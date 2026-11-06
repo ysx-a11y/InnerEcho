@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 import { resolve } from 'path';
 
@@ -9,7 +10,7 @@ import { resolve } from 'path';
  * 不包含用户端 SPA、文章页、sitemap、sw.js 等用户资源。
  */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   // publicDir 是 Vite 顶层选项，放在 build 里会被忽略并回退到默认 public/
   publicDir: resolve(import.meta.dirname, 'public-admin'),
   build: {

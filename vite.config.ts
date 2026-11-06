@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 import { resolve } from 'path';
 
@@ -8,7 +9,7 @@ import { resolve } from 'path';
  * 产物输出到 dist-user/，与管理端 dist-admin/ 完全分离。
  */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   build: {
     outDir: 'dist-user',
     emptyOutDir: true,
