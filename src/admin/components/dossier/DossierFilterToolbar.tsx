@@ -49,16 +49,15 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
 }) => {
   return (
     <div
-      className="glass-card"
       style={{
-        background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.75) 0%, rgba(16, 8, 22, 0.85) 100%)',
-        border: '1px solid rgba(255, 112, 166, 0.2)',
-        borderRadius: 16,
-        padding: '1rem 1.25rem',
+        background: '#0f172a',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: 12,
+        padding: '0.9rem 1.25rem',
         display: 'flex',
         flexDirection: 'column',
         gap: '0.8rem',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
@@ -67,12 +66,12 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
             <span
               style={{
                 padding: '3px 10px',
-                borderRadius: '8px',
-                background: 'rgba(255, 112, 166, 0.15)',
-                border: '1px solid rgba(255, 112, 166, 0.35)',
-                color: '#ff70a6',
-                fontSize: '0.78rem',
-                fontWeight: 700,
+                borderRadius: '6px',
+                background: 'rgba(99, 102, 241, 0.15)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                color: '#a5b4fc',
+                fontSize: '0.76rem',
+                fontWeight: 600,
               }}
             >
               📑 卷宗档案库
@@ -83,20 +82,20 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
                 onClick={onNavigateToUsers}
                 style={{
                   padding: '3px 10px',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 112, 166, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   color: 'var(--admin-text-secondary)',
-                  fontSize: '0.78rem',
+                  fontSize: '0.76rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 <span>👥 注册用户画像中心</span>
-                <ChevronRight size={13} color="#ff70a6" />
+                <ChevronRight size={13} color="#94a3b8" />
               </button>
             )}
           </div>
@@ -111,18 +110,17 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
               type="button"
               onClick={onBatchDelete}
               style={{
-                background: 'rgba(255, 51, 119, 0.15)',
-                border: '1px solid rgba(255, 51, 119, 0.4)',
-                color: '#ff3377',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                color: '#f87171',
                 padding: '6px 12px',
-                borderRadius: '9px',
+                borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '0.76rem',
-                fontWeight: 700,
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                boxShadow: '0 0 10px rgba(255, 51, 119, 0.2)',
               }}
             >
               <Trash2 size={13} />
@@ -134,17 +132,16 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
             onClick={onExportCSV}
             style={{
               background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 112, 166, 0.25)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
               color: 'var(--admin-text-secondary)',
               padding: '6px 12px',
-              borderRadius: '9px',
+              borderRadius: '6px',
               cursor: 'pointer',
               fontSize: '0.76rem',
-              fontWeight: 600,
+              fontWeight: 500,
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              transition: 'all 0.2s',
             }}
           >
             <Download size={13} />
@@ -154,18 +151,17 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
             type="button"
             onClick={onRefresh}
             style={{
-              background: 'rgba(255, 112, 166, 0.12)',
-              border: '1px solid rgba(255, 112, 166, 0.3)',
-              color: '#ff70a6',
+              background: 'rgba(99, 102, 241, 0.15)',
+              border: '1px solid rgba(99, 102, 241, 0.35)',
+              color: '#c7d2fe',
               padding: '6px 12px',
-              borderRadius: '9px',
+              borderRadius: '6px',
               cursor: 'pointer',
               fontSize: '0.76rem',
-              fontWeight: 700,
+              fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              transition: 'all 0.2s',
             }}
           >
             <RefreshCw size={13} className={loading ? 'spin-rotate' : ''} />
@@ -186,18 +182,18 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
             placeholder="搜索昵称 / 职业 / 设备ID..."
             style={{
               width: '100%',
-              background: 'rgba(12, 6, 16, 0.85)',
-              border: '1px solid rgba(255, 112, 166, 0.25)',
-              borderRadius: '10px',
-              padding: '8px 12px 8px 32px',
-              color: '#fff0f5',
+              background: 'rgba(2, 6, 23, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '6px',
+              padding: '7px 12px 7px 32px',
+              color: '#f8fafc',
               fontSize: '0.78rem',
               outline: 'none',
               boxSizing: 'border-box',
             }}
           />
         </div>
-        <Filter size={14} color="#ff70a6" />
+        <Filter size={14} color="#818cf8" />
         {[
           {
             label: '可信度',
@@ -238,11 +234,11 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
             value={f.value}
             onChange={(e) => f.set(e.target.value)}
             style={{
-              background: 'rgba(12, 6, 16, 0.85)',
-              border: '1px solid rgba(255, 112, 166, 0.25)',
-              borderRadius: '10px',
-              padding: '7px 10px',
-              color: '#fff0f5',
+              background: '#0b1120',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '6px',
+              padding: '6px 10px',
+              color: '#f8fafc',
               fontSize: '0.76rem',
               outline: 'none',
               cursor: 'pointer',
@@ -264,12 +260,12 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
                 onClick={onExpandAll}
                 style={{
                   background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 112, 166, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
                   color: 'var(--admin-text-secondary)',
                   padding: '5px 10px',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   fontSize: '0.72rem',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   cursor: 'pointer',
                   transition: 'all 0.15s',
                 }}
@@ -283,12 +279,12 @@ export const DossierFilterToolbar: React.FC<DossierFilterToolbarProps> = ({
                 onClick={onCollapseAll}
                 style={{
                   background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 112, 166, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
                   color: 'var(--admin-text-secondary)',
                   padding: '5px 10px',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   fontSize: '0.72rem',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   cursor: 'pointer',
                   transition: 'all 0.15s',
                 }}

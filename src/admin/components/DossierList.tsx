@@ -12,9 +12,9 @@ import { AdminImageLightbox } from './ui/AdminImageLightbox';
 import { DictBadge } from './ui/DictBadge';
 
 function depthLabel(d: Pick<AdminDossier, 'depthRating'>): { text: string; bg: string; fg: string } {
-  if (d.depthRating === 'deep') return { text: '深度', bg: 'rgba(255,51,119,0.12)', fg: '#ff3377' };
-  if (d.depthRating === 'medium') return { text: '中度', bg: 'rgba(128,243,255,0.1)', fg: '#80f3ff' };
-  return { text: '浅层', bg: 'rgba(255,255,255,0.05)', fg: '#8d879e' };
+  if (d.depthRating === 'deep') return { text: '深度', bg: 'rgba(99,102,241,0.15)', fg: '#a5b4fc' };
+  if (d.depthRating === 'medium') return { text: '中度', bg: 'rgba(14,165,233,0.15)', fg: '#38bdf8' };
+  return { text: '浅层', bg: 'rgba(148,163,184,0.12)', fg: '#94a3b8' };
 }
 
 const STATUS_LABEL: Record<AdminAuditStatus, string> = {
@@ -438,19 +438,18 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
 
       {/* 卷宗表格 */}
       <div
-        className="glass-card"
         style={{
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.7) 0%, rgba(16, 8, 22, 0.85) 100%)',
-          border: '1px solid rgba(255, 112, 166, 0.2)',
-          borderRadius: 16,
+          background: '#0f172a',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: 12,
           overflow: 'hidden',
           overflowX: 'auto',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
         }}
       >
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.76rem' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255, 112, 166, 0.15)', color: 'var(--admin-text-secondary)', background: 'rgba(255, 255, 255, 0.02)' }}>
+            <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: '#94a3b8', background: 'rgba(2, 6, 23, 0.5)' }}>
               <th style={{ padding: '10px 8px', width: '38px', textAlign: 'center' }}>
                 <input
                   type="checkbox"
@@ -500,7 +499,7 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                     {/* 父级行：用户分组栏 */}
                     <tr
                       style={{
-                        background: 'linear-gradient(90deg, rgba(255,112,166,0.06) 0%, rgba(170,38,218,0.04) 100%)',
+                        background: 'rgba(30, 41, 59, 0.45)',
                         borderBottom: '1px solid rgba(255,255,255,0.05)',
                         borderTop: '1px solid rgba(255,255,255,0.05)',
                       }}
@@ -535,18 +534,18 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                             style={{
                               width: 32,
                               height: 32,
-                              borderRadius: '50%',
-                              background: 'linear-gradient(135deg, #ff70a6, #aa26da)',
+                              borderRadius: '6px',
+                              background: '#1e293b',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: '#fff',
+                              color: '#a5b4fc',
                               fontWeight: 700,
                               fontSize: '0.8rem',
                               flexShrink: 0,
                               overflow: 'hidden',
                               cursor: 'pointer',
-                              border: '1px solid rgba(255,112,166,0.3)',
+                              border: '1px solid rgba(99,102,241,0.3)',
                             }}
                             title="点击查看此填写人完整基础信息"
                           >
@@ -576,7 +575,7 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                                   游客组
                                 </span>
                               ) : g.guestDossierCount > 0 ? (
-                                <span style={{ color: '#80f3ff', fontSize: '0.64rem', background: 'rgba(128,243,255,0.12)', border: '1px solid rgba(128,243,255,0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                <span style={{ color: '#38bdf8', fontSize: '0.64rem', background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
                                   含同设备游客卷轴 {g.guestDossierCount} 份
                                 </span>
                               ) : null}
@@ -590,17 +589,17 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                       <td colSpan={3} style={{ padding: '10px 6px', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
                           {g.gender && (
-                            <span style={{ background: 'rgba(255,51,119,0.08)', color: '#ff70a6', border: '1px solid rgba(255,51,119,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
+                            <span style={{ background: 'rgba(99,102,241,0.08)', color: '#c7d2fe', border: '1px solid rgba(99,102,241,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
                               性别: {g.gender}
                             </span>
                           )}
                           {g.occupation && (
-                            <span style={{ background: 'rgba(128,243,255,0.06)', color: '#80f3ff', border: '1px solid rgba(128,243,255,0.12)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
+                            <span style={{ background: 'rgba(14,165,233,0.08)', color: '#7dd3fc', border: '1px solid rgba(14,165,233,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
                               职业: {g.occupation}
                             </span>
                           )}
                           {g.personaTrait && (
-                            <span style={{ background: 'rgba(225,0,255,0.04)', color: '#e100ff', border: '1px solid rgba(225,0,255,0.08)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
+                            <span style={{ background: 'rgba(168,85,247,0.08)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
                               社交形象: {g.personaTrait}
                             </span>
                           )}
@@ -630,11 +629,11 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                               setSelectedUserGroup(g);
                             }}
                             style={{
-                              background: 'rgba(128, 243, 255, 0.08)',
-                              color: '#80f3ff',
-                              border: '1px solid rgba(128, 243, 255, 0.25)',
+                              background: 'rgba(99,102,241,0.08)',
+                              color: '#a5b4fc',
+                              border: '1px solid rgba(99,102,241,0.25)',
                               padding: '3px 9px',
-                              borderRadius: '8px',
+                              borderRadius: '6px',
                               fontSize: '0.7rem',
                               fontWeight: 600,
                               cursor: 'pointer',
@@ -651,11 +650,11 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                           <span
                             onClick={() => toggleExpand(g.userKey)}
                             style={{
-                              background: 'rgba(255,51,119,0.08)',
-                              color: '#ff70a6',
-                              border: '1px solid rgba(255,51,119,0.2)',
+                              background: 'rgba(99,102,241,0.08)',
+                              color: '#a5b4fc',
+                              border: '1px solid rgba(99,102,241,0.25)',
                               padding: '3px 10px',
-                              borderRadius: '12px',
+                              borderRadius: '6px',
                               fontSize: '0.7rem',
                               fontWeight: 600,
                               cursor: 'pointer',
@@ -714,7 +713,7 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <span style={{ color: '#ffd180', fontWeight: 600 }}>{d.nickname || '未填'}</span>
                               {d.resonanceLevel && (
-                                <span style={{ fontSize: '0.62rem', color: '#ff70a6', background: 'rgba(255,51,119,0.12)', padding: '1px 4px', borderRadius: '3px', width: 'fit-content' }}>
+                                <span style={{ fontSize: '0.62rem', color: '#a5b4fc', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', padding: '1px 4px', borderRadius: '3px', width: 'fit-content' }}>
                                   {d.resonanceLevel === 'exact' ? '💎 90%共鸣' : d.resonanceLevel === 'partial' ? '🪞 60%契合' : d.resonanceLevel === 'guarded' ? '🛡️ 理性防备' : '✍️ 手写心声'}
                                 </span>
                               )}
@@ -743,7 +742,7 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                             <div style={{ display: 'inline-flex', gap: '4px' }}>
                               <button
                                 onClick={() => openDossier(d.id)}
-                                style={{ background: 'rgba(128,243,255,0.1)', border: '1px solid rgba(128,243,255,0.3)', color: '#80f3ff', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem' }}
+                                style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc', padding: '4px 8px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 500 }}
                                 title="查看全景卷宗详情"
                               >
                                 <Eye size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '2px' }} />
@@ -751,7 +750,7 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                               </button>
                               <button
                                 onClick={() => handleDeleteItem(d.id)}
-                                style={{ background: 'rgba(255,51,119,0.1)', border: '1px solid rgba(255,51,119,0.3)', color: '#ff3377', padding: '4px 6px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem' }}
+                                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', padding: '4px 6px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.72rem' }}
                                 title="物理删除该卷宗"
                               >
                                 <Trash2 size={12} />

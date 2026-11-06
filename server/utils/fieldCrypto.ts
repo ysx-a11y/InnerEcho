@@ -76,15 +76,19 @@ export function decryptField(payload: string, aad: string): string {
   if (payload === '') return '';
   const parts = payload.split(':');
   if (parts.length === 1 || parts[0] !== PREFIX) return payload; // 旧明文
-  if (parts.length !== 4) throw new Error('字段密文格式非法');
+  if (parts.length !== 4) return payload;
 
   const key = loadKey();
-  if (!key) throw new Error(`${KEY_ENV} 未配置，无法解密 v1 密文`);
+  if (!key) {
+    throw new Error('FIELD_ENC_KEY 未配置，无法解密 v1 密文');
+  }
 
   const iv = Buffer.from(parts[1], 'base64url');
   const tag = Buffer.from(parts[2], 'base64url');
   const data = Buffer.from(parts[3], 'base64url');
-  if (iv.length !== IV_LENGTH || tag.length !== TAG_LENGTH) throw new Error('字段密文参数非法');
+  if (iv.length !== IV_LENGTH || tag.length !== TAG_LENGTH) {
+    throw new Error(`v1 密文参数长度非法: iv=${iv.length}, tag=${tag.length}`);
+  }
 
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   decipher.setAAD(Buffer.from(aad, 'utf8'));

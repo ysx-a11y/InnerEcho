@@ -105,9 +105,9 @@ export const RespondentProfileModal: React.FC<RespondentProfileModalProps> = ({
               style={{
                 width: 44,
                 height: 44,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(255, 112, 166, 0.25), rgba(170, 38, 218, 0.35))',
-                border: '1px solid rgba(255, 112, 166, 0.45)',
+                borderRadius: '8px',
+                background: 'rgba(99, 102, 241, 0.15)',
+                border: '1px solid rgba(99, 102, 241, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -123,14 +123,14 @@ export const RespondentProfileModal: React.FC<RespondentProfileModalProps> = ({
                   onClick={() => onZoomImage?.(userGroup.avatarUrl!)}
                 />
               ) : (
-                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ff70a6' }}>
+                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#a5b4fc' }}>
                   {userGroup.nickname.slice(0, 1) || '匿'}
                 </span>
               )}
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#fff0f5' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc' }}>
                   {userGroup.nickname || '未命名访客'}
                 </h3>
                 {userGroup.email && (
@@ -180,9 +180,9 @@ export const RespondentProfileModal: React.FC<RespondentProfileModalProps> = ({
                 <span
                   style={{
                     fontSize: '0.72rem',
-                    color: '#ff70a6',
-                    background: 'rgba(255, 51, 119, 0.12)',
-                    border: '1px solid rgba(255, 51, 119, 0.3)',
+                    color: '#a5b4fc',
+                    background: 'rgba(99, 102, 241, 0.12)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
                     padding: '2px 8px',
                     borderRadius: '6px',
                     fontWeight: 600,
@@ -233,7 +233,7 @@ export const RespondentProfileModal: React.FC<RespondentProfileModalProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', fontSize: '0.8rem' }}>
               <div style={{ background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: 8 }}>
                 <span style={{ color: 'rgba(255,240,245,0.5)', display: 'block', fontSize: '0.7rem' }}>性别</span>
-                <span style={{ color: '#ff70a6', fontWeight: 700 }}>{userGroup.gender || '保密'}</span>
+                <span style={{ color: '#a5b4fc', fontWeight: 700 }}>{userGroup.gender || '保密'}</span>
               </div>
               <div style={{ background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: 8 }}>
                 <span style={{ color: 'rgba(255,240,245,0.5)', display: 'block', fontSize: '0.7rem' }}>真实社会职业</span>
@@ -268,7 +268,7 @@ export const RespondentProfileModal: React.FC<RespondentProfileModalProps> = ({
                 padding: '1.1rem',
               }}
             >
-              <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ff70a6', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#a5b4fc', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Sparkles size={15} />
                 <span>表里自白与隐秘暗面渴望</span>
               </div>
@@ -286,8 +286,8 @@ export const RespondentProfileModal: React.FC<RespondentProfileModalProps> = ({
                 )}
 
                 {innerDesire && (
-                  <div style={{ background: 'rgba(255, 51, 119, 0.08)', border: '1px solid rgba(255, 51, 119, 0.2)', padding: '10px 12px', borderRadius: 8 }}>
-                    <div style={{ fontSize: '0.72rem', color: '#ff70a6', fontWeight: 700, marginBottom: 4 }}>
+                  <div style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', padding: '10px 12px', borderRadius: 8 }}>
+                    <div style={{ fontSize: '0.72rem', color: '#a5b4fc', fontWeight: 700, marginBottom: 4 }}>
                       私密暗面真实渴望自白：
                     </div>
                     <div style={{ fontSize: '0.82rem', color: '#fff', fontStyle: 'italic', lineHeight: 1.5 }}>

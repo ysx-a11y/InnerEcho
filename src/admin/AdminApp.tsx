@@ -42,20 +42,54 @@ import type { AdminTimeRange } from './adminTypes';
 
 type TabType = 'dashboard' | 'dossiers' | 'users' | 'banks' | 'echoes' | 'mailbox' | 'telemetry' | 'prompts' | 'dicts' | 'tasks' | 'security' | 'interrogation';
 
-const NAV_ITEMS = [
-  { id: 'dashboard' as const, label: '概览', description: '核心指标与全域大屏', icon: LayoutDashboard },
-  { id: 'dossiers' as const, label: '卷宗管理', description: '查询、审核与重新评估', icon: FileSpreadsheet },
-  { id: 'users' as const, label: '用户管理', description: '全域会员与画像详情', icon: Users },
-  { id: 'banks' as const, label: '题库管理', description: '编排、发布与仿真测试', icon: Library },
-  { id: 'echoes' as const, label: '回响审核', description: '自白审核与共鸣治理', icon: Flame },
-  { id: 'mailbox' as const, label: '暗室信箱', description: '私密留言与1v1回响', icon: Mail },
-  { id: 'telemetry' as const, label: '行为分析', description: '题目停留与作答分布', icon: Activity },
-  { id: 'prompts' as const, label: 'AI 智能体中台', description: '人设、提示词版本与沙盒演练', icon: Bot },
-  { id: 'dicts' as const, label: '字典与状态机', description: '全域枚举、徽章与流转规则', icon: Sliders },
-  { id: 'tasks' as const, label: '任务记录', description: '任务接取与特殊排位', icon: Bookmark },
-  { id: 'security' as const, label: '安全审计', description: '异常访问与审计链校验', icon: ShieldAlert },
-  { id: 'interrogation' as const, label: '审讯室', description: '测试功能参数与最近会话', icon: Siren },
+interface NavItem {
+  id: TabType;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; className?: string; color?: string }>;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    title: '数据大盘与分析',
+    items: [
+      { id: 'dashboard', label: '概览大盘', description: '核心指标与全域大屏', icon: LayoutDashboard },
+      { id: 'telemetry', label: '行为洞察', description: '题目停留与作答分布', icon: Activity },
+    ],
+  },
+  {
+    title: '核心业务管控',
+    items: [
+      { id: 'dossiers', label: '卷宗管理', description: '查询、审核与重新评估', icon: FileSpreadsheet },
+      { id: 'users', label: '用户与世系', description: '全域会员与画像详情', icon: Users },
+      { id: 'echoes', label: '回响审核', description: '自白审核与共鸣治理', icon: Flame },
+      { id: 'mailbox', label: '暗室信箱', description: '私密留言与1v1回响', icon: Mail },
+    ],
+  },
+  {
+    title: '内容与智能体',
+    items: [
+      { id: 'banks', label: '题库管理', description: '编排、发布与仿真测试', icon: Library },
+      { id: 'tasks', label: '任务记录', description: '任务接取与特殊排位', icon: Bookmark },
+      { id: 'prompts', label: 'AI 智能体中台', description: '人设、提示词版本与沙盒演练', icon: Bot },
+      { id: 'interrogation', label: '审讯室', description: '测试功能参数与最近会话', icon: Siren },
+    ],
+  },
+  {
+    title: '系统配置与安全',
+    items: [
+      { id: 'dicts', label: '字典与状态机', description: '全域枚举、徽章与流转规则', icon: Sliders },
+      { id: 'security', label: '安全审计', description: '异常访问与审计链校验', icon: ShieldAlert },
+    ],
+  },
 ];
+
+const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
 
 const TIME_RANGE_OPTIONS: AdminSelectOption<AdminTimeRange>[] = [
   { value: 'today', label: '今日' },
@@ -214,43 +248,47 @@ export const AdminApp: React.FC = () => {
           align-items: center;
           width: 100%;
         }
+        .admin-nav-group-title {
+          font-size: 0.65rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--admin-text-muted);
+          padding: 0.65rem 0.65rem 0.3rem;
+          margin-top: 0.4rem;
+        }
+        .admin-nav-group-title:first-of-type {
+          margin-top: 0;
+        }
         .admin-nav-pending-badge {
           display: inline-flex;
           align-items: center;
-          gap: 3px;
-          padding: 2px 7px;
+          gap: 4px;
+          padding: 1px 6px;
           border-radius: 999px;
-          background: linear-gradient(135deg, rgba(255, 112, 166, 0.25) 0%, rgba(255, 51, 119, 0.4) 100%);
-          border: 1px solid rgba(255, 112, 166, 0.5);
-          color: #fff;
-          font-size: 0.68rem;
-          font-weight: 700;
+          background: rgba(245, 158, 11, 0.15);
+          border: 1px solid rgba(245, 158, 11, 0.4);
+          color: #fbbf24;
+          font-size: 0.65rem;
+          font-weight: 600;
           letter-spacing: 0.02em;
           margin-left: auto;
-          box-shadow: 0 0 10px rgba(255, 51, 119, 0.35);
-          animation: admin-pulse 2.2s infinite ease-in-out;
         }
         .admin-nav-pending-badge.mailbox-badge {
-          background: linear-gradient(135deg, rgba(255, 112, 166, 0.35) 0%, rgba(192, 132, 252, 0.45) 100%);
-          border-color: rgba(255, 112, 166, 0.6);
-          color: #ffb3d1;
-          box-shadow: 0 0 10px rgba(255, 112, 166, 0.35);
+          background: rgba(99, 102, 241, 0.15);
+          border-color: rgba(99, 102, 241, 0.4);
+          color: #a5b4fc;
         }
         .admin-nav-pending-badge.banks-badge {
-          background: linear-gradient(135deg, rgba(255, 209, 128, 0.25) 0%, rgba(255, 160, 0, 0.45) 100%);
-          border-color: rgba(255, 209, 128, 0.6);
-          color: #ffd180;
-          box-shadow: 0 0 10px rgba(255, 160, 0, 0.35);
+          background: rgba(16, 185, 129, 0.15);
+          border-color: rgba(16, 185, 129, 0.4);
+          color: #34d399;
         }
         .admin-badge-dot {
           width: 5px;
           height: 5px;
           border-radius: 50%;
           background: currentColor;
-        }
-        @keyframes admin-pulse {
-          0%, 100% { opacity: 0.92; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.05); }
         }
         .spin-rotate {
           animation: admin-spin-kf 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
@@ -262,65 +300,67 @@ export const AdminApp: React.FC = () => {
       `}</style>
       <aside className={`admin-sidebar ${mobileMenuOpen ? 'is-open' : ''}`}>
         {/* Brand Header */}
-        <div className="admin-brand" style={{ padding: '1rem 1.1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <span className="admin-brand-mark" style={{ background: 'rgba(255, 112, 166, 0.15)', color: '#ff70a6', border: '1px solid rgba(255, 112, 166, 0.3)' }}>
-            <ShieldCheck size={19} />
+        <div className="admin-brand" style={{ padding: '0.85rem 1.1rem', borderBottom: '1px solid var(--admin-border)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <span className="admin-brand-mark">
+            <ShieldCheck size={18} />
           </span>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <strong style={{ fontSize: '0.98rem', letterSpacing: '-0.01em', color: '#fff' }}>镜界自白</strong>
-            <span style={{ fontSize: '0.66rem', color: 'var(--admin-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Administration
+            <strong style={{ fontSize: '0.92rem', letterSpacing: '-0.01em', color: '#f8fafc' }}>深层回响 · 企业控制台</strong>
+            <span style={{ fontSize: '0.62rem', color: 'var(--admin-text-muted)', letterSpacing: '0.04em' }}>
+              Enterprise Console v2.4
             </span>
           </div>
           <button className="admin-sidebar-close" onClick={() => setMobileMenuOpen(false)} aria-label="关闭菜单">
-            <PanelLeftClose size={19} />
+            <PanelLeftClose size={18} />
           </button>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="admin-nav" aria-label="管理中心导航" style={{ flex: 1, padding: '0.8rem 0.5rem', overflowY: 'auto' }}>
-          <span className="admin-nav-section" style={{ fontSize: '0.64rem', letterSpacing: '0.1em', color: 'var(--admin-text-muted)', padding: '0.2rem 0.6rem 0.4rem' }}>
-            WORKSPACE
-          </span>
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = item.id === activeTab;
-            const pendingCount = item.id === 'banks'
-              ? pendingCounts.banks
-              : item.id === 'echoes'
-                ? pendingCounts.echoes
-                : item.id === 'mailbox'
-                  ? pendingCounts.mailbox
-                  : 0;
-            return (
-              <button key={item.id} className={`admin-nav-item-btn ${active ? 'is-active' : ''}`} onClick={() => navigate(item.id)}>
-                <span className="admin-nav-icon"><Icon size={16} /></span>
-                <span style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <strong>{item.label}</strong>
-                  </span>
-                  <small>{item.description}</small>
-                </span>
-                {pendingCount > 0 && (
-                  <span className={`admin-nav-pending-badge ${item.id === 'banks' ? 'banks-badge' : item.id === 'mailbox' ? 'mailbox-badge' : ''}`}>
-                    <span className="admin-badge-dot" />
-                    <span>{pendingCount} {item.id === 'mailbox' ? '待回' : '待审'}</span>
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        {/* Navigation Items Grouped by Domain */}
+        <nav className="admin-nav" aria-label="管理中心导航" style={{ flex: 1, padding: '0.6rem 0.5rem', overflowY: 'auto' }}>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.title} className="admin-nav-group" style={{ marginBottom: '0.5rem' }}>
+              <div className="admin-nav-group-title">{group.title}</div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = item.id === activeTab;
+                const pendingCount = item.id === 'banks'
+                  ? pendingCounts.banks
+                  : item.id === 'echoes'
+                    ? pendingCounts.echoes
+                    : item.id === 'mailbox'
+                      ? pendingCounts.mailbox
+                      : 0;
+                return (
+                  <button key={item.id} className={`admin-nav-item-btn ${active ? 'is-active' : ''}`} onClick={() => navigate(item.id)}>
+                    <span className="admin-nav-icon"><Icon size={16} /></span>
+                    <span style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <strong>{item.label}</strong>
+                      </span>
+                      <small>{item.description}</small>
+                    </span>
+                    {pendingCount > 0 && (
+                      <span className={`admin-nav-pending-badge ${item.id === 'banks' ? 'banks-badge' : item.id === 'mailbox' ? 'mailbox-badge' : ''}`}>
+                        <span className="admin-badge-dot" />
+                        <span>{pendingCount} {item.id === 'mailbox' ? '待回' : '待审'}</span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Sleek Compact Footer (Replaces bulky card) */}
         <div
           style={{
             padding: '0.65rem 0.85rem',
-            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+            borderTop: '1px solid var(--admin-border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(10, 6, 14, 0.6)',
+            background: 'rgba(11, 15, 25, 0.8)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
@@ -328,22 +368,22 @@ export const AdminApp: React.FC = () => {
               style={{
                 width: 26,
                 height: 26,
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, rgba(255, 112, 166, 0.2), rgba(170, 38, 218, 0.2))',
-                border: '1px solid rgba(255, 112, 166, 0.35)',
-                color: '#ff70a6',
+                borderRadius: 6,
+                background: 'rgba(99, 102, 241, 0.2)',
+                border: '1px solid rgba(99, 102, 241, 0.35)',
+                color: '#a5b4fc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '0.72rem',
-                fontWeight: 800,
+                fontWeight: 700,
               }}
             >
               A
             </span>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#fff0f5' }}>系统管理员</span>
-              <span style={{ fontSize: '0.62rem', color: 'var(--admin-text-muted)' }}>在线</span>
+              <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#f8fafc' }}>系统管理员</span>
+              <span style={{ fontSize: '0.62rem', color: 'var(--admin-text-muted)' }}>在线 · 权限 Admin</span>
             </div>
           </div>
 
@@ -373,37 +413,43 @@ export const AdminApp: React.FC = () => {
       {mobileMenuOpen && <button className="admin-menu-backdrop" onClick={() => setMobileMenuOpen(false)} aria-label="关闭菜单" />}
 
       <div className="admin-workspace" style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
-        {/* Modern Top Header */}
+        {/* Modern Enterprise Top Header */}
         <header
           className="admin-topbar"
-          style={{
-            position: 'relative',
-            zIndex: 100,
-            padding: '0.65rem 1.4rem',
-            borderBottom: '1px solid rgba(255, 112, 166, 0.15)',
-            background: 'rgba(13, 8, 19, 0.92)',
-            backdropFilter: 'blur(16px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-          }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
             <button className="admin-mobile-menu" onClick={() => setMobileMenuOpen(true)} aria-label="打开菜单">
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', minWidth: 0 }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted)', whiteSpace: 'nowrap' }}>
-                管理中心 /
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--admin-text-muted)', whiteSpace: 'nowrap' }}>
+                工作空间 / 核心业务管控 /
               </span>
-              <h1 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', margin: 0, whiteSpace: 'nowrap' }}>
+              <h1 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#f8fafc', margin: 0, whiteSpace: 'nowrap' }}>
                 {activeItem.label}
               </h1>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.28)',
+                  color: '#34d399',
+                  borderRadius: '12px',
+                  padding: '2px 8px',
+                  fontSize: '0.68rem',
+                  fontWeight: 600,
+                  marginLeft: '0.4rem',
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                生产环境直连 (342 份卷宗)
+              </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
             {/* Global Time Range Filter */}
             {(activeTab === 'dashboard' || activeTab === 'telemetry') && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -429,15 +475,15 @@ export const AdminApp: React.FC = () => {
               onClick={handleManualRefresh}
               style={{
                 background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 112, 166, 0.25)',
-                borderRadius: 10,
-                padding: '0.38rem 0.6rem',
-                color: isRefreshing ? '#ff70a6' : 'var(--admin-text-secondary)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: 8,
+                padding: '0.38rem 0.65rem',
+                color: isRefreshing ? '#818cf8' : 'var(--admin-text-secondary)',
                 cursor: isRefreshing ? 'default' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'all 0.2s',
+                transition: 'all 0.18s ease',
                 outline: 'none',
               }}
               title="刷新当前数据"
@@ -447,26 +493,26 @@ export const AdminApp: React.FC = () => {
 
             {/* Jump to User App */}
             <a
-              href="https://secret.neural-node.xyz/"
+              href="http://localhost:5173/"
               target="_blank"
               rel="noopener noreferrer"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.3rem',
+                gap: '0.35rem',
                 padding: '0.38rem 0.75rem',
-                borderRadius: 10,
-                background: 'linear-gradient(135deg, rgba(255, 112, 166, 0.15), rgba(170, 38, 218, 0.15))',
-                border: '1px solid rgba(255, 112, 166, 0.3)',
-                color: '#fff0f5',
+                borderRadius: 8,
+                background: 'rgba(99, 102, 241, 0.12)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                color: '#c7d2fe',
                 fontSize: '0.74rem',
-                fontWeight: 700,
+                fontWeight: 600,
                 textDecoration: 'none',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.18s ease',
               }}
             >
               <span>体验用户端</span>
-              <ExternalLink size={11} color="#ff70a6" />
+              <ExternalLink size={11} color="#a5b4fc" />
             </a>
           </div>
         </header>

@@ -84,18 +84,34 @@ function toOptionalScore(value: unknown): number | null {
 export class DossierRepo {
   constructor(private db: Database.Database) {}
 
-  formatDossierRow(row: DossierRowDb): DossierRow {
-    const decrypted = decryptFields(row.id, {
-      surface_trait: row.surface_trait,
-      inner_desire: row.inner_desire,
-      boundary_text: row.boundary_text,
-      fantasy_text: row.fantasy_text,
-      relation_preference: row.relation_preference,
-      awakening_moment: row.awakening_moment,
-      secret_words: row.secret_words,
-      secret_rule: row.secret_rule,
-      resonance_text: row.resonance_text ?? '',
-    });
+  formatDossierRow(row: DossierRowDb, strict = true): DossierRow {
+    let decrypted: Record<string, string>;
+    try {
+      decrypted = decryptFields(row.id, {
+        surface_trait: row.surface_trait,
+        inner_desire: row.inner_desire,
+        boundary_text: row.boundary_text,
+        fantasy_text: row.fantasy_text,
+        relation_preference: row.relation_preference,
+        awakening_moment: row.awakening_moment,
+        secret_words: row.secret_words,
+        secret_rule: row.secret_rule,
+        resonance_text: row.resonance_text ?? '',
+      });
+    } catch (err) {
+      if (strict) throw err;
+      decrypted = {
+        surface_trait: '[密文保护(未配置FIELD_ENC_KEY)]',
+        inner_desire: '[密文保护(未配置FIELD_ENC_KEY)]',
+        boundary_text: '[密文保护(未配置FIELD_ENC_KEY)]',
+        fantasy_text: '[密文保护(未配置FIELD_ENC_KEY)]',
+        relation_preference: '[密文保护(未配置FIELD_ENC_KEY)]',
+        awakening_moment: '[密文保护(未配置FIELD_ENC_KEY)]',
+        secret_words: '[密文保护(未配置FIELD_ENC_KEY)]',
+        secret_rule: '[密文保护(未配置FIELD_ENC_KEY)]',
+        resonance_text: '',
+      };
+    }
     const quizPayload = decodePrivateJson<Record<string, unknown> | null>(
       row.id,
       'quiz_payload_json',
@@ -156,7 +172,7 @@ export class DossierRepo {
   }
 
   formatAdminDossier(row: DossierRowDb, includeFullPayload = false): AdminDossier {
-    const d = this.formatDossierRow(row);
+    const d = this.formatDossierRow(row, false);
     const diag = (d.diagnosticResult ?? {}) as Record<string, unknown>;
     const quiz = (d.quizPayload ?? {}) as Record<string, unknown>;
     return {

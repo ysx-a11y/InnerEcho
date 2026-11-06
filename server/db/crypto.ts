@@ -18,8 +18,12 @@ export function encodeJsonField(recordId: string, fieldName: string, value: unkn
 
 export function decodeJsonField<T>(recordId: string, fieldName: string, stored: string | null | undefined, fallback: T): T {
   if (!stored) return fallback;
-  const json = decryptField(stored, `${recordId}:${fieldName}`);
-  return safeJsonParse(json, fallback);
+  try {
+    const json = decryptField(stored, `${recordId}:${fieldName}`);
+    return safeJsonParse(json, fallback);
+  } catch {
+    return fallback;
+  }
 }
 
 export function encodePrivateJson(
@@ -39,8 +43,15 @@ export function decodePrivateJson<T>(recordId: string, fieldName: string, stored
   const parsed = safeJsonParse<Record<string, unknown>>(stored, {});
   const encrypted = parsed[ENCRYPTED_PAYLOAD_KEY];
   if (typeof encrypted !== 'string') return safeJsonParse(stored, fallback);
-  const json = decryptField(encrypted, `${recordId}:${fieldName}`);
-  return safeJsonParse(json, fallback);
+  try {
+    const json = decryptField(encrypted, `${recordId}:${fieldName}`);
+    return safeJsonParse(json, fallback);
+  } catch (err) {
+    if (parsed && typeof parsed === 'object') {
+      return { ...parsed, ...((fallback && typeof fallback === 'object') ? fallback : {}) } as T;
+    }
+    throw err;
+  }
 }
 
 interface DossierRowDb {

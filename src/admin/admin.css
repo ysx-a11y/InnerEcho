@@ -1,21 +1,21 @@
 :root {
-  --admin-bg: #08040d;
-  --admin-surface: rgba(20, 10, 28, 0.85);
-  --admin-surface-raised: rgba(30, 15, 42, 0.9);
-  --admin-surface-card: linear-gradient(135deg, rgba(28, 14, 38, 0.7) 0%, rgba(16, 8, 22, 0.85) 100%);
-  --admin-border: rgba(255, 112, 166, 0.18);
-  --admin-border-strong: rgba(255, 112, 166, 0.35);
-  --admin-text: #ffffff;
-  --admin-text-secondary: #dfb8cf;
-  --admin-text-muted: #8d7a94;
-  --admin-accent: #ff70a6;
-  --admin-accent-soft: rgba(255, 112, 166, 0.14);
-  --admin-accent-glow: 0 0 16px rgba(255, 112, 166, 0.28);
-  --admin-success: #4fd1a1;
-  --admin-warning: #ffd180;
-  --admin-danger: #ff3377;
-  --admin-cyan: #80f3ff;
-  --admin-purple: #cda4fc;
+  --admin-bg: #090d16;
+  --admin-surface: #0f172a;
+  --admin-surface-raised: #1e293b;
+  --admin-surface-card: #0f172a;
+  --admin-border: rgba(255, 255, 255, 0.08);
+  --admin-border-strong: rgba(255, 255, 255, 0.16);
+  --admin-text: #f8fafc;
+  --admin-text-secondary: #94a3b8;
+  --admin-text-muted: #64748b;
+  --admin-accent: #6366f1;
+  --admin-accent-soft: rgba(99, 102, 241, 0.12);
+  --admin-accent-glow: 0 0 16px rgba(99, 102, 241, 0.2);
+  --admin-success: #10b981;
+  --admin-warning: #f59e0b;
+  --admin-danger: #ef4444;
+  --admin-cyan: #06b6d4;
+  --admin-purple: #8b5cf6;
 }
 
 /* Base Body & Shell */
@@ -48,31 +48,31 @@ body:has(.admin-shell) {
   height: 6px;
 }
 .admin-shell ::-webkit-scrollbar-track {
-  background: rgba(10, 4, 14, 0.5);
+  background: rgba(11, 15, 25, 0.5);
 }
 .admin-shell ::-webkit-scrollbar-thumb {
-  background: rgba(255, 112, 166, 0.22);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 4px;
 }
 .admin-shell ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 112, 166, 0.45);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 /* Glass & Panel Utilities */
 .glass-card,
 .admin-panel {
   border: 1px solid var(--admin-border);
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--admin-surface-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-card:hover,
 .admin-panel:hover {
-  border-color: rgba(255, 112, 166, 0.28);
+  border-color: rgba(99, 102, 241, 0.28);
 }
 
 /* Page Intro & Eyebrow */
@@ -154,12 +154,12 @@ body:has(.admin-shell) {
   flex: 0 0 250px;
   flex-direction: column;
   border-right: 1px solid var(--admin-border);
-  background: #0d0714;
+  background: #0b0f19;
 }
 
 .admin-brand {
   display: flex;
-  min-height: 70px;
+  min-height: 64px;
   align-items: center;
   gap: 0.75rem;
   padding: 0 1.15rem;
@@ -168,15 +168,15 @@ body:has(.admin-shell) {
 
 .admin-brand-mark {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgba(255, 112, 166, 0.35);
-  border-radius: 10px;
-  background: linear-gradient(145deg, rgba(255, 112, 166, 0.22), rgba(255, 51, 119, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(79, 70, 229, 0.08));
   color: var(--admin-accent);
-  box-shadow: var(--admin-accent-glow);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.15);
 }
 
 .admin-nav {
@@ -184,67 +184,68 @@ body:has(.admin-shell) {
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.75rem 0.5rem;
+  gap: 0.2rem;
+  padding: 0.75rem 0.6rem;
   overflow-y: auto;
 }
 
 .admin-nav-section {
-  padding: 0.25rem 0.65rem 0.4rem;
+  padding: 0.6rem 0.65rem 0.25rem;
   color: var(--admin-text-muted);
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .admin-nav button {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.62rem 0.7rem;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   color: var(--admin-text-secondary);
   cursor: pointer;
   text-align: left;
-  transition: all 0.18s ease;
+  transition: all 0.16s ease;
 }
 
 .admin-nav button:hover {
-  background: rgba(255, 112, 166, 0.06);
+  background: rgba(255, 255, 255, 0.04);
   color: #fff;
-  border-color: rgba(255, 112, 166, 0.15);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .admin-nav button.is-active {
-  border-color: rgba(255, 112, 166, 0.35);
-  background: linear-gradient(135deg, rgba(255, 112, 166, 0.18) 0%, rgba(170, 38, 218, 0.12) 100%);
-  color: #fff0f5;
-  box-shadow: 0 0 16px rgba(255, 112, 166, 0.15);
+  border-color: rgba(99, 102, 241, 0.4);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.16) 0%, rgba(79, 70, 229, 0.08) 100%);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .admin-nav-icon {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--admin-text-muted);
-  transition: all 0.18s ease;
+  transition: all 0.16s ease;
 }
 
 .admin-nav .is-active .admin-nav-icon {
-  background: rgba(255, 112, 166, 0.2);
-  color: #ff70a6;
+  background: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
 }
 
 .admin-nav strong {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .admin-nav small {
@@ -270,14 +271,14 @@ body:has(.admin-shell) {
   position: relative;
   z-index: 100;
   display: flex;
-  min-height: 64px;
-  flex: 0 0 64px;
+  min-height: 56px;
+  flex: 0 0 56px;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0 1.5rem;
+  padding: 0 1.25rem;
   border-bottom: 1px solid var(--admin-border);
-  background: rgba(13, 8, 19, 0.92);
+  background: rgba(11, 15, 25, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -307,18 +308,18 @@ body:has(.admin-shell) {
   gap: 0.4rem;
   padding: 0.4rem 0.8rem;
   border: 1px solid var(--admin-border);
-  border-radius: 9px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--admin-text-secondary);
   cursor: pointer;
   font-size: 0.74rem;
   font-weight: 600;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 }
 
 .admin-button:hover:not(:disabled) {
-  border-color: var(--admin-accent);
-  background: rgba(255, 112, 166, 0.12);
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.1);
   color: #fff;
 }
 
@@ -328,47 +329,48 @@ body:has(.admin-shell) {
 }
 
 .admin-button-primary {
-  border: 1px solid rgba(255, 112, 166, 0.5);
-  background: linear-gradient(135deg, #ff70a6 0%, #d81b60 100%);
+  border: 1px solid rgba(99, 102, 241, 0.6);
+  background: #4f46e5;
   color: #ffffff;
-  box-shadow: 0 0 15px rgba(255, 112, 166, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 10px rgba(99, 102, 241, 0.2);
 }
 
 .admin-button-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ff85b5 0%, #e91e63 100%);
-  box-shadow: 0 0 20px rgba(255, 112, 166, 0.5);
+  background: #4338ca;
+  border-color: #818cf8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 14px rgba(99, 102, 241, 0.35);
 }
 
 .admin-button-danger {
-  border: 1px solid rgba(255, 51, 119, 0.4);
-  background: rgba(255, 51, 119, 0.12);
-  color: #ff3377;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
 }
 
 .admin-button-danger:hover:not(:disabled) {
-  background: rgba(255, 51, 119, 0.25);
-  border-color: #ff3377;
+  background: rgba(239, 68, 68, 0.22);
+  border-color: #ef4444;
   color: #fff;
 }
 
 .admin-button-activate {
-  border-color: rgba(79, 209, 161, 0.4);
-  background: rgba(79, 209, 161, 0.12);
-  color: #4fd1a1;
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
 }
 
 .admin-button-activate:hover:not(:disabled) {
-  background: rgba(79, 209, 161, 0.24);
+  background: rgba(16, 185, 129, 0.22);
   color: #fff;
 }
 
 .admin-icon-button {
   display: grid;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   border: 1px solid var(--admin-border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--admin-text-secondary);
   cursor: pointer;
@@ -378,7 +380,7 @@ body:has(.admin-shell) {
 .admin-icon-button:hover {
   border-color: var(--admin-accent);
   color: #fff;
-  background: rgba(255, 112, 166, 0.1);
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .admin-button-row {
@@ -410,9 +412,9 @@ body:has(.admin-shell) {
   box-sizing: border-box;
   width: 100%;
   padding: 0.5rem 0.75rem;
-  background: rgba(14, 8, 20, 0.85);
+  background: #0b1120;
   border: 1px solid var(--admin-border);
-  border-radius: 9px;
+  border-radius: 6px;
   color: var(--admin-text);
   font-family: inherit;
   font-size: 0.76rem;
@@ -426,7 +428,7 @@ body:has(.admin-shell) {
 .admin-content input[type="text"]:focus,
 .admin-content input[type="search"]:focus {
   border-color: var(--admin-accent);
-  box-shadow: 0 0 0 3px rgba(255, 112, 166, 0.15);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
 }
 
 .admin-form-row {
@@ -448,51 +450,51 @@ body:has(.admin-shell) {
   gap: 0.2rem;
   font-size: 0.62rem;
   font-weight: 700;
-  color: #c084fc;
-  background: rgba(192, 132, 252, 0.15);
-  border: 1px solid rgba(192, 132, 252, 0.35);
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
   padding: 0.12rem 0.45rem;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .bank-badge-published {
   font-size: 0.62rem;
   font-weight: 700;
-  color: var(--admin-success);
-  background: rgba(79, 209, 161, 0.15);
-  border: 1px solid rgba(79, 209, 161, 0.35);
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
   padding: 0.12rem 0.45rem;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .bank-badge-draft {
   font-size: 0.62rem;
   font-weight: 700;
-  color: var(--admin-warning);
-  background: rgba(255, 209, 128, 0.15);
-  border: 1px solid rgba(255, 209, 128, 0.35);
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.3);
   padding: 0.12rem 0.45rem;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .bank-badge-pending {
   font-size: 0.62rem;
   font-weight: 700;
-  color: #ff70a6;
-  background: rgba(255, 112, 166, 0.15);
-  border: 1px solid rgba(255, 112, 166, 0.35);
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
   padding: 0.12rem 0.45rem;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .bank-badge-rejected {
   font-size: 0.62rem;
   font-weight: 700;
-  color: #ff3377;
-  background: rgba(255, 51, 119, 0.15);
-  border: 1px solid rgba(255, 51, 119, 0.35);
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   padding: 0.12rem 0.45rem;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 /* Global & Bank Stats Grid & Cards */
@@ -510,13 +512,11 @@ body:has(.admin-shell) {
   flex-direction: column;
   justify-content: space-between;
   padding: 0.95rem 1.15rem;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(28, 14, 38, 0.8) 0%, rgba(16, 8, 22, 0.9) 100%);
+  border-radius: 8px;
+  background: #0f172a;
   border: 1px solid var(--admin-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  transition: all 0.22s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
   cursor: default;
   overflow: hidden;
 }
@@ -527,14 +527,14 @@ body:has(.admin-shell) {
 
 .admin-stat-card.is-clickable:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 112, 166, 0.45);
-  box-shadow: 0 12px 30px rgba(255, 112, 166, 0.15);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .admin-stat-card.is-active-filter {
   border-color: var(--admin-accent);
-  background: linear-gradient(135deg, rgba(255, 112, 166, 0.18) 0%, rgba(28, 14, 38, 0.95) 100%);
-  box-shadow: 0 0 18px rgba(255, 112, 166, 0.3);
+  background: #131d35;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
 }
 
 .admin-stat-label {

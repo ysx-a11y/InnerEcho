@@ -98,50 +98,46 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
         style={{
           width: '100%',
           maxWidth: '420px',
-          background: 'rgba(20, 16, 32, 0.65)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
+          background: '#0f172a',
           border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '24px',
+          borderRadius: '16px',
           padding: '2.5rem 2rem',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)',
           zIndex: 10,
           boxSizing: 'border-box',
           transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
         }}
       >
         {/* Logo 与标题 */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.2rem' }}>
           <div
             style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '20px',
-              background: 'linear-gradient(135deg, #ff3377 0%, #aa26da 100%)',
+              width: '56px',
+              height: '56px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.2rem auto',
-              boxShadow: '0 0 20px rgba(225, 0, 255, 0.4)',
+              boxShadow: '0 0 20px rgba(99, 102, 241, 0.35)',
             }}
           >
-            <ShieldCheck size={32} color="#ffffff" />
+            <ShieldCheck size={28} color="#ffffff" />
           </div>
           <h1
             style={{
-              fontSize: '1.8rem',
+              fontSize: '1.45rem',
               fontWeight: 800,
-              letterSpacing: '0.1em',
-              margin: '0 0 0.5rem 0',
-              background: 'linear-gradient(to right, #ffffff, #cda4fc)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em',
+              margin: '0 0 0.4rem 0',
+              color: '#f8fafc',
             }}
           >
-            镜界自白 · 管理中心
+            深层回响 · 企业控制台
           </h1>
-          <p style={{ fontSize: '0.85rem', color: '#8d879e', margin: 0 }}>
-            Mirror Confession Administration Control Panel
+          <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>
+            InnerEcho Enterprise Management Console
           </p>
         </div>
 
@@ -152,11 +148,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
               htmlFor="admin-username"
               style={{
                 display: 'block',
-                fontSize: '0.75rem',
+                fontSize: '0.72rem',
                 textTransform: 'uppercase',
-                letterSpacing: '0.15em',
-                color: '#8d879e',
-                marginBottom: '0.6rem',
+                letterSpacing: '0.08em',
+                color: '#94a3b8',
+                marginBottom: '0.4rem',
                 fontWeight: 600,
               }}
             >
@@ -171,12 +167,12 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
               readOnly
               style={{
                 width: '100%',
-                background: 'rgba(10, 8, 18, 0.55)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '12px',
-                padding: '12px',
-                color: '#a9a3b8',
-                fontSize: '0.9rem',
+                background: '#0b1120',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                color: '#cbd5e1',
+                fontSize: '0.85rem',
                 outline: 'none',
                 boxSizing: 'border-box',
                 fontFamily: 'inherit',
@@ -188,11 +184,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
               htmlFor="admin-security-token"
               style={{
                 display: 'block',
-                fontSize: '0.75rem',
+                fontSize: '0.72rem',
                 textTransform: 'uppercase',
-                letterSpacing: '0.15em',
-                color: '#8d879e',
-                marginBottom: '0.6rem',
+                letterSpacing: '0.08em',
+                color: '#94a3b8',
+                marginBottom: '0.4rem',
                 fontWeight: 600,
               }}
             >
@@ -226,12 +222,12 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                 disabled={loading}
                 style={{
                   width: '100%',
-                  background: 'rgba(10, 8, 18, 0.8)',
-                  border: `1px solid ${error ? '#ff3377' : 'rgba(255, 255, 255, 0.1)'}`,
-                  borderRadius: '12px',
-                  padding: '12px 40px 12px 36px',
+                  background: '#0b1120',
+                  border: `1px solid ${error ? '#ef4444' : 'rgba(255, 255, 255, 0.12)'}`,
+                  borderRadius: '8px',
+                  padding: '10px 40px 10px 36px',
                   color: '#ffffff',
-                  fontSize: '0.95rem',
+                  fontSize: '0.9rem',
                   outline: 'none',
                   boxSizing: 'border-box',
                   transition: 'all 0.2s ease',
@@ -249,7 +245,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
-                  color: '#655e75',
+                  color: '#64748b',
                   cursor: 'pointer',
                   padding: 0,
                   display: 'flex',
@@ -265,8 +261,8 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                 style={{
                   display: 'block',
                   fontSize: '0.75rem',
-                  color: '#ff3377',
-                  marginTop: '0.5rem',
+                  color: '#f87171',
+                  marginTop: '0.4rem',
                   fontWeight: 500,
                 }}
               >
@@ -280,15 +276,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
             disabled={loading}
             style={{
               width: '100%',
-              background: 'linear-gradient(90deg, #ff3377 0%, #aa26da 100%)',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '12px',
+              background: '#4f46e5',
+              border: '1px solid #6366f1',
+              borderRadius: '8px',
+              padding: '11px',
               color: '#ffffff',
-              fontSize: '0.95rem',
+              fontSize: '0.9rem',
               fontWeight: 600,
               cursor: 'pointer',
-              boxShadow: '0 4px 15px rgba(225, 0, 255, 0.25)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2), 0 0 12px rgba(99, 102, 241, 0.25)',
               transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
@@ -311,14 +307,14 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                 <span>口令校验中...</span>
               </>
             ) : (
-              <span>进入管理大盘</span>
+              <span>登入控制台</span>
             )}
           </button>
         </form>
 
         <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.7rem', color: '#524b61', margin: 0 }}>
-            授权访问区域，所有操作将被安全遥测审计
+          <p style={{ fontSize: '0.7rem', color: '#64748b', margin: 0 }}>
+            企业受限访问区域，所有运维操作受到实时遥测与安全链审计
           </p>
         </div>
       </div>
@@ -335,8 +331,8 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
         }
         .shake-element {
           animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-          border-color: #ff3377 !important;
-          box-shadow: 0 0 15px rgba(255, 51, 119, 0.3) !important;
+          border-color: #ef4444 !important;
+          box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
         }
       `}</style>
     </div>

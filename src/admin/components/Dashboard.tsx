@@ -139,7 +139,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   if (loading && !overview) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '45vh', color: '#ff70a6', gap: '0.6rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '45vh', color: '#818cf8', gap: '0.6rem' }}>
         <RefreshCw size={18} className="spin-rotate" />
         <span>正在加载全域数据大屏...</span>
       </div>
@@ -148,12 +148,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   if (error && !overview) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '45vh', color: '#ff3377', gap: '0.8rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '45vh', color: '#f87171', gap: '0.8rem' }}>
         <AlertTriangle size={28} />
         <span>{error}</span>
         <button
           onClick={() => load()}
-          style={{ background: 'rgba(255,51,119,0.1)', border: '1px solid rgba(255,51,119,0.3)', color: '#fff', borderRadius: '10px', padding: '8px 18px', cursor: 'pointer' }}
+          style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '6px', padding: '6px 16px', cursor: 'pointer' }}
         >
           重试
         </button>
@@ -180,10 +180,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         className="glass-card"
         style={{
           padding: '1.1rem 1.3rem',
-          borderRadius: 18,
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.7) 0%, rgba(16, 8, 22, 0.85) 100%)',
-          border: '1px solid rgba(255, 112, 166, 0.2)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+          borderRadius: 12,
+          background: '#0f172a',
+          border: '1px solid var(--admin-border)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.8rem',
@@ -193,21 +193,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <FileText size={16} color="#ff70a6" />
-            <h3 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#fff', margin: 0, fontFamily: 'var(--font-heading)' }}>
+            <FileText size={16} color="#818cf8" />
+            <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
               最近成功测算生成的深度卷宗
             </h3>
           </div>
           <button
             onClick={onNavigateToUsers}
             style={{
-              background: 'rgba(255, 112, 166, 0.1)',
-              border: '1px solid rgba(255, 112, 166, 0.3)',
-              borderRadius: 8,
+              background: 'rgba(99, 102, 241, 0.1)',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
+              borderRadius: 6,
               padding: '0.25rem 0.65rem',
-              color: '#ff70a6',
+              color: '#a5b4fc',
               fontSize: '0.72rem',
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -239,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
                       transition: 'background 0.15s ease',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 112, 166, 0.06)')}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
                     <td style={{ padding: '0.6rem', color: '#fff', fontWeight: 600 }}>
@@ -258,13 +258,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <button
                         onClick={() => openDossier(d.id)}
                         style={{
-                          background: 'rgba(255, 112, 166, 0.12)',
-                          border: '1px solid rgba(255, 112, 166, 0.3)',
-                          borderRadius: 6,
+                          background: 'rgba(99, 102, 241, 0.1)',
+                          border: '1px solid rgba(99, 102, 241, 0.25)',
+                          borderRadius: 5,
                           padding: '0.2rem 0.5rem',
-                          color: '#ff70a6',
+                          color: '#a5b4fc',
                           fontSize: '0.7rem',
-                          fontWeight: 700,
+                          fontWeight: 600,
                           cursor: 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',

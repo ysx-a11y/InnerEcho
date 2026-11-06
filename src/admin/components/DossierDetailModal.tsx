@@ -90,7 +90,7 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
           style={{
             padding: '1rem 1.5rem',
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            background: 'rgba(12, 9, 22, 0.95)',
+            background: '#0f172a',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -103,24 +103,24 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
               <h2 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <span>卷宗全景审计报告：</span>
-                <span style={{ color: '#ff70a6' }}>{dossier.nickname || '匿名访客'}</span>
+                <span style={{ color: '#a5b4fc' }}>{dossier.nickname || '匿名访客'}</span>
               </h2>
               <span
                 style={{
                   fontSize: '0.68rem',
                   padding: '2px 7px',
                   borderRadius: '4px',
-                  background: 'rgba(128,243,255,0.1)',
-                  color: '#80f3ff',
+                  background: 'rgba(99, 102, 241, 0.1)',
+                  color: '#a5b4fc',
                   fontFamily: 'monospace',
-                  border: '1px solid rgba(128,243,255,0.2)',
+                  border: '1px solid rgba(99, 102, 241, 0.25)',
                 }}
               >
                 {dossier.id}
               </span>
             </div>
-            <p style={{ fontSize: '0.72rem', color: '#6e677c', margin: '0.25rem 0 0 0' }}>
-              提交于 {formatTime(dossier.createdAt)} · 设备: <span style={{ fontFamily: 'monospace', color: '#8d879e' }}>{dossier.deviceId || '未记录'}</span>
+            <p style={{ fontSize: '0.72rem', color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
+              提交于 {formatTime(dossier.createdAt)} · 设备: <span style={{ fontFamily: 'monospace', color: '#cbd5e1' }}>{dossier.deviceId || '未记录'}</span>
             </p>
           </div>
 
@@ -130,8 +130,8 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
               display: 'flex',
               background: 'rgba(255, 255, 255, 0.04)',
               padding: '3px',
-              borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
             }}
           >
             {[
@@ -150,13 +150,13 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
                     gap: '0.35rem',
                     padding: '0.45rem 0.9rem',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     fontSize: '0.78rem',
                     fontWeight: isSelected ? 700 : 500,
                     cursor: 'pointer',
-                    background: isSelected ? 'rgba(255, 51, 119, 0.2)' : 'transparent',
-                    color: isSelected ? '#ff70a6' : '#8d879e',
-                    borderBottom: isSelected ? '1px solid #ff70a6' : '1px solid transparent',
+                    background: isSelected ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                    color: isSelected ? '#c7d2fe' : '#94a3b8',
+                    borderBottom: isSelected ? '1px solid #6366f1' : '1px solid transparent',
                     transition: 'all 0.15s ease',
                     whiteSpace: 'nowrap',
                   }}
