@@ -11,13 +11,13 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   // publicDir 是 Vite 顶层选项，放在 build 里会被忽略并回退到默认 public/
-  publicDir: resolve(__dirname, 'public-admin'),
+  publicDir: resolve(import.meta.dirname, 'public-admin'),
   build: {
     outDir: 'dist-admin',
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        admin: resolve(__dirname, 'admin.html'),
+        admin: resolve(import.meta.dirname, 'admin.html'),
       },
       output: {
         manualChunks(id) {
