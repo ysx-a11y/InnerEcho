@@ -31,6 +31,9 @@
     "pretypecheck": "npm run gen:banks"
   },
   "dependencies": {
+    "@mantine/core": "^9.7.4",
+    "@mantine/hooks": "^9.7.4",
+    "@mantine/notifications": "^9.7.4",
     "@sentry/node": "^10.68.0",
     "@sentry/react": "^10.68.0",
     "bcryptjs": "^3.0.3",

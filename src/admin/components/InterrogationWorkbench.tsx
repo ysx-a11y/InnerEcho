@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Siren,
-  RefreshCw,
   Save,
   MessageSquare,
   Clock,
@@ -9,9 +8,11 @@ import {
   AlertCircle,
   Sparkles,
 } from 'lucide-react';
+import { Table, Badge, Paper, Text, Group, Button, Loader } from '@mantine/core';
 import { interrogationApi, formatTime } from '../adminApi';
 import type { AdminInterrogationConfig, AdminInterrogationSession } from '../adminTypes';
-import { AdminToast, type ToastMessage } from './ui/AdminToast';
+import { adminNotify } from './ui/adminNotify';
+import { AdminWorkbenchShell } from './ui/AdminWorkbenchShell';
 
 const TURN_RANGE = { min: 1, max: 20 };
 const INPUT_RANGE = { min: 64, max: 8000 };
@@ -25,9 +26,9 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  active: '#ff70a6',
-  exhausted: '#f59e0b',
-  summarized: '#34d399',
+  active: 'pink',
+  exhausted: 'yellow',
+  summarized: 'teal',
 };
 
 export const InterrogationWorkbench: React.FC = () => {
@@ -35,13 +36,6 @@ export const InterrogationWorkbench: React.FC = () => {
   const [sessions, setSessions] = useState<AdminInterrogationSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  const addToast = (type: 'success' | 'error' | 'info', content: string) => {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    setToasts((prev) => [...prev, { id, type, content }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3200);
-  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -53,7 +47,7 @@ export const InterrogationWorkbench: React.FC = () => {
       if (configRes.success) setConfig(configRes.config);
       if (sessionsRes.success) setSessions(sessionsRes.items);
     } catch {
-      addToast('error', '加载审讯室配置失败');
+      adminNotify.error('加载审讯室配置失败');
     } finally {
       setLoading(false);
     }
@@ -98,7 +92,7 @@ export const InterrogationWorkbench: React.FC = () => {
     if (!config) return;
     const error = validate();
     if (error) {
-      addToast('error', error);
+      adminNotify.error(error);
       return;
     }
     try {
@@ -112,12 +106,12 @@ export const InterrogationWorkbench: React.FC = () => {
       });
       if (res.success) {
         setConfig(res.config);
-        addToast('success', '审讯室参数已保存，下一轮对话即刻生效');
+        adminNotify.success('审讯室参数已保存，下一轮对话即刻生效');
       } else {
-        addToast('error', '保存失败，请稍后重试');
+        adminNotify.error('保存失败，请稍后重试');
       }
     } catch {
-      addToast('error', '网络异常，保存失败');
+      adminNotify.error('网络异常，保存失败');
     } finally {
       setSaving(false);
     }
@@ -133,12 +127,12 @@ export const InterrogationWorkbench: React.FC = () => {
       );
       if (res.success) {
         setConfig(res.config);
-        addToast('success', key === 'interrogatorPrompt' ? '审讯者提示词已恢复默认' : '总结提示词已恢复默认');
+        adminNotify.success(key === 'interrogatorPrompt' ? '审讯者提示词已恢复默认' : '总结提示词已恢复默认');
       } else {
-        addToast('error', '恢复默认失败，请稍后重试');
+        adminNotify.error('恢复默认失败，请稍后重试');
       }
     } catch {
-      addToast('error', '网络异常，恢复失败');
+      adminNotify.error('网络异常，恢复失败');
     } finally {
       setSaving(false);
     }
@@ -156,216 +150,232 @@ export const InterrogationWorkbench: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div className="glass-card" style={{ padding: '1rem 1.1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <Siren size={18} color="#ff70a6" />
-          <span style={{ fontWeight: 800, fontSize: '1rem', letterSpacing: '0.02em' }}>审讯室 · 测试功能</span>
-          <span
+    <AdminWorkbenchShell
+      title="审讯室 · 测试功能"
+      description={`用户最多交互 ${config?.maxTurns ?? 5} 轮。每轮输入/输出预算为成本护栏，提示词保存后下一轮即刻生效。`}
+      icon={<Siren size={20} />}
+      loading={loading}
+      onRefresh={loadData}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {loading && !config ? (
+          <Paper p="xl" radius="lg" withBorder style={{ textAlign: 'center', background: 'rgba(25, 20, 35, 0.65)' }}>
+            <Group justify="center" gap="xs">
+              <Loader size="sm" color="pink" />
+              <Text size="sm" c="dimmed">正在读取配置…</Text>
+            </Group>
+          </Paper>
+        ) : (
+          <Paper
+            p="md"
+            radius="lg"
+            withBorder
             style={{
-              fontSize: '0.62rem',
-              padding: '1px 7px',
-              borderRadius: 999,
-              border: '1px solid rgba(255, 112, 166, 0.5)',
-              color: '#ffb0c4',
-              background: 'rgba(255, 112, 166, 0.1)',
-              fontWeight: 700,
+              background: 'rgba(25, 20, 35, 0.65)',
+              borderColor: 'rgba(255, 255, 255, 0.08)',
             }}
           >
-            实验
-          </span>
-          <button
-            type="button"
-            className="admin-button"
-            onClick={loadData}
-            disabled={loading}
-            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <RefreshCw size={13} className={loading ? 'admin-spin' : undefined} />
-            刷新
-          </button>
-        </div>
-        <p style={{ margin: '0.55rem 0 0', fontSize: '0.78rem', color: 'rgba(245, 233, 243, 0.62)', lineHeight: 1.6 }}>
-          用户在前端的审讯室最多交互 <b>{config?.maxTurns ?? 5}</b> 轮，之后显示「暂未开放」。这里的输入 / 输出 token
-          预算是每轮的成本护栏：输入超预算直接拒绝，输出超预算会被截断。审讯者与总结的提示词也在本页维护，保存后下一轮对话即刻生效。
-        </p>
-      </div>
-
-      {loading && !config ? (
-        <div className="glass-card" style={{ padding: '1.6rem', textAlign: 'center', color: 'rgba(245, 233, 243, 0.6)' }}>
-          <RefreshCw size={18} className="admin-spin" /> 正在读取配置…
-        </div>
-      ) : (
-        <div className="glass-card" style={{ padding: '1rem 1.1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.85rem' }}>
-            <Sparkles size={15} color="#ff70a6" />
-            <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>对话参数</span>
-            <span style={{ fontSize: '0.7rem', color: 'rgba(245, 233, 243, 0.5)' }}>
-              改完保存即可，无需发版
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontSize: '0.75rem', color: 'rgba(245, 233, 243, 0.72)' }}>
-                对话轮数上限（{TURN_RANGE.min}-{TURN_RANGE.max}）
-              </span>
-              <input
-                type="number"
-                min={TURN_RANGE.min}
-                max={TURN_RANGE.max}
-                value={config?.maxTurns ?? ''}
-                onChange={(event) => updateField('maxTurns', event.target.value)}
-                style={inputStyle}
-              />
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontSize: '0.75rem', color: 'rgba(245, 233, 243, 0.72)' }}>
-                允许输入 token（{INPUT_RANGE.min}-{INPUT_RANGE.max}）
-              </span>
-              <input
-                type="number"
-                min={INPUT_RANGE.min}
-                max={INPUT_RANGE.max}
-                step={64}
-                value={config?.maxInputTokens ?? ''}
-                onChange={(event) => updateField('maxInputTokens', event.target.value)}
-                style={inputStyle}
-              />
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontSize: '0.75rem', color: 'rgba(245, 233, 243, 0.72)' }}>
-                允许输出 token（{OUTPUT_RANGE.min}-{OUTPUT_RANGE.max}）
-              </span>
-              <input
-                type="number"
-                min={OUTPUT_RANGE.min}
-                max={OUTPUT_RANGE.max}
-                step={32}
-                value={config?.maxOutputTokens ?? ''}
-                onChange={(event) => updateField('maxOutputTokens', event.target.value)}
-                style={inputStyle}
-              />
-            </label>
-          </div>
-          <div style={{ marginTop: '1.15rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={15} color="#ff70a6" />
-              <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>提示词</span>
-              <span style={{ fontSize: '0.7rem', color: 'rgba(245, 233, 243, 0.5)' }}>留空 = 默认；保存后下一轮生效</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.85rem' }}>
+              <Sparkles size={16} color="#ff70a6" />
+              <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>参数与提示词配置</span>
             </div>
-            {([
-              { key: 'interrogatorPrompt', label: '审讯者提示词', limit: PROMPT_LIMITS.interrogatorPrompt, rows: 10 },
-              { key: 'summaryPrompt', label: '总结提示词', limit: PROMPT_LIMITS.summaryPrompt, rows: 4 },
-            ] as const).map((item) => (
-              <div key={item.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '0.75rem', color: 'rgba(245, 233, 243, 0.72)' }}>{item.label}</span>
-                  <span
-                    style={{
-                      fontSize: '0.66rem',
-                      marginLeft: 'auto',
-                      color:
-                        config && config[item.key].length > item.limit
-                          ? '#f87171'
-                          : 'rgba(245, 233, 243, 0.4)',
-                    }}
-                  >
-                    {config?.[item.key].length ?? 0} / {item.limit}
-                  </span>
-                  <button
-                    type="button"
-                    className="admin-button"
-                    onClick={() => void handleResetPrompt(item.key)}
-                    disabled={saving}
-                    style={{ fontSize: '0.68rem', padding: '2px 8px' }}
-                  >
-                    恢复默认
-                  </button>
-                </div>
-                <textarea
-                  value={config?.[item.key] ?? ''}
-                  onChange={(event) => updatePrompt(item.key, event.target.value)}
-                  rows={item.rows}
-                  spellCheck={false}
-                  style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, fontFamily: 'inherit' }}
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '0.8rem',
+                marginBottom: '1rem',
+              }}
+            >
+              <div>
+                <label style={{ display: 'block', fontSize: '0.74rem', color: 'rgba(245, 233, 243, 0.65)', marginBottom: 4 }}>
+                  最大交互轮数（{TURN_RANGE.min}-{TURN_RANGE.max}）
+                </label>
+                <input
+                  type="number"
+                  min={TURN_RANGE.min}
+                  max={TURN_RANGE.max}
+                  value={config?.maxTurns ?? 5}
+                  onChange={(event) => updateField('maxTurns', event.target.value)}
+                  style={inputStyle}
                 />
               </div>
-            ))}
-            <p style={{ margin: 0, fontSize: '0.7rem', color: 'rgba(245, 233, 243, 0.45)', lineHeight: 1.6 }}>
-              审讯者提示词里的 {'{{dossier}}'} 会被替换成来访者档案；不写这个占位符也会自动把档案追加在末尾。
-              提示词只影响之后的新对话，已经生成的回复与总结不会改写。
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.9rem' }}>
-            <button
-              type="button"
-              className="admin-button admin-button-primary"
-              onClick={handleSave}
-              disabled={saving}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            >
-              <Save size={14} />
-              {saving ? '保存中…' : '保存参数'}
-            </button>
-            {config?.updatedAt && (
-              <span style={{ fontSize: '0.7rem', color: 'rgba(245, 233, 243, 0.45)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <Clock size={12} /> 上次保存：{formatTime(config.updatedAt)}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
 
-      <div className="glass-card" style={{ padding: '1rem 1.1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.8rem' }}>
-          <MessageSquare size={15} color="#ff70a6" />
-          <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>最近审讯会话</span>
-          <span style={{ fontSize: '0.7rem', color: 'rgba(245, 233, 243, 0.5)' }}>只读，最近 30 条</span>
-        </div>
-        {sessions.length === 0 ? (
-          <div style={{ padding: '1.2rem 0', textAlign: 'center', fontSize: '0.8rem', color: 'rgba(245, 233, 243, 0.45)' }}>
-            <AlertCircle size={16} /> 还没有人进过审讯室
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-              <thead>
-                <tr style={{ color: 'rgba(245, 233, 243, 0.55)', textAlign: 'left' }}>
-                  <th style={{ padding: '0.45rem 0.4rem', fontWeight: 600 }}>用户</th>
-                  <th style={{ padding: '0.45rem 0.4rem', fontWeight: 600 }}>状态</th>
-                  <th style={{ padding: '0.45rem 0.4rem', fontWeight: 600 }}>轮次</th>
-                  <th style={{ padding: '0.45rem 0.4rem', fontWeight: 600 }}>开始</th>
-                  <th style={{ padding: '0.45rem 0.4rem', fontWeight: 600 }}>总结</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map((session) => (
-                  <tr key={session.id} style={{ borderTop: '1px solid rgba(255, 112, 166, 0.12)' }}>
-                    <td style={{ padding: '0.5rem 0.4rem' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <User size={12} color="rgba(245, 233, 243, 0.5)" />
-                        {session.email || session.userId}
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.5rem 0.4rem', color: STATUS_COLOR[session.status] || '#f5e9f3' }}>
-                      {STATUS_LABEL[session.status] || session.status}
-                    </td>
-                    <td style={{ padding: '0.5rem 0.4rem' }}>{session.turnCount}</td>
-                    <td style={{ padding: '0.5rem 0.4rem', color: 'rgba(245, 233, 243, 0.7)' }}>
-                      {formatTime(session.createdAt)}
-                    </td>
-                    <td style={{ padding: '0.5rem 0.4rem', color: 'rgba(245, 233, 243, 0.7)' }}>
-                      {session.summaryGeneratedAt ? formatTime(session.summaryGeneratedAt) : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.74rem', color: 'rgba(245, 233, 243, 0.65)', marginBottom: 4 }}>
+                  单轮输入 token 上限（{INPUT_RANGE.min}-{INPUT_RANGE.max}）
+                </label>
+                <input
+                  type="number"
+                  min={INPUT_RANGE.min}
+                  max={INPUT_RANGE.max}
+                  step={64}
+                  value={config?.maxInputTokens ?? 1200}
+                  onChange={(event) => updateField('maxInputTokens', event.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.74rem', color: 'rgba(245, 233, 243, 0.65)', marginBottom: 4 }}>
+                  单轮输出 token 上限（{OUTPUT_RANGE.min}-{OUTPUT_RANGE.max}）
+                </label>
+                <input
+                  type="number"
+                  min={OUTPUT_RANGE.min}
+                  max={OUTPUT_RANGE.max}
+                  step={32}
+                  value={config?.maxOutputTokens ?? 300}
+                  onChange={(event) => updateField('maxOutputTokens', event.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {[
+                {
+                  key: 'interrogatorPrompt' as const,
+                  title: '审讯者系统提示词',
+                  limit: PROMPT_LIMITS.interrogatorPrompt,
+                  rows: 9,
+                },
+                {
+                  key: 'summaryPrompt' as const,
+                  title: '总结系统提示词',
+                  limit: PROMPT_LIMITS.summaryPrompt,
+                  rows: 4,
+                },
+              ].map((item) => (
+                <div key={item.key}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: '0.74rem', color: 'rgba(245, 233, 243, 0.75)', fontWeight: 600 }}>
+                      {item.title}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '0.68rem',
+                        color:
+                          (config?.[item.key].length ?? 0) > item.limit
+                            ? '#ff6b81'
+                            : 'rgba(245, 233, 243, 0.4)',
+                      }}
+                    >
+                      {config?.[item.key].length ?? 0} / {item.limit}
+                    </span>
+                    <Button
+                      variant="subtle"
+                      size="compact-xs"
+                      color="gray"
+                      onClick={() => void handleResetPrompt(item.key)}
+                      disabled={saving}
+                    >
+                      恢复默认
+                    </Button>
+                  </div>
+                  <textarea
+                    value={config?.[item.key] ?? ''}
+                    onChange={(event) => updatePrompt(item.key, event.target.value)}
+                    rows={item.rows}
+                    spellCheck={false}
+                    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, fontFamily: 'inherit' }}
+                  />
+                </div>
+              ))}
+              <Text size="xs" c="dimmed">
+                审讯者提示词里的 {'{{dossier}}'} 会被替换成来访者档案；不写这个占位符也会自动把档案追加在末尾。
+              </Text>
+            </div>
+
+            <Group mt="md" gap="sm">
+              <Button
+                color="pink"
+                size="xs"
+                radius="md"
+                onClick={handleSave}
+                disabled={saving}
+                leftSection={saving ? <Loader size={12} color="white" /> : <Save size={13} />}
+              >
+                {saving ? '保存中…' : '保存参数'}
+              </Button>
+              {config?.updatedAt && (
+                <Text size="xs" c="dimmed">
+                  <Clock size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
+                  上次保存：{formatTime(config.updatedAt)}
+                </Text>
+              )}
+            </Group>
+          </Paper>
         )}
-      </div>
 
-      <AdminToast toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((toast) => toast.id !== id))} />
-    </div>
+        <Paper
+          p="md"
+          radius="lg"
+          withBorder
+          style={{
+            background: 'rgba(25, 20, 35, 0.65)',
+            borderColor: 'rgba(255, 255, 255, 0.08)',
+          }}
+        >
+          <Group justify="space-between" mb="xs">
+            <Group gap="xs">
+              <MessageSquare size={16} color="#ff70a6" />
+              <Text size="sm" fw={700}>最近审讯会话</Text>
+            </Group>
+            <Text size="xs" c="dimmed">只读，最近 30 条</Text>
+          </Group>
+
+          {sessions.length === 0 ? (
+            <Text py="xl" ta="center" size="sm" c="dimmed">
+              <AlertCircle size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+              还没有人进过审讯室
+            </Text>
+          ) : (
+            <Table.ScrollContainer minWidth={500}>
+              <Table highlightOnHover verticalSpacing="xs">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>用户</Table.Th>
+                    <Table.Th>状态</Table.Th>
+                    <Table.Th>轮次</Table.Th>
+                    <Table.Th>开始时间</Table.Th>
+                    <Table.Th>总结生成时间</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {sessions.map((session) => (
+                    <Table.Tr key={session.id}>
+                      <Table.Td>
+                        <Group gap={6} wrap="nowrap">
+                          <User size={12} color="rgba(245, 233, 243, 0.5)" />
+                          <Text size="xs">{session.email || session.userId}</Text>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge size="xs" variant="light" color={STATUS_COLOR[session.status] || 'gray'}>
+                          {STATUS_LABEL[session.status] || session.status}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs">{session.turnCount}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" c="dimmed">{formatTime(session.createdAt)}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" c="dimmed">
+                          {session.summaryGeneratedAt ? formatTime(session.summaryGeneratedAt) : '—'}
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
+          )}
+        </Paper>
+      </div>
+    </AdminWorkbenchShell>
   );
 };
