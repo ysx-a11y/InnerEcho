@@ -11,6 +11,7 @@ import { dossierRowToFullDossierData } from '../services/dossierPayload.js';
 import { createBankSchema, updateBankSchema, adminBankListQuerySchema } from '../schemas.js';
 import { adminDictRouter } from './admin/adminDict.js';
 import { adminLineageRouter } from './admin/adminLineage.js';
+import { adminAiHubRouter } from './admin/adminAiHub.js';
 
 export const adminRouter = Router();
 adminRouter.use(adminSecurityAuditMiddleware);
@@ -66,6 +67,8 @@ adminRouter.post('/verify', adminLoginLimiter, requireAdmin, (_req, res) => {
 adminRouter.use('/dict', adminActionLimiter, requireAdmin, adminDictRouter);
 // 账号血缘、跨世代族谱与风控
 adminRouter.use('/users/lineage', adminActionLimiter, requireAdmin, adminLineageRouter);
+// AI 智能体与提示词中台
+adminRouter.use('/ai', adminActionLimiter, requireAdmin, adminAiHubRouter);
 
 const dossierListQuerySchema = z.object({
   search: z.string().max(100).optional().default(''),
@@ -195,7 +198,7 @@ adminRouter.get('/pending-counts', adminActionLimiter, requireAdmin, async (_req
 /** 报告提示词模板列表；只返回模板内容，不返回任何 LLM 密钥或供应商配置。 */
 adminRouter.get('/prompt-templates', adminActionLimiter, requireAdmin, async (_req, res) => {
   try {
-    const items = await db.listPromptTemplates();
+    const items = await db.listPromptTemplates('agent_dossier_analyst');
     res.json({ success: true, items, activeId: items.find((item) => item.isActive)?.id ?? null });
   } catch {
     res.status(500).json({ success: false, message: '服务器内部错误' });

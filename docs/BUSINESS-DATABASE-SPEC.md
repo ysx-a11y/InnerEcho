@@ -375,3 +375,16 @@ stateDiagram-v2
 3. **零服务端内存增量与双产物构建**：
    - 运行 `npm run build`，验证 `dist-user`（用户端纯净，无任何 Mantine 与 Admin 代码泄露）与 `dist-admin`（管理端高奢工作台）双端秒级构建成功。
 
+---
+
+## 九、 AI 智能体与提示词中台现代化架构 (AI Agent & Prompt Hub)
+
+详细业务设计、数据库字段设计与版本快照机制参见独立专项规范：[`docs/AI-AGENT-PROMPT-SPEC.md`](./AI-AGENT-PROMPT-SPEC.md)。
+
+### 9.1 核心资产整合
+- 将原本散落的卷宗诊断提示词、审讯室系统提示词与总结提示词，统一抽象为三大内置智能体：`agent_dossier_analyst`、`agent_interrogator`、`agent_interrogation_recorder`。
+- 引入不可变版本快照表 `prompt_versions`，通过 `active_version_id` 实现秒级回滚与变更审计。
+- 引入动态变量插值引擎 `sys_prompt_variables` 与防注入护栏，解耦 TS 字符串死板硬编码。
+- 提供后台 Playground 演练沙盒，免做题一键加载真实卷宗实施 Dry-Run 校验。
+
+

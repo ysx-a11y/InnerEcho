@@ -485,4 +485,86 @@ export interface AccountLineageSummary {
   updatedAt: string;
 }
 
+/** AI 智能体契约 */
+export interface AiAgentContract {
+  id: string;
+  agentKey: string;
+  name: string;
+  description: string;
+  interactionMode: 'analysis' | 'chat' | 'summary';
+  defaultModel: string;
+  temperature: number;
+  topP: number;
+  maxOutputTokens: number;
+  outputSchema: string;
+  status: string;
+  remark: string;
+  adminNotes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 提示词不可变版本快照 */
+export interface PromptVersionContract {
+  id: string;
+  templateId: string;
+  versionNum: number;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  modelParams: Record<string, unknown>;
+  changeSummary: string;
+  createdBy: string;
+  remark: string;
+  adminNotes: string;
+  createdAt: string;
+}
+
+/** 提示词动态变量元数据 */
+export interface PromptVariableContract {
+  id: string;
+  variableKey: string;
+  namespace: string;
+  label: string;
+  description: string;
+  mockValue: string;
+  remark: string;
+  adminNotes: string;
+  createdAt: string;
+}
+
+/** 沙盒试跑演练请求契约 */
+export interface PlaygroundRunRequest {
+  agentId?: string;
+  templateId?: string;
+  versionId?: string;
+  draftSystemPrompt?: string;
+  draftUserTemplate?: string;
+  modelOverride?: string;
+  temperatureOverride?: number;
+  mockSource?: 'real_dossier' | 'preset_mock';
+  dossierId?: string;
+  customVariables?: Record<string, string>;
+}
+
+/** 沙盒试跑演练响应契约 */
+export interface PlaygroundRunResponse {
+  success: boolean;
+  message?: string;
+  renderedFullPrompt: string;
+  rawResponse: string;
+  parsedJson?: Record<string, unknown> | null;
+  validation: {
+    isValid: boolean;
+    missingFields: string[];
+    issues: string[];
+  };
+  metrics: {
+    durationMs: number;
+    estimatedPromptTokens: number;
+    estimatedCompletionTokens: number;
+    model: string;
+  };
+}
+
+
 

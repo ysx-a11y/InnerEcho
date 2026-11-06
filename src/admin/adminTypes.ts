@@ -31,6 +31,14 @@ export interface AdminSecurityEventListParams {
   offset?: number;
 }
 
+export type {
+  AiAgentContract,
+  PromptVersionContract,
+  PromptVariableContract,
+  PlaygroundRunRequest,
+  PlaygroundRunResponse,
+} from '../../shared/apiContracts';
+
 export interface PromptTemplate {
   id: string;
   name: string;
@@ -39,6 +47,11 @@ export interface PromptTemplate {
   categories: string[];
   isActive: boolean;
   isBuiltin: boolean;
+  agentId?: string;
+  activeVersionId?: string | null;
+  activeVersionNum?: number | null;
+  remark?: string;
+  adminNotes?: string;
   createdAt: string;
   updatedAt: string;
 }

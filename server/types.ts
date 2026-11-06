@@ -153,6 +153,11 @@ export interface PromptTemplate {
   categories: string[];
   isActive: boolean;
   isBuiltin: boolean;
+  agentId?: string;
+  activeVersionId?: string | null;
+  activeVersionNum?: number | null;
+  remark?: string;
+  adminNotes?: string;
   createdAt: string;
   updatedAt: string;
 }

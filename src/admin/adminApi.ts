@@ -408,3 +408,96 @@ export const interrogationApi = {
       '/api/admin/interrogation/sessions?limit=' + limit
     ),
 };
+
+export const aiHubApi = {
+  listAgents: () =>
+    adminFetch<{ success: boolean; items: import('./adminTypes').AiAgentContract[] }>('/api/admin/ai/agents'),
+  updateAgent: (
+    id: string,
+    patch: Partial<
+      Pick<
+        import('./adminTypes').AiAgentContract,
+        'name' | 'description' | 'defaultModel' | 'temperature' | 'topP' | 'maxOutputTokens' | 'outputSchema' | 'status' | 'remark' | 'adminNotes'
+      >
+    >
+  ) =>
+    adminFetch<{ success: boolean; agent: import('./adminTypes').AiAgentContract }>(
+      `/api/admin/ai/agents/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: JSON.stringify(patch) }
+    ),
+  listTemplates: (agentId?: string) => {
+    const qs = agentId ? `?agentId=${encodeURIComponent(agentId)}` : '';
+    return adminFetch<{ success: boolean; items: PromptTemplate[] }>(`/api/admin/ai/templates${qs}`);
+  },
+  getTemplate: (id: string) =>
+    adminFetch<{ success: boolean; template: PromptTemplate }>(`/api/admin/ai/templates/${encodeURIComponent(id)}`),
+  createTemplate: (input: {
+    name: string;
+    description: string;
+    content: string;
+    agentId?: string;
+    categories?: string[];
+    changeSummary?: string;
+    remark?: string;
+    adminNotes?: string;
+  }) =>
+    adminFetch<{ success: boolean; template: PromptTemplate }>('/api/admin/ai/templates', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateTemplate: (
+    id: string,
+    patch: { name?: string; description?: string; content?: string; categories?: string[]; remark?: string; adminNotes?: string }
+  ) =>
+    adminFetch<{ success: boolean; template: PromptTemplate }>(`/api/admin/ai/templates/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  createVersion: (
+    templateId: string,
+    input: {
+      systemPrompt: string;
+      userPromptTemplate?: string;
+      modelParams?: Record<string, unknown>;
+      changeSummary: string;
+      remark?: string;
+      adminNotes?: string;
+    }
+  ) =>
+    adminFetch<{ success: boolean; version: import('./adminTypes').PromptVersionContract }>(
+      `/api/admin/ai/templates/${encodeURIComponent(templateId)}/versions`,
+      { method: 'POST', body: JSON.stringify(input) }
+    ),
+  listVersions: (templateId: string) =>
+    adminFetch<{ success: boolean; versions: import('./adminTypes').PromptVersionContract[] }>(
+      `/api/admin/ai/templates/${encodeURIComponent(templateId)}/versions`
+    ),
+  rollbackVersion: (
+    templateId: string,
+    input: { targetVersionId: string; adminNotes?: string; remark?: string }
+  ) =>
+    adminFetch<{ success: boolean; template: PromptTemplate; message: string }>(
+      `/api/admin/ai/templates/${encodeURIComponent(templateId)}/rollback`,
+      { method: 'POST', body: JSON.stringify(input) }
+    ),
+  activateTemplate: (id: string) =>
+    adminFetch<{ success: boolean; template: PromptTemplate }>(
+      `/api/admin/ai/templates/${encodeURIComponent(id)}/activate`,
+      { method: 'POST', body: JSON.stringify({}) }
+    ),
+  deleteTemplate: (id: string) =>
+    adminFetch<{ success: boolean }>(`/api/admin/ai/templates/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+  listVariables: (namespace?: string) => {
+    const qs = namespace ? `?namespace=${encodeURIComponent(namespace)}` : '';
+    return adminFetch<{ success: boolean; variables: import('./adminTypes').PromptVariableContract[] }>(
+      `/api/admin/ai/variables${qs}`
+    );
+  },
+  runPlayground: (data: import('./adminTypes').PlaygroundRunRequest) =>
+    adminFetch<import('./adminTypes').PlaygroundRunResponse>('/api/admin/ai/playground/run', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};

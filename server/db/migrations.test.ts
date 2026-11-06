@@ -220,11 +220,11 @@ describe('migrateDatabase', () => {
     expect(dictItemRemark?.name).toBe('remark');
     expect(transitionRemark?.name).toBe('remark');
 
-    // 验证 6 大内置字典及子项注入成功
+    // 验证内置字典及子项注入成功 (v36 包含 6 大字典，v37 新增 2 大字典)
     const dictCount = database
       .prepare("SELECT COUNT(*) as c FROM sys_dict_types")
       .get() as { c: number };
-    expect(dictCount.c).toBe(6);
+    expect(dictCount.c).toBeGreaterThanOrEqual(6);
 
     const activeUserStatus = database
       .prepare("SELECT * FROM sys_dict_items WHERE type_code = 'user_account_status' AND value = 'active'")
@@ -285,5 +285,72 @@ describe('migrateDatabase', () => {
     expect(users[0].account_status).toBe('deleted');
     expect(users[1].lineage_id).toBe(testLineage?.id);
     expect(users[1].account_status).toBe('active');
+  });
+
+  it('v37 creates ai_agents, prompt_versions, sys_prompt_variables, and links prompt_templates active_version_id', () => {
+    const database = createMemoryDatabase();
+    migrateDatabase(database);
+
+    // 1. 验证 ai_agents 表及 3 大内置智能体
+    const agents = database
+      .prepare('SELECT id, agent_key, name, interaction_mode, default_model, temperature, remark, admin_notes FROM ai_agents ORDER BY id ASC')
+      .all() as { id: string; agent_key: string; name: string; interaction_mode: string; default_model: string; temperature: number; remark: string; admin_notes: string }[];
+    expect(agents.length).toBe(3);
+
+    const analyst = agents.find((a) => a.agent_key === 'dossier_analyst');
+    expect(analyst?.name).toBe('深层卷宗解构导师');
+    expect(analyst?.interaction_mode).toBe('analysis');
+    expect(analyst?.default_model).toBe('gemini-1.5-pro');
+    expect(analyst?.temperature).toBe(0.85);
+    expect(analyst?.remark).toBeTruthy();
+
+    const interrogator = agents.find((a) => a.agent_key === 'interrogator');
+    expect(interrogator?.name).toBe('审讯室冷峻主审官');
+    expect(interrogator?.interaction_mode).toBe('chat');
+    expect(interrogator?.temperature).toBe(0.55);
+
+    // 2. 验证 prompt_templates 字段与生效版本链接
+    const templates = database
+      .prepare('SELECT id, name, agent_id, active_version_id, remark FROM prompt_templates')
+      .all() as { id: string; name: string; agent_id: string; active_version_id: string; remark: string }[];
+    expect(templates.length).toBeGreaterThanOrEqual(2);
+
+    for (const t of templates) {
+      expect(t.agent_id).toBeTruthy();
+      expect(t.active_version_id).toBeTruthy();
+    }
+
+    // 3. 验证 prompt_versions 快照记录
+    const versions = database
+      .prepare('SELECT id, template_id, version_num, system_prompt, change_summary, remark, admin_notes FROM prompt_versions')
+      .all() as { id: string; template_id: string; version_num: number; system_prompt: string; change_summary: string; remark: string; admin_notes: string }[];
+    expect(versions.length).toBeGreaterThanOrEqual(templates.length);
+    for (const v of versions) {
+      expect(v.version_num).toBe(1);
+      expect(v.system_prompt).toBeTruthy();
+      expect(v.change_summary).toBeTruthy();
+      expect(v.remark).toBeTruthy();
+    }
+
+    // 4. 验证 sys_prompt_variables
+    const promptVars = database
+      .prepare('SELECT variable_key, namespace, label, mock_value FROM sys_prompt_variables')
+      .all() as { variable_key: string; namespace: string; label: string; mock_value: string }[];
+    expect(promptVars.length).toBeGreaterThanOrEqual(10);
+    const occVar = promptVars.find((v) => v.variable_key === 'user.occupation');
+    expect(occVar?.label).toBe('真实社会职业');
+    expect(occVar?.mock_value).toBe('外企合规法务');
+
+    // 5. 验证新增的字典类型
+    const agentTypeDict = database
+      .prepare("SELECT * FROM sys_dict_types WHERE code = 'ai_agent_type'")
+      .get() as { name: string; is_system: number } | undefined;
+    expect(agentTypeDict?.name).toBe('AI 智能体类型');
+
+    const agentItems = database
+      .prepare("SELECT value, label, badge_color FROM sys_dict_items WHERE type_code = 'ai_agent_type'")
+      .all() as { value: string; label: string; badge_color: string }[];
+    expect(agentItems.map((i) => i.value)).toContain('dossier_analyst');
+    expect(agentItems.map((i) => i.value)).toContain('interrogator');
   });
 });

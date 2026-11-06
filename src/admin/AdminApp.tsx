@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   Mail,
   Siren,
+  Bot,
 } from 'lucide-react';
 import { AdminLogin } from './components/AdminLogin';
 import { Dashboard } from './components/Dashboard';
@@ -47,7 +48,7 @@ const NAV_ITEMS = [
   { id: 'echoes' as const, label: '回响审核', description: '自白审核与共鸣治理', icon: Flame },
   { id: 'mailbox' as const, label: '暗室信箱', description: '私密留言与1v1回响', icon: Mail },
   { id: 'telemetry' as const, label: '行为分析', description: '题目停留与作答分布', icon: Activity },
-  { id: 'prompts' as const, label: '提示词配置', description: '模板版本与生效策略', icon: Sparkles },
+  { id: 'prompts' as const, label: 'AI 智能体中台', description: '人设、提示词版本与沙盒演练', icon: Bot },
   { id: 'tasks' as const, label: '任务记录', description: '任务接取与特殊排位', icon: Bookmark },
   { id: 'security' as const, label: '安全审计', description: '异常访问与审计链校验', icon: ShieldAlert },
   { id: 'interrogation' as const, label: '审讯室', description: '测试功能参数与最近会话', icon: Siren },

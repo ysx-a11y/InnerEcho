@@ -1,21 +1,49 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle,
-  Check,
-  ChevronRight,
+  Tabs,
+  Paper,
+  Group,
+  Stack,
+  Text,
+  Button,
+  Badge,
+  Textarea,
+  TextInput,
+  Select,
+  Code,
+  Tooltip,
+  Alert,
+} from '@mantine/core';
+import {
+  Bot,
+  Sparkles,
+  Play,
+  Save,
+  RotateCcw,
+  Plus,
+  Trash2,
   Copy,
   FileCode2,
-  Loader2,
-  Play,
-  Plus,
-  RefreshCw,
-  Save,
-  Trash2,
+  Check,
+  AlertCircle,
+  Variable,
+  Layers,
 } from 'lucide-react';
-import { adminApi, formatTime } from '../adminApi';
-import type { PromptTemplate } from '../adminTypes';
+import { aiHubApi, adminApi, formatTime } from '../adminApi';
+import type {
+  AiAgentContract,
+  PromptTemplate,
+  PromptVariableContract,
+  PromptVersionContract,
+} from '../adminTypes';
+import { AdminWorkbenchShell } from './ui/AdminWorkbenchShell';
+import { adminNotify } from './ui/adminNotify';
 import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
-import { AdminToast, type ToastMessage } from './ui/AdminToast';
+import { PromptVariableBar } from './ai/PromptVariableBar';
+import { PromptVersionModal } from './ai/PromptVersionModal';
+import { PromptRollbackModal } from './ai/PromptRollbackModal';
+import { PromptPlayground } from './ai/PromptPlayground';
+import { AiAgentStudio } from './ai/AiAgentStudio';
 
 export const PROMPT_CATEGORY_OPTIONS: { key: string; label: string; badgeColor: string; desc: string }[] = [
   { key: 'all', label: '通用全部', badgeColor: '#a78bfa', desc: '全部分类默认兜底' },
@@ -27,7 +55,6 @@ export const PROMPT_CATEGORY_OPTIONS: { key: string; label: string; badgeColor: 
 
 const REQUIRED_OUTPUT_FIELDS = [
   'archetypeTitle',
-  'archetypeSubtitle',
   'disparityScore',
   'personaDeconstruction',
   'shadowDeconstruction',
@@ -36,24 +63,29 @@ const REQUIRED_OUTPUT_FIELDS = [
 ];
 
 export const PromptWorkbench: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>('studio');
+  const [agents, setAgents] = useState<AiAgentContract[]>([]);
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [variables, setVariables] = useState<PromptVariableContract[]>([]);
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // 编辑区状态
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [content, setContent] = useState('');
   const [categories, setCategories] = useState<string[]>(['all']);
+  const [versions, setVersions] = useState<PromptVersionContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [confirmingActivate, setConfirmingActivate] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
-  // 统一确认对话框状态
+  // 模态弹窗状态
+  const [versionModalOpen, setVersionModalOpen] = useState(false);
+  const [rollbackModalOpen, setRollbackModalOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
     title: string;
     description: string;
-    confirmText?: string;
     danger?: boolean;
     onConfirm: () => void;
   }>({
@@ -63,630 +95,451 @@ export const PromptWorkbench: React.FC = () => {
     onConfirm: () => {},
   });
 
-  // 统一 Toast 状态
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const addToast = (type: 'success' | 'error' | 'info', content: string) => {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    setToasts((prev) => [...prev, { id, type, content }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3200);
-  };
-
-  const selected = useMemo(
-    () => templates.find((item) => item.id === selectedId) ?? null,
-    [templates, selectedId]
-  );
-  const activeList = useMemo(() => templates.filter((item) => item.isActive), [templates]);
-  const active = useMemo(() => activeList[0] ?? null, [activeList]);
-  const missingFields = REQUIRED_OUTPUT_FIELDS.filter((field) => !content.includes(field));
-
-  // 校验其他生效模板占用的分类（防止重复覆盖）
-  const otherActiveTemplates = useMemo(() => {
-    return templates.filter((item) => item.isActive && item.id !== selectedId);
-  }, [templates, selectedId]);
-
-  const categoryOccupancyMap = useMemo(() => {
-    const map = new Map<string, { templateId: string; templateName: string }>();
-    for (const t of otherActiveTemplates) {
-      const cats = t.categories ?? ['all'];
-      for (const cat of cats) {
-        map.set(cat, { templateId: t.id, templateName: t.name });
-      }
-    }
-    return map;
-  }, [otherActiveTemplates]);
-
-  // 计算当前选择是否存在与其他生效模板的冲突
-  const activeConflicts = useMemo(() => {
-    const conflicts: { key: string; label: string; templateName: string }[] = [];
-    const isTargetAll = categories.includes('all');
-
-    for (const opt of PROMPT_CATEGORY_OPTIONS) {
-      if (!isTargetAll && !categories.includes(opt.key)) continue;
-
-      if (categoryOccupancyMap.has('all')) {
-        const occ = categoryOccupancyMap.get('all')!;
-        conflicts.push({ key: opt.key, label: opt.label, templateName: occ.templateName });
-      } else if (categoryOccupancyMap.has(opt.key)) {
-        const occ = categoryOccupancyMap.get(opt.key)!;
-        conflicts.push({ key: opt.key, label: opt.label, templateName: occ.templateName });
-      }
-    }
-    return conflicts;
-  }, [categories, categoryOccupancyMap]);
-
-  const isDirty = useMemo(() => {
-    if (!selected) return false;
-    const baseCats = (selected.categories ?? ['all']).slice().sort().join(',');
-    const currCats = categories.slice().sort().join(',');
-    return (
-      selected.name !== name ||
-      selected.description !== description ||
-      selected.content !== content ||
-      baseCats !== currCats
-    );
-  }, [selected, name, description, content, categories]);
-
-  const applyTemplate = (template: PromptTemplate) => {
-    setSelectedId(template.id);
-    setName(template.name);
-    setDescription(template.description);
-    setContent(template.content);
-    setCategories(Array.isArray(template.categories) && template.categories.length > 0 ? template.categories : ['all']);
-    setConfirmingActivate(false);
-    setNotice(null);
-  };
-
-  const toggleCategory = (key: string) => {
-    if (key === 'all') {
-      setCategories((prev) => (prev.includes('all') ? [] : ['all']));
-      return;
-    }
-
-    setCategories((prev) => {
-      const withoutAll = prev.filter((c) => c !== 'all');
-      if (withoutAll.includes(key)) {
-        return withoutAll.filter((c) => c !== key);
-      }
-      return [...withoutAll, key];
-    });
-  };
-
-  const load = useCallback(async (preferredId?: string) => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
-      const response = await adminApi.promptTemplates();
-      setTemplates(response.items);
-      const next = response.items.find((item) => item.id === preferredId)
-        ?? response.items.find((item) => item.id === selectedId)
-        ?? response.items.find((item) => item.isActive)
-        ?? response.items[0];
-      if (next) applyTemplate(next);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '提示词模板加载失败');
+      const [agentsRes, tmplRes, varsRes] = await Promise.all([
+        aiHubApi.listAgents(),
+        aiHubApi.listTemplates(),
+        aiHubApi.listVariables(),
+      ]);
+
+      if (agentsRes.success) setAgents(agentsRes.items);
+      if (tmplRes.success) {
+        setTemplates(tmplRes.items);
+        if (!selectedId && tmplRes.items.length > 0) {
+          const activeFirst = tmplRes.items.find((t) => t.isActive) || tmplRes.items[0];
+          setSelectedId(activeFirst.id);
+        }
+      }
+      if (varsRes.success) setVariables(varsRes.variables);
+    } catch {
+      adminNotify.error('加载 AI 智能体与提示词中台数据失败');
     } finally {
       setLoading(false);
     }
   }, [selectedId]);
 
   useEffect(() => {
-    void load();
-    // Initial fetch only; later refreshes are explicit so unsaved edits are not overwritten.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void loadData();
+  }, [loadData]);
 
-  const handleSelect = (template: PromptTemplate) => {
-    if (isDirty) {
-      setConfirmConfig({
-        isOpen: true,
-        title: '放弃未保存修改',
-        description: '当前模板有未保存的修改，确定切换到其他模板吗？未保存的内容将丢失。',
-        confirmText: '确定切换',
-        danger: false,
-        onConfirm: () => {
-          setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
-          applyTemplate(template);
-        },
+  // 当选择不同模板时，同步加载表单与版本历史
+  useEffect(() => {
+    if (!selectedId) return;
+    const current = templates.find((t) => t.id === selectedId);
+    if (current) {
+      setName(current.name);
+      setDescription(current.description || '');
+      setContent(current.content);
+      setCategories(current.categories || ['all']);
+
+      // 异步加载该模板的版本历史
+      void aiHubApi.listVersions(selectedId).then((res) => {
+        if (res.success) setVersions(res.versions);
       });
-      return;
     }
-    applyTemplate(template);
+  }, [selectedId, templates]);
+
+  const selected = useMemo(
+    () => templates.find((item) => item.id === selectedId) ?? null,
+    [templates, selectedId]
+  );
+
+  const filteredTemplates = useMemo(() => {
+    if (selectedAgentFilter === 'all') return templates;
+    return templates.filter((t) => (t.agentId || 'agent_dossier_analyst') === selectedAgentFilter);
+  }, [templates, selectedAgentFilter]);
+
+  const missingFields = useMemo(() => {
+    if (selected?.agentId && selected.agentId !== 'agent_dossier_analyst') return [];
+    return REQUIRED_OUTPUT_FIELDS.filter((field) => !content.includes(field));
+  }, [content, selected]);
+
+  // 插入动态变量
+  const handleInsertVariable = (placeholder: string) => {
+    setContent((prev) => `${prev} ${placeholder} `);
+    adminNotify.info(`已插入变量 ${placeholder}`);
   };
 
-  const handleSave = async () => {
-    if (!selected) return;
+  // 保存当前草稿更改
+  const handleDraftSave = async () => {
+    if (!selectedId) return;
     setSaving(true);
-    setError(null);
     try {
-      const response = await adminApi.updatePromptTemplate(selected.id, {
-        name,
-        description,
+      const res = await aiHubApi.updateTemplate(selectedId, {
+        name: name.trim(),
+        description: description.trim(),
         content,
         categories,
       });
-      setTemplates((items) => items.map((item) => (item.id === response.template.id ? response.template : item)));
-      applyTemplate(response.template);
-      addToast('success', '模板与分类绑定已成功保存');
-    } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '保存失败');
+      if (res.success) {
+        adminNotify.success('模板草稿保存成功');
+        await loadData();
+      }
+    } catch {
+      adminNotify.error('保存失败');
     } finally {
       setSaving(false);
     }
   };
 
+  // 固化新版本快照
+  const handleCreateSnapshot = async (data: { changeSummary: string; remark: string; adminNotes: string }) => {
+    if (!selectedId) return;
+    const res = await aiHubApi.createVersion(selectedId, {
+      systemPrompt: content,
+      changeSummary: data.changeSummary,
+      remark: data.remark,
+      adminNotes: data.adminNotes,
+    });
+    if (res.success) {
+      adminNotify.success(`成功生成版本 v${res.version.versionNum} 快照`);
+      await loadData();
+    }
+  };
+
+  // 一键回滚
+  const handleRollback = async (data: { targetVersionId: string; adminNotes: string; remark: string }) => {
+    if (!selectedId) return;
+    const res = await aiHubApi.rollbackVersion(selectedId, data);
+    if (res.success) {
+      adminNotify.success(res.message || '回滚完成');
+      await loadData();
+    }
+  };
+
+  // 复制为新模板
   const handleDuplicate = async () => {
-    if (!content.trim()) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const response = await adminApi.createPromptTemplate({
-        name: `${name || '未命名模板'} · 副本`,
-        description,
-        content,
-        categories,
-      });
-      addToast('success', '已创建新模板，当前仍未生效');
-      await load(response.template.id);
-    } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '创建模板失败');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCreate = async () => {
-    const base = active ?? selected;
-    if (!base) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const response = await adminApi.createPromptTemplate({
-        name: '新提示词模板',
-        description: '未绑定分类（仅存盘备用），可选择分类绑定并手动启用。',
-        content: base.content,
-        categories: [],
-      });
-      await load(response.template.id);
-      addToast('success', '新模板已创建（未绑定分类）');
-    } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '创建模板失败');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleActivate = async () => {
     if (!selected) return;
-    if (categories.length === 0) {
-      addToast('error', '未绑定分类的模板不能启用，请先选择至少一个应用分类。');
-      return;
-    }
-    if (isDirty) {
-      addToast('error', '请先保存当前修改与分类选择，再启用模板。');
-      return;
-    }
-    if (!confirmingActivate) {
-      setConfirmingActivate(true);
-      setNotice(null);
-      return;
-    }
-    setSaving(true);
-    setError(null);
     try {
-      const response = await adminApi.activatePromptTemplate(selected.id);
-      setTemplates((items) =>
-        items.map((item) => ({
-          ...item,
-          isActive: item.id === response.template.id,
-          updatedAt: item.id === response.template.id ? response.template.updatedAt : item.updatedAt,
-        }))
-      );
-      addToast('success', '模板已启用，测评该分类题库时将立即生效');
-      setConfirmingActivate(false);
-      await load(selected.id);
-    } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '启用失败');
-    } finally {
-      setSaving(false);
+      const res = await aiHubApi.createTemplate({
+        name: `${selected.name} (副本)`,
+        description: selected.description,
+        content,
+        agentId: selected.agentId,
+        categories: selected.categories,
+        changeSummary: `复制自 ${selected.name}`,
+      });
+      if (res.success) {
+        adminNotify.success('成功创建副本模板');
+        setSelectedId(res.template.id);
+        await loadData();
+      }
+    } catch {
+      adminNotify.error('复制模板失败');
     }
   };
 
-  const handleDelete = async () => {
-    if (!selected || selected.isActive || selected.isBuiltin) return;
+  // 激活模板
+  const handleActivate = async () => {
+    if (!selectedId) return;
+    try {
+      const res = await aiHubApi.activateTemplate(selectedId);
+      if (res.success) {
+        adminNotify.success('模板已设为当前生效');
+        await loadData();
+      }
+    } catch {
+      adminNotify.error('激活模板失败');
+    }
+  };
+
+  // 删除模板
+  const handleDelete = () => {
+    if (!selectedId || !selected) return;
     setConfirmConfig({
       isOpen: true,
-      title: '删除提示词模板',
-      description: `确定删除模板“${selected.name}”吗？此操作不可恢复。`,
-      confirmText: '确认删除',
+      title: '确认删除提示词模板',
+      description: `确定要彻底删除模板【${selected.name}】及其所有历史快照吗？此操作不可逆。`,
       danger: true,
       onConfirm: async () => {
-        setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
-        setSaving(true);
         try {
-          await adminApi.deletePromptTemplate(selected.id);
-          addToast('success', '模板已成功删除');
-          setSelectedId(null);
-          await load(active?.id);
-        } catch (err) {
-          addToast('error', err instanceof Error ? err.message : '删除失败');
-        } finally {
-          setSaving(false);
+          const res = await aiHubApi.deleteTemplate(selectedId);
+          if (res.success) {
+            adminNotify.success('模板删除成功');
+            setSelectedId(null);
+            await loadData();
+          }
+        } catch (err: unknown) {
+          adminNotify.error(err instanceof Error ? err.message : '删除失败');
         }
       },
     });
   };
 
-  if (loading && templates.length === 0) {
-    return <div className="admin-empty-state"><Loader2 className="admin-spin" size={22} />正在读取提示词配置…</div>;
-  }
-
   return (
-    <div className="prompt-workbench">
-      <div className="prompt-top-banner">
-        <div className="prompt-active-summary-bar">
-          <div className="prompt-active-indicator">
-            <span className="admin-status-dot" />
-            <span style={{ fontSize: '0.78rem', color: 'var(--admin-text-secondary)' }}>生效中模板调度 ({activeList.length})：</span>
-            <strong style={{ fontSize: '0.82rem', color: '#fff' }}>{active ? active.name : '未设置'}</strong>
-          </div>
-          <div className="prompt-active-categories-flow">
-            {activeList.map((a) => {
-              const catLabels = (a.categories && a.categories.length > 0)
-                ? a.categories.map((k) => PROMPT_CATEGORY_OPTIONS.find((o) => o.key === k)?.label ?? k).join('、')
-                : '通用全部';
-              return (
-                <span key={a.id} className="prompt-active-flow-chip">
-                  <em style={{ fontStyle: 'normal', color: 'var(--admin-accent)' }}>{catLabels}</em>
-                  <span>: {a.name}</span>
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+    <AdminWorkbenchShell
+      title="AI 智能体与提示词中台 (AI Agent & Prompt Hub)"
+      description="统一管理卷宗解构师、审讯室主审官人设、不可变版本快照、秒级回滚与沙盒演练场"
+      icon={<Bot size={22} color="#ff70a6" />}
+      loading={loading}
+      onRefresh={loadData}
+    >
+      <Tabs value={activeTab} onChange={(val) => setActiveTab(val || 'studio')} mb="lg">
+        <Tabs.List>
+          <Tabs.Tab value="studio" leftSection={<Sparkles size={14} color="#ff70a6" />}>
+            提示词版本工坊
+          </Tabs.Tab>
+          <Tabs.Tab value="playground" leftSection={<Play size={14} color="#80f3ff" />}>
+            沙盒演练场 (Playground)
+          </Tabs.Tab>
+          <Tabs.Tab value="agents" leftSection={<Bot size={14} color="#a78bfa" />}>
+            智能体超参数配置
+          </Tabs.Tab>
+        </Tabs.List>
 
-      {error && <div className="admin-alert admin-alert-error"><AlertTriangle size={16} />{error}</div>}
-      {notice && <div className="admin-alert admin-alert-success"><Check size={16} />{notice}</div>}
-
-      <div className="prompt-layout">
-        <aside className="prompt-library admin-panel">
-          <div className="admin-panel-header">
-            <div>
-              <span className="admin-panel-title">模板库</span>
-              <small>{templates.length} 个版本</small>
-            </div>
-            <button className="admin-icon-button" onClick={handleCreate} disabled={saving} title="新建模板">
-              <Plus size={17} />
-            </button>
-          </div>
-
-          <div className="prompt-template-list">
-            {templates.map((template) => (
-              <button
-                key={template.id}
-                className={`prompt-template-item ${selectedId === template.id ? 'is-selected' : ''}`}
-                onClick={() => handleSelect(template)}
-              >
-                <span className="prompt-template-icon"><FileCode2 size={16} /></span>
-                <span className="prompt-template-copy">
-                  <strong>{template.name}</strong>
-                  <small>{template.description || '没有说明'}</small>
-                  <div className="prompt-template-categories">
-                    {(template.categories && template.categories.length > 0) ? (
-                      template.categories.map((catKey) => {
-                        const opt = PROMPT_CATEGORY_OPTIONS.find((c) => c.key === catKey) ?? {
-                          label: catKey,
-                          badgeColor: '#999',
-                        };
-                        return (
-                          <span
-                            key={catKey}
-                            className="prompt-category-badge"
-                            style={{
-                              color: opt.badgeColor,
-                              borderColor: `${opt.badgeColor}44`,
-                              backgroundColor: `${opt.badgeColor}15`,
-                            }}
-                          >
-                            {opt.label}
-                          </span>
-                        );
-                      })
-                    ) : (
-                      <span
-                        className="prompt-category-badge is-unassigned"
-                        style={{
-                          color: 'var(--admin-text-muted)',
-                          borderColor: 'rgba(255, 255, 255, 0.12)',
-                          backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                        }}
-                      >
-                        未绑定分类
-                      </span>
-                    )}
-                  </div>
-                  <span>
-                    {template.isActive && <em>生效中</em>}
-                    {template.isBuiltin && <em className="is-muted">内置</em>}
-                    <time>{formatTime(template.updatedAt).slice(0, 10)}</time>
-                  </span>
-                </span>
-                <ChevronRight size={15} />
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <main className="prompt-editor admin-panel">
-          {selected ? (
-            <>
-              {/* 顶部主操作栏：标题状态与所有核心按钮（删除、另存副本、保存、启用）一字排开 */}
-              <div className="prompt-editor-toolbar">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-                  <span className="admin-panel-title">编辑模板</span>
-                  {selected.isActive ? (
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#70dcb4', background: 'rgba(79, 209, 161, 0.15)', border: '1px solid rgba(79, 209, 161, 0.35)', padding: '0.18rem 0.55rem', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Check size={12} strokeWidth={3} /> 生效运行中
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '0.68rem', color: 'var(--admin-text-muted)', background: 'rgba(255, 255, 255, 0.05)', padding: '0.18rem 0.55rem', borderRadius: 6 }}>
-                      草稿未启用
-                    </span>
-                  )}
-                  {isDirty && (
-                    <small style={{ color: '#ffb300', fontSize: '0.72rem', fontWeight: 700 }}>• 有未保存修改</small>
-                  )}
-                </div>
-
-                <div className="admin-button-row" style={{ flexWrap: 'wrap' }}>
-                  {/* 刷新 */}
-                  <button className="admin-button admin-button-quiet" onClick={() => void load(selected.id)} disabled={saving || isDirty} title="刷新">
-                    <RefreshCw size={14} />刷新
-                  </button>
-
-                  {/* 另存副本 */}
-                  <button className="admin-button admin-button-quiet" onClick={handleDuplicate} disabled={saving} title="另存副本">
-                    <Copy size={14} />另存副本
-                  </button>
-
-                  {/* 删除模板 */}
-                  <button
-                    className="admin-button admin-button-danger"
-                    onClick={handleDelete}
-                    disabled={saving || selected.isActive || selected.isBuiltin}
-                    title={selected.isActive ? '生效中的模板不能删除' : selected.isBuiltin ? '内置模板不能删除' : '删除模板'}
-                  >
-                    <Trash2 size={14} />删除
-                  </button>
-
-                  {/* 保存 */}
-                  <button
-                    className="admin-button admin-button-primary"
-                    onClick={handleSave}
-                    disabled={saving || !isDirty}
-                  >
-                    {saving ? <Loader2 className="admin-spin" size={14} /> : <Save size={14} />}保存
-                  </button>
-
-                  {/* 启用按钮 */}
-                  {confirmingActivate && (
-                    <button
-                      className="admin-button admin-button-quiet"
-                      onClick={() => setConfirmingActivate(false)}
-                      disabled={saving}
-                    >
-                      取消
-                    </button>
-                  )}
-                  <button
-                    className="admin-button admin-button-activate"
-                    onClick={handleActivate}
-                    disabled={saving || selected.isActive || categories.length === 0}
-                    title={categories.length === 0 ? '未绑定分类的模板不能启用，请先选择至少一个应用分类' : undefined}
-                    style={{ fontWeight: 800 }}
-                  >
-                    {selected.isActive ? <Check size={14} strokeWidth={2.5} /> : <Play size={14} />}
-                    {selected.isActive ? '已生效' : confirmingActivate ? '确认启用' : '启用此模板'}
-                  </button>
-                </div>
-              </div>
-
-              {/* 紧凑配置栏：单行名称与说明 + 简洁分类标签 */}
-              <div style={{ padding: '0.75rem 1rem 0.6rem', display: 'flex', flexDirection: 'column', gap: '0.55rem', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 0.9fr) minmax(240px, 1.4fr)', gap: '0.75rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ color: 'var(--admin-text-secondary)', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      模板名称:
-                    </span>
-                    <input
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      placeholder="输入提示词模板名称..."
-                      maxLength={80}
-                      style={{
-                        width: '100%',
-                        padding: '0.38rem 0.65rem',
-                        fontSize: '0.78rem',
-                        borderRadius: 6,
-                        background: 'rgba(10, 5, 18, 0.85)',
-                        border: '1px solid var(--admin-border)',
-                        color: '#f3e8ff',
-                        outline: 'none',
-                      }}
-                    />
-                  </label>
-
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ color: 'var(--admin-text-secondary)', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      用途说明:
-                    </span>
-                    <input
-                      value={description}
-                      onChange={(event) => setDescription(event.target.value)}
-                      placeholder="说明适用场景..."
-                      maxLength={300}
-                      style={{
-                        width: '100%',
-                        padding: '0.38rem 0.65rem',
-                        fontSize: '0.78rem',
-                        borderRadius: 6,
-                        background: 'rgba(10, 5, 18, 0.85)',
-                        border: '1px solid var(--admin-border)',
-                        color: '#f3e8ff',
-                        outline: 'none',
-                      }}
-                    />
-                  </label>
-                </div>
-
-                {/* 生效分类标签 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--admin-text-secondary)', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    生效分类:
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                    {PROMPT_CATEGORY_OPTIONS.map((opt) => {
-                      const isSelected = categories.includes(opt.key);
-                      const occupied = categoryOccupancyMap.get(opt.key);
-                      const isLocked = Boolean(occupied && selected.isActive);
-                      return (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          className={`prompt-category-chip ${isSelected ? 'is-selected' : ''} ${isLocked ? 'is-locked' : ''}`}
-                          style={{
-                            borderColor: isSelected ? opt.badgeColor : undefined,
-                            backgroundColor: isSelected ? `${opt.badgeColor}22` : undefined,
-                            color: isSelected ? opt.badgeColor : undefined,
-                            padding: '0.24rem 0.55rem',
-                            fontSize: '0.72rem',
-                            borderRadius: 6,
-                          }}
-                          onClick={() => {
-                            if (isLocked && occupied) {
-                              addToast('error', `该分类已由生效模板「${occupied.templateName}」覆盖，生效中的模板不能直接占用；请先调整该模板的分类绑定。`);
-                              return;
-                            }
-                            toggleCategory(opt.key);
-                          }}
-                          title={occupied ? `已被「${occupied.templateName}」覆盖` : undefined}
-                        >
-                          <span className="prompt-category-chip-dot" style={{ backgroundColor: opt.badgeColor }} />
-                          <span>{opt.label}</span>
-                          {isSelected && <Check size={11} strokeWidth={2.5} />}
-                          {occupied && (
-                            <span className="prompt-category-occupied" style={{ fontSize: '0.58rem', padding: '0.02rem 0.3rem' }}>
-                              被占用
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-
-                    {/* 都不选 / 仅存盘备用 */}
-                    <button
-                      type="button"
-                      className={`prompt-category-chip ${selected.isActive ? 'is-locked' : ''}`}
-                      style={{
-                        borderColor: categories.length === 0 ? '#aaa' : undefined,
-                        backgroundColor: categories.length === 0 ? 'rgba(255, 255, 255, 0.12)' : undefined,
-                        color: categories.length === 0 ? '#ffffff' : 'var(--admin-text-muted)',
-                        padding: '0.24rem 0.55rem',
-                        fontSize: '0.72rem',
-                        borderRadius: 6,
-                      }}
-                      onClick={() => {
-                        if (selected.isActive) {
-                          addToast('error', '生效中的模板不能清空分类，请先调整分类绑定或停用后再清空。');
-                          return;
-                        }
-                        setCategories([]);
-                      }}
-                      title={selected.isActive ? '生效中的模板不能清空分类' : '清空绑定分类（仅存盘备用，不接管测评）'}
-                    >
-                      <span>都不选 / 仅存盘</span>
-                      {categories.length === 0 && <Check size={11} strokeWidth={2.5} />}
-                    </button>
-                  </div>
-                </div>
-
-                {activeConflicts.length > 0 && !selected.isActive && (
-                  <div
-                    style={{
-                      padding: '0.25rem 0.55rem',
-                      borderRadius: 6,
-                      background: 'rgba(255, 170, 0, 0.08)',
-                      border: '1px solid rgba(255, 170, 0, 0.25)',
-                      color: '#ffd180',
-                      fontSize: '0.68rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <AlertTriangle size={12} style={{ flexShrink: 0 }} />
-                    <span>
-                      所选分类已被使用（{activeConflicts.map((c) => `「${c.label}」由「${c.templateName}」`).join('、')}），启用将自动接管覆盖。
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* 报告生成指令 Editor 区域：全高度通透展开 */}
-              <div style={{ padding: '0.55rem 1rem 0.35rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>报告生成指令</span>
-                  {missingFields.length === 0 ? (
-                    <span style={{ fontSize: '0.65rem', color: '#70dcb4', background: 'rgba(79, 209, 161, 0.12)', padding: '0.1rem 0.4rem', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                      <Check size={10} strokeWidth={2.5} /> 结构完整
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '0.65rem', color: '#ffb300', background: 'rgba(255, 179, 0, 0.12)', padding: '0.1rem 0.4rem', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }} title={`缺少：${missingFields.join('、')}`}>
-                      <AlertTriangle size={10} /> 缺少 {missingFields.length} 个字段
-                    </span>
-                  )}
-                </div>
-                <code style={{ fontSize: '0.72rem', color: 'var(--admin-text-muted)' }}>{content.length.toLocaleString()} 字符</code>
-              </div>
-
-              <div style={{ flex: 1, padding: '0 1rem 1rem', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <textarea
-                  className="prompt-code-editor"
-                  value={content}
-                  onChange={(event) => setContent(event.target.value)}
-                  spellCheck={false}
-                  aria-label="报告生成指令"
-                  style={{
-                    flex: 1,
-                    minHeight: 520,
-                    width: '100%',
-                    boxSizing: 'border-box',
+        {/* Tab 1: 提示词工坊 */}
+        <Tabs.Panel value="studio" pt="md">
+          <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.2rem', alignItems: 'start' }}>
+            {/* 左侧：模板列表与过滤 */}
+            <Paper p="md" withBorder style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
+              <Group justify="space-between" mb="xs">
+                <Text size="xs" fw={700} c="dimmed">
+                  归属角色过滤
+                </Text>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="pink"
+                  leftSection={<Plus size={12} />}
+                  onClick={async () => {
+                    const res = await aiHubApi.createTemplate({
+                      name: '新提示词模板',
+                      description: '自定义心理学解构模板',
+                      content: '你是一位极具同理心的深层解构导师...',
+                      agentId: selectedAgentFilter === 'all' ? 'agent_dossier_analyst' : selectedAgentFilter,
+                    });
+                    if (res.success) {
+                      adminNotify.success('新建模板成功');
+                      setSelectedId(res.template.id);
+                      await loadData();
+                    }
                   }}
-                />
-              </div>
-            </>
-          ) : (
-            <div className="admin-empty-state">请选择一个模板</div>
-          )}
-        </main>
-      </div>
+                >
+                  新建模板
+                </Button>
+              </Group>
 
-      {/* 统一确认对话框 */}
+              <Select
+                size="xs"
+                mb="md"
+                data={[
+                  { value: 'all', label: '全部角色模板' },
+                  ...agents.map((a) => ({ value: a.id, label: a.name })),
+                ]}
+                value={selectedAgentFilter}
+                onChange={(val) => setSelectedAgentFilter(val || 'all')}
+              />
+
+              <Stack gap="xs">
+                {filteredTemplates.map((t) => {
+                  const isCurrent = t.id === selectedId;
+                  return (
+                    <Paper
+                      key={t.id}
+                      p="xs"
+                      withBorder
+                      onClick={() => setSelectedId(t.id)}
+                      style={{
+                        cursor: 'pointer',
+                        borderColor: isCurrent ? '#ff70a6' : 'rgba(255, 255, 255, 0.08)',
+                        backgroundColor: isCurrent ? 'rgba(255, 112, 166, 0.08)' : 'rgba(255, 255, 255, 0.01)',
+                      }}
+                    >
+                      <Group justify="space-between" mb={2}>
+                        <Text size="xs" fw={700} truncate style={{ maxWidth: '180px' }}>
+                          {t.name}
+                        </Text>
+                        <Group gap={4}>
+                          {t.isActive && (
+                            <Badge color="teal" variant="light" size="xs">
+                              生效中
+                            </Badge>
+                          )}
+                          <Badge color="pink" variant="outline" size="xs">
+                            v{t.activeVersionNum ?? 1}
+                          </Badge>
+                        </Group>
+                      </Group>
+                      <Text size="11px" c="dimmed" truncate>
+                        {t.description || '无描述'}
+                      </Text>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            </Paper>
+
+            {/* 右侧：代码编辑器、变量芯片、版本快照 */}
+            {selected ? (
+              <Paper p="md" withBorder style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
+                {/* 顶栏操作 */}
+                <Group justify="space-between" mb="md">
+                  <div>
+                    <Group gap="xs">
+                      <Text fw={700} size="md">
+                        {selected.name}
+                      </Text>
+                      {selected.isActive ? (
+                        <Badge color="teal" variant="light">
+                          当前生产生效版本 v{selected.activeVersionNum ?? 1}
+                        </Badge>
+                      ) : (
+                        <Button size="compact-xs" color="teal" variant="light" onClick={handleActivate}>
+                          设为当前生效
+                        </Button>
+                      )}
+                    </Group>
+                    <Text size="xs" c="dimmed">
+                      最后更新: {formatTime(selected.updatedAt)} | 关联版本 ID: {selected.activeVersionId}
+                    </Text>
+                  </div>
+
+                  <Group gap="xs">
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="yellow"
+                      leftSection={<RotateCcw size={12} />}
+                      onClick={() => setRollbackModalOpen(true)}
+                    >
+                      版本回滚 ({versions.length})
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="default"
+                      leftSection={<Copy size={12} />}
+                      onClick={handleDuplicate}
+                    >
+                      创建副本
+                    </Button>
+                    {!selected.isBuiltin && !selected.isActive && (
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        color="red"
+                        leftSection={<Trash2 size={12} />}
+                        onClick={handleDelete}
+                      >
+                        删除
+                      </Button>
+                    )}
+                  </Group>
+                </Group>
+
+                {/* 动态变量快捷插入芯片栏 */}
+                <PromptVariableBar variables={variables} onSelectVariable={handleInsertVariable} />
+
+                {/* 核心系统提示词编辑区 */}
+                <div style={{ position: 'relative', marginBottom: '1rem' }}>
+                  <Textarea
+                    label="系统提示词主体 (System Prompt)"
+                    description="支持使用 {{user.occupation}} 等变量占位符，运行时将安全注入并隔离"
+                    value={content}
+                    onChange={(e) => setContent(e.currentTarget.value)}
+                    minRows={16}
+                    maxRows={28}
+                    styles={{
+                      input: {
+                        fontFamily: 'monospace',
+                        fontSize: '12px',
+                        lineHeight: 1.6,
+                        backgroundColor: '#0a0d14',
+                        color: '#f1f5f9',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                      },
+                    }}
+                  />
+                </div>
+
+                {/* 契约缺失告警 */}
+                {missingFields.length > 0 && (
+                  <Alert icon={<AlertCircle size={16} />} color="yellow" mb="md">
+                    <Text size="xs">
+                      卷宗解构模型需要输出标准 JSON，当前提示词疑似遗漏必要契约字段：
+                      <strong> {missingFields.join(', ')}</strong>。请确保在提示词末尾保留 JSON 输出声明。
+                    </Text>
+                  </Alert>
+                )}
+
+                {/* 底部保存按钮组 */}
+                <Group justify="space-between" pt="xs" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    leftSection={<Save size={14} />}
+                    onClick={handleDraftSave}
+                    loading={saving}
+                  >
+                    保存临时草稿
+                  </Button>
+
+                  <Button
+                    color="pink"
+                    size="sm"
+                    leftSection={<Sparkles size={14} />}
+                    onClick={() => setVersionModalOpen(true)}
+                  >
+                    固化为新版本快照 (v{(selected.activeVersionNum ?? 1) + 1})
+                  </Button>
+                </Group>
+              </Paper>
+            ) : (
+              <Paper p="xl" withBorder style={{ textAlign: 'center' }}>
+                <Text c="dimmed">请从左侧选择一个提示词模板进行编辑</Text>
+              </Paper>
+            )}
+          </div>
+        </Tabs.Panel>
+
+        {/* Tab 2: 沙盒演练场 */}
+        <Tabs.Panel value="playground" pt="md">
+          <PromptPlayground
+            agents={agents}
+            templates={templates}
+            selectedTemplateId={selectedId}
+            currentDraftPrompt={content}
+          />
+        </Tabs.Panel>
+
+        {/* Tab 3: 智能体超参数配置 */}
+        <Tabs.Panel value="agents" pt="md">
+          <AiAgentStudio agents={agents} onReload={loadData} />
+        </Tabs.Panel>
+      </Tabs>
+
+      {/* 升版快照弹窗 */}
+      {selected && (
+        <PromptVersionModal
+          opened={versionModalOpen}
+          templateName={selected.name}
+          onClose={() => setVersionModalOpen(false)}
+          onSubmit={handleCreateSnapshot}
+        />
+      )}
+
+      {/* 版本回滚弹窗 */}
+      {selected && (
+        <PromptRollbackModal
+          opened={rollbackModalOpen}
+          templateName={selected.name}
+          versions={versions}
+          currentVersionId={selected.activeVersionId ?? null}
+          onClose={() => setRollbackModalOpen(false)}
+          onRollback={handleRollback}
+        />
+      )}
+
+      {/* 确认删除对话框 */}
       <AdminConfirmDialog
         isOpen={confirmConfig.isOpen}
         title={confirmConfig.title}
         description={confirmConfig.description}
-        confirmText={confirmConfig.confirmText}
         danger={confirmConfig.danger}
-        loading={saving}
         onConfirm={confirmConfig.onConfirm}
         onCancel={() => setConfirmConfig((prev) => ({ ...prev, isOpen: false }))}
       />
-
-      {/* 统一 Toast 提示 */}
-      <AdminToast toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
-    </div>
+    </AdminWorkbenchShell>
   );
 };

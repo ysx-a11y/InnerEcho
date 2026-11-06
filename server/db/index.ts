@@ -38,6 +38,7 @@ import { PromptRepo } from './repositories/promptRepo.js';
 import { WhisperMailboxRepo } from './repositories/whisperMailboxRepo.js';
 import { InterrogationRepo } from './repositories/interrogationRepo.js';
 import { DictRepo } from './repositories/dictRepo.js';
+import { AiAgentRepo } from './repositories/aiAgentRepo.js';
 import {
   SecurityRepo,
   type RegisterHoneypotTriggerInput,
@@ -103,6 +104,8 @@ export class DatabaseFacade {
   public interrogation: InterrogationRepo;
   /** 动态数据字典与状态机引擎 */
   public dict: DictRepo;
+  /** AI 智能体能力与动态变量中台 */
+  public aiAgent: AiAgentRepo;
 
   constructor(rawDb?: Database.Database) {
     this.rawDb = initDatabaseSync(rawDb);
@@ -118,6 +121,7 @@ export class DatabaseFacade {
     this.mailbox = new WhisperMailboxRepo(this.rawDb);
     this.interrogation = new InterrogationRepo(this.rawDb);
     this.dict = new DictRepo(this.rawDb);
+    this.aiAgent = new AiAgentRepo(this.rawDb);
   }
 
   // ================= Security Methods =================
@@ -699,8 +703,8 @@ export class DatabaseFacade {
   }
 
   // ================= Prompt Template Methods =================
-  async listPromptTemplates(): Promise<PromptTemplate[]> {
-    return this.prompts.listPromptTemplates();
+  async listPromptTemplates(agentId?: string): Promise<PromptTemplate[]> {
+    return this.prompts.listPromptTemplates(agentId);
   }
 
   async getActivePromptTemplate(category?: string): Promise<PromptTemplate | null> {
