@@ -21,6 +21,7 @@ import { adminApi, formatTime } from '../adminApi';
 import type { AdminTaskSummary } from '../adminTypes';
 import { SpecialPriceLadder } from './tasks/SpecialPriceLadder';
 import { AdminImageLightbox } from './ui/AdminImageLightbox';
+import { DictBadge } from './ui/DictBadge';
 
 const PAGE_SIZE = 10;
 
@@ -338,28 +339,7 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
                             {cat.icon}
                             {cat.label}
                           </span>
-                          <span
-                            style={{
-                              fontSize: '0.68rem',
-                              padding: '2px 7px',
-                              borderRadius: '4px',
-                              background: isCompleted
-                                ? 'rgba(79, 209, 161, 0.12)'
-                                : isAbandoned
-                                ? 'rgba(255, 77, 77, 0.12)'
-                                : 'rgba(255, 209, 128, 0.12)',
-                              color: isCompleted ? '#4fd1a1' : isAbandoned ? '#ff4d4d' : '#ffd180',
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.2rem',
-                              whiteSpace: 'nowrap',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {isCompleted ? <CheckCircle size={10} /> : isAbandoned ? <AlertTriangle size={10} /> : <Clock size={10} />}
-                            {isCompleted ? '已完成' : isAbandoned ? '已放弃' : '已接取 (进行中)'}
-                          </span>
+                          <DictBadge dictCode="task_progress_status" value={task.status} size="xs" />
                         </div>
                         <h4 style={{ fontSize: '1rem', margin: '0.2rem 0 0 0', fontWeight: 700, color: '#fff' }}>
                           {task.title || '无标题任务'}

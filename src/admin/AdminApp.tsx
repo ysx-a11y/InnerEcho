@@ -18,12 +18,14 @@ import {
   Mail,
   Siren,
   Bot,
+  Sliders,
 } from 'lucide-react';
 import { AdminLogin } from './components/AdminLogin';
 import { Dashboard } from './components/Dashboard';
 import { DossierList } from './components/DossierList';
 import { UserWorkbench } from './components/UserWorkbench';
 import { PromptWorkbench } from './components/PromptWorkbench';
+import { DictWorkbench } from './components/DictWorkbench';
 import { TelemetryStats } from './components/TelemetryStats';
 import { TaskList } from './components/TaskList';
 import { BankWorkbench } from './components/BankWorkbench';
@@ -38,7 +40,7 @@ import { clearAdminToken, getAdminToken, setAdminToken } from './adminToken';
 import { adminApi } from './adminApi';
 import type { AdminTimeRange } from './adminTypes';
 
-type TabType = 'dashboard' | 'dossiers' | 'users' | 'banks' | 'echoes' | 'mailbox' | 'telemetry' | 'prompts' | 'tasks' | 'security' | 'interrogation';
+type TabType = 'dashboard' | 'dossiers' | 'users' | 'banks' | 'echoes' | 'mailbox' | 'telemetry' | 'prompts' | 'dicts' | 'tasks' | 'security' | 'interrogation';
 
 const NAV_ITEMS = [
   { id: 'dashboard' as const, label: '概览', description: '核心指标与全域大屏', icon: LayoutDashboard },
@@ -49,6 +51,7 @@ const NAV_ITEMS = [
   { id: 'mailbox' as const, label: '暗室信箱', description: '私密留言与1v1回响', icon: Mail },
   { id: 'telemetry' as const, label: '行为分析', description: '题目停留与作答分布', icon: Activity },
   { id: 'prompts' as const, label: 'AI 智能体中台', description: '人设、提示词版本与沙盒演练', icon: Bot },
+  { id: 'dicts' as const, label: '字典与状态机', description: '全域枚举、徽章与流转规则', icon: Sliders },
   { id: 'tasks' as const, label: '任务记录', description: '任务接取与特殊排位', icon: Bookmark },
   { id: 'security' as const, label: '安全审计', description: '异常访问与审计链校验', icon: ShieldAlert },
   { id: 'interrogation' as const, label: '审讯室', description: '测试功能参数与最近会话', icon: Siren },
@@ -193,7 +196,9 @@ export const AdminApp: React.FC = () => {
               ? <TelemetryStats range={globalRange} customDate={globalCustomDate} refreshTrigger={refreshTrigger} />
               : activeTab === 'prompts'
                 ? <PromptWorkbench />
-                : activeTab === 'tasks'
+                : activeTab === 'dicts'
+                  ? <DictWorkbench />
+                  : activeTab === 'tasks'
                   ? <TaskList refreshTrigger={refreshTrigger} />
                   : activeTab === 'interrogation'
                     ? <InterrogationWorkbench />

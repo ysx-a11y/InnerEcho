@@ -304,6 +304,8 @@ export interface AdminEchoWhisperContract {
   createdAt: string;
   deviceId: string;
   userId: string | null;
+  adminNotes?: string | null;
+  remark?: string | null;
 }
 
 export interface AdminEchoListResponse {

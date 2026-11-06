@@ -37,6 +37,10 @@ export type {
   PromptVariableContract,
   PlaygroundRunRequest,
   PlaygroundRunResponse,
+  SysDictType,
+  SysDictItem,
+  SysStateTransition,
+  AccountLineageSummary,
 } from '../../shared/apiContracts';
 
 export interface PromptTemplate {
@@ -278,6 +282,8 @@ export interface AdminEchoWhisper {
   createdAt: string;
   deviceId: string;
   userId: string | null;
+  adminNotes?: string | null;
+  remark?: string | null;
 }
 
 export interface AdminEchoListParams {
@@ -294,6 +300,10 @@ export interface AdminUserSummary {
   id: string;
   email: string;
   generation: number;
+  lineageId?: string | null;
+  accountStatus?: string;
+  adminNotes?: string | null;
+  remark?: string | null;
   createdAt: string;
   deletedAt: string | null;
   lastLoginAt: string | null;
@@ -315,10 +325,25 @@ export interface AdminUserDetails {
     id: string;
     email: string;
     generation: number;
+    lineageId?: string | null;
+    accountStatus?: string;
+    adminNotes?: string | null;
+    remark?: string | null;
     createdAt: string;
     deletedAt: string | null;
     tokenInvalidatedAt: string | null;
   };
+  lineage?: import('../../shared/apiContracts').AccountLineageSummary | null;
+  lineageGenerations?: Array<{
+    id: string;
+    email: string;
+    generation: number;
+    accountStatus: string;
+    createdAt: string;
+    deletedAt: string | null;
+    adminNotes: string | null;
+    remark: string | null;
+  }>;
   basicInfo?: ChapterOneData | null;
   devices: {
     deviceId: string;

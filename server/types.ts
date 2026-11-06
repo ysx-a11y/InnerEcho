@@ -355,6 +355,10 @@ export interface AdminUserSummary {
   id: string;
   email: string;
   generation: number;
+  lineageId?: string | null;
+  accountStatus?: string;
+  adminNotes?: string | null;
+  remark?: string | null;
   createdAt: string;
   deletedAt: string | null;
   lastLoginAt: string | null;
@@ -376,10 +380,25 @@ export interface AdminUserDetails {
     id: string;
     email: string;
     generation: number;
+    lineageId?: string | null;
+    accountStatus?: string;
+    adminNotes?: string | null;
+    remark?: string | null;
     createdAt: string;
     deletedAt: string | null;
     tokenInvalidatedAt: string | null;
   };
+  lineage?: import('../shared/apiContracts.js').AccountLineageSummary | null;
+  lineageGenerations?: Array<{
+    id: string;
+    email: string;
+    generation: number;
+    accountStatus: string;
+    createdAt: string;
+    deletedAt: string | null;
+    adminNotes: string | null;
+    remark: string | null;
+  }>;
   basicInfo?: ChapterOneData | null;
   devices: { deviceId: string; lastLoginAt: string; createdAt: string }[];
   dossiers: {

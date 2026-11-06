@@ -360,6 +360,10 @@ export class UserRepo {
         u.id,
         u.email,
         u.generation,
+        u.lineage_id,
+        u.account_status,
+        u.admin_notes,
+        u.remark,
         u.created_at,
         u.deleted_at,
         (SELECT COUNT(*) FROM dossiers d WHERE d.user_id = u.id) as dossier_count,
@@ -407,6 +411,10 @@ export class UserRepo {
       id: r.id,
       email: r.email,
       generation: r.generation ?? 1,
+      lineageId: r.lineage_id ?? null,
+      accountStatus: r.account_status ?? (r.deleted_at ? 'deleted' : 'active'),
+      adminNotes: r.admin_notes ?? null,
+      remark: r.remark ?? null,
       createdAt: r.created_at,
       deletedAt: r.deleted_at ?? null,
       lastLoginAt: r.last_login_at ?? null,
@@ -442,9 +450,26 @@ export class UserRepo {
     resolveBankNamesFn: (bankIds: string[]) => Promise<Record<string, string>>
   ): Promise<AdminUserDetails | null> {
     const userRow = this.db
-      .prepare('SELECT id, email, generation, created_at, deleted_at, token_invalidated_at FROM users WHERE id = ?')
+      .prepare('SELECT id, email, generation, lineage_id, account_status, admin_notes, remark, created_at, deleted_at, token_invalidated_at FROM users WHERE id = ?')
       .get(userId) as any;
     if (!userRow) return null;
+
+    let lineage = userRow.lineage_id ? this.getAccountLineage(userRow.lineage_id) : null;
+    if (!lineage && userRow.email) {
+      lineage = this.getAccountLineageByRootKey(userRow.email);
+    }
+    const lineageGenerations = lineage
+      ? this.getLineageGenerations(lineage.id).map((u) => ({
+          id: u.id,
+          email: u.email,
+          generation: u.generation,
+          accountStatus: u.account_status ?? (u.deleted_at ? 'deleted' : 'active'),
+          createdAt: u.created_at,
+          deletedAt: u.deleted_at,
+          adminNotes: u.admin_notes ?? null,
+          remark: u.remark ?? null,
+        }))
+      : [];
 
     let basicInfo = await this.getUserBasicInfo(userId);
 
@@ -510,10 +535,16 @@ export class UserRepo {
         id: userRow.id,
         email: userRow.email,
         generation: userRow.generation ?? 1,
+        lineageId: userRow.lineage_id ?? lineage?.id ?? null,
+        accountStatus: userRow.account_status ?? (userRow.deleted_at ? 'deleted' : 'active'),
+        adminNotes: userRow.admin_notes ?? null,
+        remark: userRow.remark ?? null,
         createdAt: userRow.created_at,
         deletedAt: userRow.deleted_at ?? null,
         tokenInvalidatedAt: userRow.token_invalidated_at ?? null,
       },
+      lineage,
+      lineageGenerations,
       basicInfo,
       devices: devices.map((d) => ({
         deviceId: d.device_id,

@@ -32,6 +32,8 @@ import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
 import { AdminToast, type ToastMessage } from './ui/AdminToast';
 import { BankEditorHeader } from './banks/BankEditorHeader';
 import { BankEditorTabs } from './banks/BankEditorTabs';
+import { DictBadge } from './ui/DictBadge';
+import { adminNotify } from './ui/adminNotify';
 
 const CATEGORY_MAP: Record<string, { label: string; desc: string; badgeColor: string }> = {
   scenario: { label: '情境切片', desc: '沉浸场景剧情与角色代入', badgeColor: '#ec4899' },
@@ -782,14 +784,8 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
                       <div className="bank-item-tags">
                         {bank.isBuiltin ? (
                           <span className="bank-badge-preset"><Lock size={10} /> 官方内置</span>
-                        ) : bank.auditStatus === 'pending' ? (
-                          <span className="bank-badge-pending">待审核</span>
-                        ) : bank.auditStatus === 'approved' ? (
-                          <span className="bank-badge-published">已通过</span>
-                        ) : bank.auditStatus === 'rejected' ? (
-                          <span className="bank-badge-rejected">未通过</span>
                         ) : (
-                          <span className="bank-badge-draft">草稿</span>
+                          <DictBadge dictCode="bank_audit_status" value={bank.auditStatus || (bank.isPublished ? 'active' : 'draft')} size="xs" />
                         )}
                       </div>
                     </div>

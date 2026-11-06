@@ -638,6 +638,8 @@ const adminEchoQuerySchema = z.object({
 
 const adminEchoPatchSchema = z.object({
   auditStatus: z.enum(['pending', 'approved', 'rejected', 'flagged']),
+  adminNotes: z.string().max(1000).optional(),
+  remark: z.string().max(500).optional(),
 }).strict();
 
 /** 管理后台：回响心声列表。 */
@@ -652,12 +654,15 @@ adminRouter.get('/echoes', adminActionLimiter, requireAdmin, async (req, res) =>
   }
 });
 
-/** 管理后台：更新回响心声审核状态（通过/驳回/下架）。 */
+/** 管理后台：更新回响心声审核状态（通过/驳回/下架）并记录审核批注。 */
 adminRouter.patch('/echoes/:id', adminActionLimiter, requireAdmin, async (req, res) => {
   try {
     const id = String(req.params.id);
     const parsed = adminEchoPatchSchema.parse(req.body ?? {});
-    await db.updateAdminEchoStatus(id, parsed.auditStatus);
+    await db.updateAdminEchoStatus(id, parsed.auditStatus, {
+      adminNotes: parsed.adminNotes,
+      remark: parsed.remark,
+    });
     return res.json({ success: true, message: `回响状态已更新为 ${parsed.auditStatus}` });
   } catch (err) {
     if (sendZodError(err, res)) return;

@@ -5,21 +5,35 @@ import {
   XCircle,
   AlertTriangle,
   Trash2,
-  RefreshCw,
   Search,
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
   Sparkles,
   Filter,
+  Eye,
+  MessageSquare,
 } from 'lucide-react';
 import { echoesApi, formatTime } from '../adminApi';
 import type { AdminEchoWhisper } from '../adminTypes';
 import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
 import { DictBadge } from './ui/DictBadge';
+import { DictSelect } from './ui/DictSelect';
+import { AdminWorkbenchShell } from './ui/AdminWorkbenchShell';
+import { StateTransitionModal } from './ui/StateTransitionModal';
 import { adminNotify } from './ui/adminNotify';
 
 const PAGE_SIZE = 20;
+
+const SHADOW_TAG_OPTIONS = [
+  { value: 'all', label: '全部阴影倾向' },
+  { value: '支配渴求', label: '支配渴求' },
+  { value: '绝对臣服', label: '绝对臣服' },
+  { value: '角色互换', label: '角色互换' },
+  { value: '安全束缚', label: '安全束缚' },
+  { value: '反差情绪', label: '反差情绪' },
+  { value: '心理补偿', label: '心理补偿' },
+];
 
 interface EchoWorkbenchProps {
   refreshTrigger?: number;
@@ -33,19 +47,19 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Toast messages via Mantine
-  const addToast = (type: 'success' | 'error' | 'info', content: string) => {
-    if (type === 'success') adminNotify.success(content);
-    else if (type === 'error') adminNotify.error(content);
-    else adminNotify.info(content);
-  };
-
   // Filters
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterTag, setFilterTag] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [deleteConfirmEcho, setDeleteConfirmEcho] = useState<AdminEchoWhisper | null>(null);
+
+  // State Transition Modal State
+  const [transitionTarget, setTransitionTarget] = useState<{
+    echo: AdminEchoWhisper;
+    toStatus: 'approved' | 'rejected' | 'flagged' | 'pending';
+    actionName: string;
+  } | null>(null);
 
   const load = useCallback(async (isManual = false) => {
     setLoading(true);
@@ -62,13 +76,13 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
         setEchoes(res.items);
         setTotal(res.total);
         if (isManual) {
-          addToast('success', '回响心声列表已刷新');
+          adminNotify.success('回响心声列表已刷新');
         }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '加载回响心声失败';
       setError(msg);
-      addToast('error', msg);
+      adminNotify.error(msg);
     } finally {
       setLoading(false);
     }
@@ -78,21 +92,46 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
     void load();
   }, [load, refreshTrigger]);
 
-  const handleUpdateStatus = async (id: string, newStatus: 'approved' | 'rejected' | 'flagged' | 'pending') => {
+  const handleUpdateStatus = async (
+    id: string,
+    newStatus: 'approved' | 'rejected' | 'flagged' | 'pending',
+    notesData?: { adminNotes?: string; remark?: string }
+  ) => {
     setActionLoadingId(id);
     try {
-      await echoesApi.updateStatus(id, newStatus);
+      if (notesData) {
+        await echoesApi.updateStatus(id, newStatus, notesData);
+      } else {
+        await echoesApi.updateStatus(id, newStatus);
+      }
       setEchoes((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, auditStatus: newStatus } : item))
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                auditStatus: newStatus,
+                adminNotes: notesData?.adminNotes !== undefined ? notesData.adminNotes : item.adminNotes,
+                remark: notesData?.remark !== undefined ? notesData.remark : item.remark,
+              }
+            : item
+        )
       );
       onStatusChanged?.();
-      const statusLabel = newStatus === 'approved' ? '已核准公开' : newStatus === 'rejected' ? '已下架/拒绝' : '状态已更新';
-      addToast('success', `心声${statusLabel}`);
+      const statusLabel =
+        newStatus === 'approved' ? '已核准公开' : newStatus === 'rejected' ? '已驳回' : newStatus === 'flagged' ? '已下架' : '状态已更新';
+      adminNotify.success(`心声${statusLabel}`);
     } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '操作失败');
+      adminNotify.error(err instanceof Error ? err.message : '操作失败');
     } finally {
       setActionLoadingId(null);
     }
+  };
+
+  const handleExecuteTransition = async (notesData: { adminNotes?: string; remark?: string }) => {
+    if (!transitionTarget) return;
+    const { echo, toStatus } = transitionTarget;
+    await handleUpdateStatus(echo.id, toStatus, notesData);
+    setTransitionTarget(null);
   };
 
   const executeDelete = async () => {
@@ -104,10 +143,10 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
       setEchoes((prev) => prev.filter((item) => item.id !== id));
       setTotal((prev) => Math.max(0, prev - 1));
       onStatusChanged?.();
-      addToast('success', '已永久删除该条回响心声');
+      adminNotify.success('已永久删除该条回响心声');
       setDeleteConfirmEcho(null);
     } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '删除失败');
+      adminNotify.error(err instanceof Error ? err.message : '删除失败');
     } finally {
       setActionLoadingId(null);
     }
@@ -116,7 +155,13 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div style={{ width: '100%', maxWidth: '1400px', margin: '0 auto', boxSizing: 'border-box' }}>
+    <AdminWorkbenchShell
+      title="深夜回响心声审核工作台"
+      description="访客匿名自白与共鸣广场治理，支持动态字典状态机、审核批注与违规下架"
+      icon={<Flame size={22} color="#ff70a6" />}
+      loading={loading}
+      onRefresh={() => load(true)}
+    >
       {/* 筛选过滤工具栏 */}
       <div
         className="glass-card"
@@ -125,7 +170,6 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
           border: '1px solid rgba(255, 112, 166, 0.2)',
           borderRadius: 16,
           padding: '0.85rem 1.15rem',
-          marginBottom: '1rem',
           display: 'flex',
           gap: '0.8rem',
           flexWrap: 'wrap',
@@ -164,30 +208,22 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
 
         <Filter size={14} color="#ff70a6" />
 
-        {/* 审核状态下拉 */}
-        <select
-          value={filterStatus}
-          onChange={(e) => {
-            setFilterStatus(e.target.value);
-            setPage(0);
-          }}
-          style={{
-            background: 'rgba(12, 6, 16, 0.85)',
-            border: '1px solid rgba(255, 112, 166, 0.25)',
-            borderRadius: '10px',
-            padding: '7px 10px',
-            color: '#fff0f5',
-            fontSize: '0.76rem',
-            outline: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          <option value="all">全部审核状态</option>
-          <option value="pending">⏳ 待审核 (Pending)</option>
-          <option value="approved">✅ 已通过 (Approved)</option>
-          <option value="rejected">❌ 已驳回 (Rejected)</option>
-          <option value="flagged">🚩 已下架 (Flagged)</option>
-        </select>
+        {/* 动态审核状态字典下拉 */}
+        <div style={{ minWidth: 150 }}>
+          <DictSelect
+            dictCode="echo_audit_status"
+            value={filterStatus === 'all' ? null : filterStatus}
+            onChange={(val) => {
+              setFilterStatus(val || 'all');
+              setPage(0);
+            }}
+            placeholder="全部审核状态"
+            includeAllOption
+            allOptionLabel="全部审核状态"
+            allOptionValue="all"
+            size="xs"
+          />
+        </div>
 
         {/* 阴影标签下拉 */}
         <select
@@ -207,13 +243,11 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
             cursor: 'pointer',
           }}
         >
-          <option value="all">全部阴影倾向</option>
-          <option value="支配渴求">支配渴求</option>
-          <option value="绝对臣服">绝对臣服</option>
-          <option value="角色互换">角色互换</option>
-          <option value="安全束缚">安全束缚</option>
-          <option value="反差情绪">反差情绪</option>
-          <option value="心理补偿">心理补偿</option>
+          {SHADOW_TAG_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -245,256 +279,265 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
           >
             <AlertTriangle size={16} />
             <span>{error}</span>
-            <button
-              onClick={() => { void load(true); }}
-              style={{
-                marginLeft: 'auto',
-                background: 'rgba(240, 113, 120, 0.15)',
-                border: '1px solid rgba(240, 113, 120, 0.3)',
-                color: '#fff',
-                borderRadius: '8px',
-                padding: '4px 12px',
-                cursor: 'pointer',
-                fontSize: '0.76rem',
-              }}
-            >
-              重试
-            </button>
           </div>
         ) : loading && echoes.length === 0 ? (
-          <div style={{ color: '#8d879e', textAlign: 'center', padding: '3rem 0', fontSize: '0.85rem' }}>
-            正在加载回响心声列表...
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--admin-text-muted)', fontSize: '0.82rem' }}>
+            <span>正在检索深夜回响纸条...</span>
           </div>
         ) : echoes.length === 0 ? (
-          <div style={{ color: '#8d879e', textAlign: 'center', padding: '3rem 0', fontSize: '0.85rem' }}>
-            暂无匹配的回响心声记录
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--admin-text-muted)', fontSize: '0.82rem' }}>
+            <span>暂无符合条件的回响心声记录</span>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left', minWidth: '860px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: '#8d879e' }}>
-                <th style={{ padding: '10px 8px', fontWeight: 600, width: '100px' }}>状态</th>
-                <th style={{ padding: '10px 8px', fontWeight: 600, width: '130px' }}>现实面具/职业</th>
-                <th style={{ padding: '10px 8px', fontWeight: 600, width: '110px' }}>阴影标签</th>
-                <th style={{ padding: '10px 8px', fontWeight: 600 }}>暗面自白心声</th>
-                <th style={{ padding: '10px 8px', fontWeight: 600, width: '90px' }}>共鸣数</th>
-                <th style={{ padding: '10px 8px', fontWeight: 600, width: '150px' }}>投掷时间</th>
-                <th style={{ padding: '10px 8px', fontWeight: 600, width: '190px', textAlign: 'right' }}>审核操作</th>
+              <tr style={{ borderBottom: '1px solid rgba(255, 112, 166, 0.15)', color: 'var(--admin-text-muted)' }}>
+                <th style={{ padding: '0.6rem 0.5rem', width: 90 }}>状态</th>
+                <th style={{ padding: '0.6rem 0.5rem', width: 140 }}>社会面具</th>
+                <th style={{ padding: '0.6rem 0.5rem' }}>自白心声内容</th>
+                <th style={{ padding: '0.6rem 0.5rem', width: 110 }}>暗面倾向</th>
+                <th style={{ padding: '0.6rem 0.5rem', width: 80, textAlign: 'center' }}>共鸣数</th>
+                <th style={{ padding: '0.6rem 0.5rem', width: 130 }}>投递时间</th>
+                <th style={{ padding: '0.6rem 0.5rem', width: 200, textAlign: 'right' }}>流转操作</th>
               </tr>
             </thead>
             <tbody>
-              {echoes.map((echo) => {
-                const isOperating = actionLoadingId === echo.id;
+              {echoes.map((item) => {
+                const isItemLoading = actionLoadingId === item.id;
                 return (
                   <tr
-                    key={echo.id}
+                    key={item.id}
                     style={{
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.03)',
-                      transition: 'background 0.15s',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+                      transition: 'background 0.2s',
                     }}
                   >
-                    {/* 状态徽标 */}
-                    <td style={{ padding: '12px 8px' }}>
-                      <DictBadge
-                        dictCode="echo_audit_status"
-                        value={echo.auditStatus === 'flagged' ? 'hidden' : echo.auditStatus}
-                        size="sm"
-                      />
+                    {/* 状态 (动态字典 Badge) */}
+                    <td style={{ padding: '0.8rem 0.5rem' }}>
+                      <DictBadge dictCode="echo_audit_status" value={item.auditStatus} size="sm" />
                     </td>
 
-                    {/* 角色面具 */}
-                    <td style={{ padding: '12px 8px', fontWeight: 600, color: '#ffd180' }}>
-                      🎭 {echo.surfaceRole}
+                    {/* 面具职业 */}
+                    <td style={{ padding: '0.8rem 0.5rem', color: '#80f3ff', fontWeight: 600 }}>
+                      {item.surfaceRole}
+                    </td>
+
+                    {/* 自白正文 & 审核批注 */}
+                    <td style={{ padding: '0.8rem 0.5rem', color: '#f3edf7', maxWidth: '380px' }}>
+                      <div
+                        style={{
+                          wordBreak: 'break-word',
+                          lineHeight: 1.45,
+                          fontSize: '0.78rem',
+                        }}
+                      >
+                        "{item.shadowDesire}"
+                      </div>
+                      {item.adminNotes && (
+                        <div
+                          style={{
+                            marginTop: 4,
+                            fontSize: '0.7rem',
+                            color: '#ffd180',
+                            background: 'rgba(255, 209, 128, 0.08)',
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            display: 'inline-block',
+                          }}
+                        >
+                          批注: {item.adminNotes}
+                        </div>
+                      )}
                     </td>
 
                     {/* 阴影标签 */}
-                    <td style={{ padding: '12px 8px' }}>
+                    <td style={{ padding: '0.8rem 0.5rem' }}>
                       <span
                         style={{
-                          background: 'rgba(147, 51, 234, 0.15)',
-                          border: '1px solid rgba(147, 51, 234, 0.3)',
-                          color: '#c084fc',
-                          padding: '2px 8px',
-                          borderRadius: '8px',
                           fontSize: '0.72rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {echo.shadowTag}
-                      </span>
-                    </td>
-
-                    {/* 暗面自白 */}
-                    <td style={{ padding: '12px 8px', maxWidth: '380px', lineHeight: 1.55, color: 'rgba(255, 255, 255, 0.9)' }}>
-                      “{echo.shadowDesire}”
-                    </td>
-
-                    {/* 共鸣数 */}
-                    <td style={{ padding: '12px 8px' }}>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
+                          background: 'rgba(255, 112, 166, 0.12)',
                           color: '#ff70a6',
-                          fontWeight: 700,
+                          border: '1px solid rgba(255, 112, 166, 0.25)',
+                          borderRadius: '6px',
+                          padding: '2px 6px',
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        <Flame size={13} />
-                        <span>{echo.echoCount}</span>
+                        #{item.shadowTag}
                       </span>
                     </td>
 
-                    {/* 投掷时间 */}
-                    <td style={{ padding: '12px 8px', fontSize: '0.75rem', color: '#8d879e' }}>
-                      {formatTime(echo.createdAt)}
+                    {/* 共鸣次数 */}
+                    <td style={{ padding: '0.8rem 0.5rem', textAlign: 'center', color: '#ff70a6', fontWeight: 700 }}>
+                      {item.echoCount}
                     </td>
 
-                    {/* 审核操作 */}
-                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end' }}>
-                        {/* 1. 待审核状态：显示【通过】与【驳回】 */}
-                        {echo.auditStatus === 'pending' && (
+                    {/* 投递时间 */}
+                    <td style={{ padding: '0.8rem 0.5rem', color: 'var(--admin-text-muted)', fontSize: '0.72rem' }}>
+                      {formatTime(item.createdAt)}
+                    </td>
+
+                    {/* 流转操作动作 */}
+                    <td style={{ padding: '0.8rem 0.5rem', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        {item.auditStatus === 'pending' && (
                           <>
                             <button
-                              onClick={() => handleUpdateStatus(echo.id, 'approved')}
-                              disabled={isOperating}
+                              disabled={isItemLoading}
+                              onClick={() => handleUpdateStatus(item.id, 'approved')}
                               title="审核通过并公开"
                               style={{
-                                background: 'rgba(79, 209, 161, 0.12)',
-                                border: '1px solid rgba(79, 209, 161, 0.35)',
+                                background: 'rgba(79, 209, 161, 0.15)',
+                                border: '1px solid rgba(79, 209, 161, 0.4)',
                                 color: '#4fd1a1',
-                                padding: '4px 10px',
-                                borderRadius: '8px',
-                                cursor: isOperating ? 'not-allowed' : 'pointer',
-                                display: 'inline-flex',
+                                borderRadius: '6px',
+                                padding: '4px 8px',
+                                fontSize: '0.72rem',
+                                cursor: 'pointer',
+                                display: 'flex',
                                 alignItems: 'center',
-                                gap: '4px',
-                                fontSize: '0.74rem',
-                                fontWeight: 600,
+                                gap: '3px',
                               }}
                             >
-                              <CheckCircle2 size={13} />
-                              <span>通过</span>
+                              <CheckCircle2 size={12} />
+                              通过
                             </button>
                             <button
-                              onClick={() => handleUpdateStatus(echo.id, 'rejected')}
-                              disabled={isOperating}
+                              disabled={isItemLoading}
+                              onClick={() => handleUpdateStatus(item.id, 'rejected')}
                               title="驳回不通过"
                               style={{
-                                background: 'rgba(245, 185, 95, 0.12)',
-                                border: '1px solid rgba(245, 185, 95, 0.35)',
-                                color: '#f5b95f',
-                                padding: '4px 10px',
-                                borderRadius: '8px',
-                                cursor: isOperating ? 'not-allowed' : 'pointer',
-                                display: 'inline-flex',
+                                background: 'rgba(240, 113, 120, 0.15)',
+                                border: '1px solid rgba(240, 113, 120, 0.4)',
+                                color: '#f07178',
+                                borderRadius: '6px',
+                                padding: '4px 8px',
+                                fontSize: '0.72rem',
+                                cursor: 'pointer',
+                                display: 'flex',
                                 alignItems: 'center',
-                                gap: '4px',
-                                fontSize: '0.74rem',
-                                fontWeight: 600,
+                                gap: '3px',
                               }}
                             >
-                              <XCircle size={13} />
-                              <span>驳回</span>
+                              <XCircle size={12} />
+                              驳回
                             </button>
                           </>
                         )}
 
-                        {/* 2. 已通过/已公开状态：仅显示【下架】 */}
-                        {echo.auditStatus === 'approved' && (
+                        {item.auditStatus === 'approved' && (
                           <button
-                            onClick={() => handleUpdateStatus(echo.id, 'flagged')}
-                            disabled={isOperating}
+                            disabled={isItemLoading}
+                            onClick={() => handleUpdateStatus(item.id, 'flagged')}
                             title="下架隐藏"
+                            style={{
+                              background: 'rgba(255, 179, 71, 0.15)',
+                              border: '1px solid rgba(255, 179, 71, 0.4)',
+                              color: '#ffb347',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
+                          >
+                            <ShieldAlert size={12} />
+                            下架
+                          </button>
+                        )}
+
+                        {item.auditStatus === 'flagged' && (
+                          <button
+                            disabled={isItemLoading}
+                            onClick={() => handleUpdateStatus(item.id, 'approved')}
+                            title="重新上架公开"
+                            style={{
+                              background: 'rgba(79, 209, 161, 0.15)',
+                              border: '1px solid rgba(79, 209, 161, 0.4)',
+                              color: '#4fd1a1',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
+                          >
+                            <CheckCircle2 size={12} />
+                            重新上架
+                          </button>
+                        )}
+
+                        {item.auditStatus === 'rejected' && (
+                          <button
+                            disabled={isItemLoading}
+                            onClick={() => handleUpdateStatus(item.id, 'approved')}
+                            title="重新审核通过"
+                            style={{
+                              background: 'rgba(79, 209, 161, 0.15)',
+                              border: '1px solid rgba(79, 209, 161, 0.4)',
+                              color: '#4fd1a1',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
+                          >
+                            <CheckCircle2 size={12} />
+                            重新通过
+                          </button>
+                        )}
+
+                        {/* 状态流转与批注弹窗触发按钮 */}
+                        <button
+                          disabled={isItemLoading}
+                          onClick={() =>
+                            setTransitionTarget({
+                              echo: item,
+                              toStatus: item.auditStatus === 'pending' ? 'approved' : item.auditStatus === 'approved' ? 'flagged' : 'approved',
+                              actionName: '流转批注',
+                            })
+                          }
+                          title="流转与审核批注"
+                          style={{
+                            background: 'rgba(255, 112, 166, 0.08)',
+                            border: '1px solid rgba(255, 112, 166, 0.25)',
+                            color: '#ff70a6',
+                            borderRadius: '6px',
+                            padding: '4px 7px',
+                            fontSize: '0.72rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <MessageSquare size={12} />
+                        </button>
+
+                        {/* 物理删除：仅限已下架或已驳回的心声 */}
+                        {(item.auditStatus === 'rejected' || item.auditStatus === 'flagged') && (
+                          <button
+                            disabled={isItemLoading}
+                            onClick={() => setDeleteConfirmEcho(item)}
+                            title="物理删除该已下架/已驳回心声"
                             style={{
                               background: 'rgba(255, 255, 255, 0.05)',
                               border: '1px solid rgba(255, 255, 255, 0.15)',
-                              color: '#ffd180',
-                              padding: '4px 10px',
-                              borderRadius: '8px',
-                              cursor: isOperating ? 'not-allowed' : 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              fontSize: '0.74rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            <ShieldAlert size={13} />
-                            <span>下架</span>
-                          </button>
-                        )}
-
-                        {/* 3. 已下架状态：显示【上架】 */}
-                        {echo.auditStatus === 'flagged' && (
-                          <button
-                            onClick={() => handleUpdateStatus(echo.id, 'approved')}
-                            disabled={isOperating}
-                            title="重新上架公开"
-                            style={{
-                              background: 'rgba(79, 209, 161, 0.12)',
-                              border: '1px solid rgba(79, 209, 161, 0.35)',
-                              color: '#4fd1a1',
-                              padding: '4px 10px',
-                              borderRadius: '8px',
-                              cursor: isOperating ? 'not-allowed' : 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              fontSize: '0.74rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            <CheckCircle2 size={13} />
-                            <span>上架</span>
-                          </button>
-                        )}
-
-                        {/* 4. 已驳回状态：可重新【通过】 */}
-                        {echo.auditStatus === 'rejected' && (
-                          <button
-                            onClick={() => handleUpdateStatus(echo.id, 'approved')}
-                            disabled={isOperating}
-                            title="重新审核通过"
-                            style={{
-                              background: 'rgba(79, 209, 161, 0.12)',
-                              border: '1px solid rgba(79, 209, 161, 0.35)',
-                              color: '#4fd1a1',
-                              padding: '4px 10px',
-                              borderRadius: '8px',
-                              cursor: isOperating ? 'not-allowed' : 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              fontSize: '0.74rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            <CheckCircle2 size={13} />
-                            <span>通过</span>
-                          </button>
-                        )}
-
-                        {/* 5. 仅在【已下架】或【已驳回】状态下出现【删除】按钮；上架和待审核状态无法删除 */}
-                        {(echo.auditStatus === 'flagged' || echo.auditStatus === 'rejected') && (
-                          <button
-                            onClick={() => setDeleteConfirmEcho(echo)}
-                            disabled={isOperating}
-                            title="物理删除该已下架/已驳回心声"
-                            style={{
-                              background: 'rgba(240, 113, 120, 0.12)',
-                              border: '1px solid rgba(240, 113, 120, 0.35)',
-                              color: '#f07178',
+                              color: 'var(--admin-text-muted)',
+                              borderRadius: '6px',
                               padding: '4px 7px',
-                              borderRadius: '8px',
-                              cursor: isOperating ? 'not-allowed' : 'pointer',
-                              display: 'inline-flex',
+                              cursor: 'pointer',
+                              display: 'flex',
                               alignItems: 'center',
-                              fontSize: '0.74rem',
                             }}
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={12} />
                           </button>
                         )}
                       </div>
@@ -505,66 +548,77 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
             </tbody>
           </table>
         )}
+
+        {/* 分页控制栏 */}
+        {totalPages > 1 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: '1.2rem',
+              paddingTop: '0.8rem',
+              borderTop: '1px solid rgba(255, 112, 166, 0.1)',
+              fontSize: '0.76rem',
+              color: 'var(--admin-text-muted)',
+            }}
+          >
+            <span>
+              共 {total} 条回响记录 · 第 {page + 1} / {totalPages} 页
+            </span>
+            <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <button
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  color: page === 0 ? 'rgba(255, 255, 255, 0.2)' : '#fff0f5',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  cursor: page === 0 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => p + 1)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  color: page >= totalPages - 1 ? 'rgba(255, 255, 255, 0.2)' : '#fff0f5',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 分页控制 */}
-      {totalPages > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: '1rem',
-            padding: '0.4rem 0.2rem',
-          }}
-        >
-          <span style={{ fontSize: '0.8rem', color: '#8d879e' }}>
-            共 {total} 条心声 · 第 {page + 1} / {totalPages} 页
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0 || loading}
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px',
-                padding: '6px 12px',
-                color: page === 0 ? '#555' : '#fff',
-                fontSize: '0.78rem',
-                cursor: page === 0 || loading ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <ChevronLeft size={14} />
-              <span>上一页</span>
-            </button>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1 || loading}
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px',
-                padding: '6px 12px',
-                color: page >= totalPages - 1 ? '#555' : '#fff',
-                fontSize: '0.78rem',
-                cursor: page >= totalPages - 1 || loading ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <span>下一页</span>
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
+      {/* 状态流转与审核批注 Modal */}
+      {transitionTarget && (
+        <StateTransitionModal
+          opened={Boolean(transitionTarget)}
+          onClose={() => setTransitionTarget(null)}
+          dictCode="echo_audit_status"
+          fromValue={transitionTarget.echo.auditStatus}
+          toValue={transitionTarget.toStatus}
+          actionName={transitionTarget.actionName}
+          targetName={`【${transitionTarget.echo.surfaceRole}】"${transitionTarget.echo.shadowDesire.slice(0, 20)}..."`}
+          onConfirm={handleExecuteTransition}
+        />
       )}
 
-      {/* 物理删除确认弹窗 */}
+      {/* 物理删除确认对话框 */}
       <AdminConfirmDialog
         isOpen={Boolean(deleteConfirmEcho)}
         title="物理删除回响心声"
@@ -576,6 +630,6 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
         onConfirm={executeDelete}
         onCancel={() => setDeleteConfirmEcho(null)}
       />
-    </div>
+    </AdminWorkbenchShell>
   );
 };

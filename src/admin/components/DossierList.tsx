@@ -9,6 +9,7 @@ import { DossierFilterToolbar } from './dossier/DossierFilterToolbar';
 import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
 import { AdminToast, type ToastMessage } from './ui/AdminToast';
 import { AdminImageLightbox } from './ui/AdminImageLightbox';
+import { DictBadge } from './ui/DictBadge';
 
 function depthLabel(d: Pick<AdminDossier, 'depthRating'>): { text: string; bg: string; fg: string } {
   if (d.depthRating === 'deep') return { text: '深度', bg: 'rgba(255,51,119,0.12)', fg: '#ff3377' };
@@ -736,15 +737,7 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
                             </span>
                           </td>
                           <td style={{ padding: '8px 6px', verticalAlign: 'middle' }}>
-                            <span style={{
-                              fontSize: '0.7rem',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: d.auditStatus === 'approved' ? 'rgba(79,209,161,0.1)' : d.auditStatus === 'flagged' ? 'rgba(240,113,120,0.1)' : 'rgba(255,209,128,0.1)',
-                              color: d.auditStatus === 'approved' ? '#4fd1a1' : d.auditStatus === 'flagged' ? '#f07178' : '#ffd180',
-                            }}>
-                              {STATUS_LABEL[d.auditStatus]}
-                            </span>
+                            <DictBadge dictCode="dossier_audit_status" value={d.auditStatus} size="xs" />
                           </td>
                           <td style={{ padding: '8px 6px', textAlign: 'center', verticalAlign: 'middle' }}>
                             <div style={{ display: 'inline-flex', gap: '4px' }}>

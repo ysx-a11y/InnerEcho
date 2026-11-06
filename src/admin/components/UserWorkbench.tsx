@@ -352,7 +352,7 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
                             <span style={{ color: '#fff', fontWeight: 700 }}>{u.email}</span>
                             <DictBadge
                               dictCode="user_account_status"
-                              value={isDeleted ? 'deleted' : 'active'}
+                              value={u.accountStatus || (isDeleted ? 'deleted' : 'active')}
                               size="xs"
                             />
                           </div>

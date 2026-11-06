@@ -15,6 +15,8 @@ import {
 import { formatTime } from '../adminApi';
 import { getQuestionnaireName } from '../adminUtils';
 import type { AdminUserDetails } from '../adminTypes';
+import { DictBadge } from './ui/DictBadge';
+import { AccountLineageCard } from './users/AccountLineageCard';
 
 interface UserProfileModalProps {
   userId: string | null;
@@ -128,26 +130,34 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
           ) : userDetails ? (
             <>
+              {/* 0. 根账号血缘与跨世代族谱 */}
+              <AccountLineageCard
+                currentUserId={userId}
+                lineage={userDetails.lineage ?? null}
+                generations={userDetails.lineageGenerations ?? []}
+              />
+
               {/* 1. 基础信息 & 关联设备 */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1rem' }}>
                 {/* 账号档案 */}
                 <div style={{ background: 'var(--admin-surface-raised)', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '1.1rem' }}>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ffb347', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>📌 账号档案</span>
+                    <span>📌 账号档案 (本世代)</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.78rem', fontFamily: 'monospace' }}>
                     <div>注册代次: 第{userDetails.user.generation}代</div>
-                    <div>
-                      状态:{' '}
-                      {userDetails.user.deletedAt ? (
-                        <span style={{ color: '#f07178' }}>已注销</span>
-                      ) : (
-                        <span style={{ color: '#4fd1a1' }}>正常</span>
-                      )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>状态:</span>
+                      <DictBadge dictCode="user_account_status" value={userDetails.user.accountStatus || (userDetails.user.deletedAt ? 'deleted' : 'active')} size="xs" />
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
                       注册时间: {formatTime(userDetails.user.createdAt)}
                     </div>
+                    {userDetails.user.deletedAt && (
+                      <div style={{ gridColumn: 'span 2', color: '#f07178' }}>
+                        注销时间: {formatTime(userDetails.user.deletedAt)}
+                      </div>
+                    )}
                   </div>
                 </div>
 

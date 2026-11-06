@@ -640,8 +640,12 @@ export class DatabaseFacade {
     return this.echoes.listAdminEchoes(query);
   }
 
-  async updateAdminEchoStatus(id: string, auditStatus: EchoAuditStatus): Promise<boolean> {
-    return this.echoes.updateAdminEchoStatus(id, auditStatus);
+  async updateAdminEchoStatus(
+    id: string,
+    auditStatus: EchoAuditStatus,
+    options?: { adminNotes?: string; remark?: string }
+  ): Promise<boolean> {
+    return this.echoes.updateAdminEchoStatus(id, auditStatus, options);
   }
 
   async batchDeleteEchoes(ids: string[]): Promise<number> {

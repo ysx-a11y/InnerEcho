@@ -353,4 +353,44 @@ describe('migrateDatabase', () => {
     expect(agentItems.map((i) => i.value)).toContain('dossier_analyst');
     expect(agentItems.map((i) => i.value)).toContain('interrogator');
   });
+
+  it('runs migration v38 and ensures admin_notes and remark across business tables', () => {
+    const database = createMemoryDatabase();
+    migrateDatabase(database);
+
+    const version = database.prepare('PRAGMA user_version').get() as { user_version: number };
+    expect(version.user_version).toBe(38);
+
+    const echoAdminNotes = database
+      .prepare("SELECT name FROM pragma_table_info('echo_whispers') WHERE name='admin_notes'")
+      .get();
+    const echoRemark = database
+      .prepare("SELECT name FROM pragma_table_info('echo_whispers') WHERE name='remark'")
+      .get();
+    expect(echoAdminNotes).toBeTruthy();
+    expect(echoRemark).toBeTruthy();
+
+    const bankAdminNotes = database
+      .prepare("SELECT name FROM pragma_table_info('user_banks') WHERE name='admin_notes'")
+      .get();
+    const bankRemark = database
+      .prepare("SELECT name FROM pragma_table_info('user_banks') WHERE name='remark'")
+      .get();
+    expect(bankAdminNotes).toBeTruthy();
+    expect(bankRemark).toBeTruthy();
+
+    const taskAdminNotes = database
+      .prepare("SELECT name FROM pragma_table_info('user_tasks') WHERE name='admin_notes'")
+      .get();
+    const taskRemark = database
+      .prepare("SELECT name FROM pragma_table_info('user_tasks') WHERE name='remark'")
+      .get();
+    expect(taskAdminNotes).toBeTruthy();
+    expect(taskRemark).toBeTruthy();
+
+    const flaggedItem = database
+      .prepare("SELECT label, badge_color FROM sys_dict_items WHERE type_code = 'echo_audit_status' AND value = 'flagged'")
+      .get() as { label: string; badge_color: string } | undefined;
+    expect(flaggedItem?.label).toBe('已下架');
+  });
 });

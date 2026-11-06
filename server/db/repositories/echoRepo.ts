@@ -15,6 +15,8 @@ export interface EchoWhisperRowDb {
   shadow_tag: string;
   echo_count: number;
   audit_status: string;
+  admin_notes?: string | null;
+  remark?: string | null;
   created_at: string;
 }
 
@@ -282,13 +284,32 @@ export class EchoRepo {
       createdAt: r.created_at,
       deviceId: r.device_id,
       userId: r.user_id,
+      adminNotes: r.admin_notes ?? null,
+      remark: r.remark ?? null,
     }));
 
     return { items, total: totalRow?.c ?? 0 };
   }
 
-  async updateAdminEchoStatus(id: string, auditStatus: EchoAuditStatus): Promise<boolean> {
-    const info = this.db.prepare('UPDATE echo_whispers SET audit_status = ? WHERE id = ?').run(auditStatus, id);
+  async updateAdminEchoStatus(
+    id: string,
+    auditStatus: EchoAuditStatus,
+    options?: { adminNotes?: string; remark?: string }
+  ): Promise<boolean> {
+    const updates: string[] = ['audit_status = ?'];
+    const params: unknown[] = [auditStatus];
+
+    if (options?.adminNotes !== undefined) {
+      updates.push('admin_notes = ?');
+      params.push(options.adminNotes);
+    }
+    if (options?.remark !== undefined) {
+      updates.push('remark = ?');
+      params.push(options.remark);
+    }
+    params.push(id);
+
+    const info = this.db.prepare(`UPDATE echo_whispers SET ${updates.join(', ')} WHERE id = ?`).run(...params);
     return info.changes > 0;
   }
 

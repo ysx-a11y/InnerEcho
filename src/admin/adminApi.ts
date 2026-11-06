@@ -289,10 +289,14 @@ export const echoesApi = {
       `/api/admin/echoes${qs}`
     );
   },
-  updateStatus: (id: string, auditStatus: 'pending' | 'approved' | 'rejected' | 'flagged') =>
+  updateStatus: (
+    id: string,
+    auditStatus: 'pending' | 'approved' | 'rejected' | 'flagged',
+    options?: { adminNotes?: string; remark?: string }
+  ) =>
     adminFetch<{ success: boolean; message: string }>(
       `/api/admin/echoes/${encodeURIComponent(id)}`,
-      { method: 'PATCH', body: JSON.stringify({ auditStatus }) }
+      { method: 'PATCH', body: JSON.stringify({ auditStatus, ...options }) }
     ),
   deleteEcho: (id: string) =>
     adminFetch<{ success: boolean; message: string }>(
@@ -500,4 +504,93 @@ export const aiHubApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+};
+
+export const dictApi = {
+  listTypes: () =>
+    adminFetch<{ success: boolean; types: import('./adminTypes').SysDictType[] }>('/api/admin/dict/types'),
+  listItems: (typeCode: string, all = false) =>
+    adminFetch<{ success: boolean; items: import('./adminTypes').SysDictItem[] }>(
+      `/api/admin/dict/items/${encodeURIComponent(typeCode)}${all ? '?all=1' : ''}`
+    ),
+  upsertItem: (input: {
+    typeCode: string;
+    value: string;
+    label: string;
+    badgeColor?: string;
+    badgeVariant?: string;
+    sortOrder?: number;
+    isDefault?: number;
+    isActive?: number;
+    remark?: string;
+  }) =>
+    adminFetch<{ success: boolean; item: import('./adminTypes').SysDictItem }>('/api/admin/dict/items', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  listTransitions: (typeCode: string, fromValue?: string) => {
+    const qs = fromValue ? `?fromValue=${encodeURIComponent(fromValue)}` : '';
+    return adminFetch<{ success: boolean; transitions: import('./adminTypes').SysStateTransition[] }>(
+      `/api/admin/dict/transitions/${encodeURIComponent(typeCode)}${qs}`
+    );
+  },
+  checkTransition: (data: { typeCode: string; fromValue: string; toValue: string; role?: string }) =>
+    adminFetch<{ success: boolean; isAllowed: boolean }>('/api/admin/dict/check-transition', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  upsertTransition: (data: {
+    typeCode: string;
+    fromValue: string;
+    toValue: string;
+    actionName: string;
+    requiredRole?: 'user' | 'admin' | 'system';
+    isAllowed?: number;
+    remark?: string;
+  }) =>
+    adminFetch<{ success: boolean; transition: import('./adminTypes').SysStateTransition }>('/api/admin/dict/transitions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
+export const lineageApi = {
+  getLineage: (lineageId: string) =>
+    adminFetch<{
+      success: boolean;
+      lineage: import('./adminTypes').AccountLineageSummary;
+      generations: Array<{
+        id: string;
+        email: string;
+        generation: number;
+        accountStatus: string;
+        createdAt: string;
+        deletedAt: string | null;
+        adminNotes: string | null;
+        remark: string | null;
+      }>;
+    }>(`/api/admin/users/lineage/${encodeURIComponent(lineageId)}`),
+  getLineageByEmail: (email: string) =>
+    adminFetch<{
+      success: boolean;
+      lineage: import('./adminTypes').AccountLineageSummary;
+      generations: Array<{
+        id: string;
+        email: string;
+        generation: number;
+        accountStatus: string;
+        createdAt: string;
+        deletedAt: string | null;
+        adminNotes: string | null;
+        remark: string | null;
+      }>;
+    }>(`/api/admin/users/lineage/by-email/${encodeURIComponent(email)}`),
+  updateRisk: (
+    lineageId: string,
+    data: { riskLevel?: string; isBlocked?: number; adminNotes?: string; remark?: string }
+  ) =>
+    adminFetch<{ success: boolean; lineage: import('./adminTypes').AccountLineageSummary }>(
+      `/api/admin/users/lineage/${encodeURIComponent(lineageId)}/risk`,
+      { method: 'PUT', body: JSON.stringify(data) }
+    ),
 };
