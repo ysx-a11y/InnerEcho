@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Production build outputs
+dist/
+dist-user/
+dist-admin/
+dist-ssr/
+dist-server/
+*.local
+
+# Environment variables & secrets (CRITICAL FOR SECURITY)
+.env
+.env.*.local
+
+# Local SQLite Database & Data files
+server/data/*.sqlite
+server/data/*.sqlite-*
+server/data/*.db
+server/data/*.json
+server/data/*.tmp
+
+# IP 属地数据库（二进制大文件，不入 Git；由本地构建拷贝进部署包）
+server/data/geo/*.xdb
+
+# IDE & Editor files
+.vscode/
+.idea/
+.dsh/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Local export artifacts (contain real self-confession data — never commit)
+
+# Production nginx config snapshot (contains hidden panel paths — keep local only)
+scripts/nginx/xui.conf.prod
+exports/
+
+# Production DB snapshots pulled from the server (contain real user data — never commit)
+data-snapshots/
+
+# Deployment bundle
+innerecho-deploy.tar.gz
+
+# 题库正文（内容不随仓库分发：只存在于本机与服务器，见 content/README.md）
+content/
+
+# 由 content/ 在构建期生成的代码（不入库；npm run gen:banks 重建）
+src/data/questionBanks/generated/
+server/data/generated/
+public/banks/

@@ -1,0 +1,75 @@
+# InnerEcho 用户端 nginx 配置（2026-08-18 实测服务器）
+#
+# 真实环境：所有域名 server 块都在 /etc/nginx/conf.d/xui.conf 内，
+# 证书为通配证书：/root/cert/neural-node.xyz/{fullchain,privkey}.pem。
+# 本示例 = secret.neural-node.xyz 块的"安全加固版"：
+#   1) /api/admin 直接 404（管理 API 只挂管理域名，应用层同样未挂载）；
+#   2) 旧隐藏入口 /nqyg-gy3a、/admin、/admin.html 路由已删除（2026-08-18），
+#      未知路径由应用层统一 404。
+#   3) 访问日志格式 innerecho_realip（生产在 /etc/nginx/conf.d/xui.conf 定义）：
+#      $remote_addr - $http_cf_connecting_ip [$time_local] "$request" $status
+#      $body_bytes_sent "$http_referer" "$http_user_agent" "$http_sec_fetch_site"
+#      其中 $http_sec_fetch_site 用于区分地址栏直输(none)/外部链接(cross-site)/站内跳转(same-origin)。
+#
+# ⚠️ 真实 IP 链路（2026-10-05 修正，踩过坑）：
+#   生产还有 /etc/nginx/conf.d/cf-access.conf，在 http 上下文用
+#   `allow <Cloudflare 官方网段>; deny all;` 保证源站只接受 Cloudflare 回源。
+#   ngx_http_access_module 判断的是「被 real_ip 改写后」的 $remote_addr，
+#   所以本 server 块**不能**再配 set_real_ip_from / real_ip_header：一旦
+#   $remote_addr 变成真实访客 IP，白名单会判定所有访客不在 CF 网段 → 全站 403。
+#   正确做法是保持 $remote_addr 为 CF 边缘 IP，把 CF 已验证的访客 IP 通过
+#   X-Forwarded-For 交给应用（Express 只信任本机反代）；应用侧 req.ip 即为
+#   真实访客 IP，地区解析、安全事件与蜜罐封禁都按真实 IP 记账。
+
+    # --- 5. InnerEcho 用户端 ---
+    server {
+        listen 443 ssl http2;
+        server_name secret.neural-node.xyz;
+
+        ssl_certificate     /root/cert/neural-node.xyz/fullchain.pem;
+        ssl_certificate_key /root/cert/neural-node.xyz/privkey.pem;
+
+        # 最低 TLS 版本由 /etc/nginx/nginx.conf 的 http 块统一声明：
+        #   ssl_protocols TLSv1.2 TLSv1.3;
+        underscores_in_headers on;
+        include /etc/nginx/snippets/cloudflare-real-ip.conf;
+
+        # 安全头只在这里下发：server/app.ts 的 helmet 已关闭 HSTS/XFO/XCTO，
+        # 否则代理响应会出现两条同名头。always 保证 404/5xx 也带。
+        add_header Strict-Transport-Security "max-age=63072000" always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header X-Content-Type-Options nosniff always;
+
+        gzip on;
+        gzip_min_length 1k;
+        gzip_comp_level 6;
+        gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+
+        # 管理接口与入口：用户域一律拒绝
+        location ^~ /api/admin {
+            return 404;
+        }
+
+        location / {
+            proxy_pass http://127.0.0.1:3001;
+
+            proxy_buffer_size 256k;
+            proxy_buffers 8 512k;
+            proxy_busy_buffers_size 512k;
+            client_max_body_size 50M;
+
+            proxy_read_timeout 300s;
+            proxy_send_timeout 300s;
+
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            # 应用只信任本机反代（trust proxy: loopback）。这里覆盖而非追加，
+            # 避免客户端可伪造的链路混入；请求能到达这里说明已通过 cf-access 白名单。
+            proxy_set_header X-Forwarded-For $http_cf_connecting_ip;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Device-Id $http_x_device_id;
+        }
+    }

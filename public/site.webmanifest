@@ -1,0 +1,26 @@
+{
+  "name": "镜界自白｜匿名反差人格问卷与隐秘渴望测试",
+  "short_name": "镜界自白",
+  "description": "以匿名反差人格问卷为主，探索支配臣服倾向与潜意识隐秘渴望，并在回声树洞留下匿名共鸣。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#120716",
+  "theme_color": "#120716",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

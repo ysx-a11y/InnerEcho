@@ -1,0 +1,31 @@
+# 镜界自白 (InnerEcho)
+
+> 镜界自白是一个专注于反差人格、隐秘渴望、支配与臣服倾向探索的匿名深度趣味问卷与自白平台。
+
+镜界自白通过匿名自白与多维标准化问卷，测量支配、臣服、克制与感官阈值四个维度，为用户生成专属性格画像与高奢美学卷宗海报，并在回声树洞中提供匿名的心流共鸣空间。
+
+## 核心产品与测评体系
+
+- [镜界自白首页与标准卷宗问卷](https://secret.neural-node.xyz/): 包含真实职业/人前形象登记、50题标准全景卷宗测试、四维心流矩阵（支配/臣服/克制/感官阈值）与高奢诊断报告海报导出。
+- [全部测评题库总览](https://secret.neural-node.xyz/banks/): 涵盖情境切片、真实自白、权责谱系与心相镜像全系列匿名测评卷宗及样题预览。
+- [心理探索指南专栏](https://secret.neural-node.xyz/articles/): 提供关于反差人格、阴影自我、潜意识释放、倾向机制等深度心理学解析。
+
+## 心理探索指南文章库
+
+- [反差人格测试：为什么表里不一不是虚伪？](https://secret.neural-node.xyz/articles/contrast-personality-test.html): 从人格面具（Persona）到阴影自我（Shadow），解析反差背后的心理机制与四种常见反差类型。
+- [反差自白：为什么匿名写下隐秘渴望更真实？](https://secret.neural-node.xyz/articles/contrast-confession.html): 探讨安全匿名环境下把“人前”与“人后”并排呈现的表达力量与自我接纳。
+- [反差问卷：50 道题如何测出表里不一的你？](https://secret.neural-node.xyz/articles/contrast-questionnaire.html): 介绍标准 50 题卷宗的四阶段结构设计（身份登记、社交面具、暗面边界、潜意识宣泄）。
+- [BDSM 倾向测试：如何读懂支配、臣服与隐秘渴望](https://secret.neural-node.xyz/articles/bdsm-tendency-test.html): 解读支配、臣服、克制与感官阈值四个维度的内涵与安全自愿原则（SSC）。
+- [为什么越乖的人越想失控？](https://secret.neural-node.xyz/articles/why-do-good-girls-want-to-lose-control.html): 剖析高自我监控的心理消耗、责任豁免渴望与安全释放机制。
+- [阴影自我：如何面对自己不被看见的一面](https://secret.neural-node.xyz/articles/shadow-self-psychology.html): 阴影整合、投射机制与自我完整性探索。
+- [匿名问卷为什么比面对面更诚实？](https://secret.neural-node.xyz/articles/anonymous-psychology-questionnaire.html): 消除社会赞许偏差（Social Desirability Bias）与隐私安全感对真实回答的促成。
+
+## 官方渠道与支持
+
+- [Telegram 官方频道](https://t.me/fanchawen): 镜界自白｜匿名反差测试官方交流与更新。
+- 声明：本站所有问卷、测评与自白内容仅供个人趣味探索、娱乐体验与反思参考，不具备任何专业诊断或科学定论效力，请勿作为现实决策依据。
+
+## Optional
+
+- [完整知识与文章语料](https://secret.neural-node.xyz/llms-full.txt): 包含所有探索文章与测评维度的完整纯文本语料。
+- [Sitemap](https://secret.neural-node.xyz/sitemap.xml): 站点公开 XML 索引。
