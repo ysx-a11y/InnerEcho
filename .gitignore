@@ -57,3 +57,13 @@ content/
 src/data/questionBanks/generated/
 server/data/generated/
 public/banks/
+
+# 内部运维备忘与本机部署脚本（仅保存在本地，不随公开仓库分发）
+docs/OPERATIONS-FACTS.md
+docs/REVIEW-2026-08-10.md
+docs/banks/
+scripts/deploy-innerecho.ps1
+scripts/deploy-server.sh
+scripts/innerecho-deploy.sh
+scripts/innerecho-smoke.sh
+scripts/sync-innerecho-backup.ps1
