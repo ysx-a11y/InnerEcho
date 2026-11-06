@@ -7,6 +7,7 @@ import type {
   AdminUserDetails,
   AdminUserListResult,
 } from '../../types.js';
+import type { AccountLineageSummary } from '../../../shared/apiContracts.js';
 import {
   genId,
   safeJsonParse,
@@ -24,6 +25,10 @@ export interface UserRow {
   password_hash: string;
   created_at: string;
   generation: number;
+  lineage_id?: string | null;
+  account_status?: string;
+  admin_notes?: string | null;
+  remark?: string | null;
   token_invalidated_at: string | null;
   deleted_at: string | null;
 }
@@ -97,19 +102,54 @@ export class UserRepo {
     if (conflict && !conflict.deleted_at) {
       throw new Error('该账号已注册，请直接登录');
     }
+    const targetEmail = email.trim().toLowerCase();
+    const existingLineage = this.db
+      .prepare('SELECT id, is_blocked, total_generations FROM account_lineages WHERE root_key = ?')
+      .get(targetEmail) as { id: string; is_blocked: number; total_generations: number } | undefined;
+
+    if (existingLineage && existingLineage.is_blocked === 1) {
+      throw new Error('该账号已被风控封禁，无法注册');
+    }
+
     const generation = (await this.countUsersByEmail(email)) + 1;
+    const now = new Date().toISOString();
     const user: AuthUser & { createdAt: string } = {
       id: genId('usr'),
-      email: email.trim().toLowerCase(),
+      email: targetEmail,
       generation,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
+
+    let lineageId = existingLineage?.id;
+    if (!lineageId) {
+      lineageId = genId('lin');
+      this.db
+        .prepare(`
+          INSERT INTO account_lineages (
+            id, root_key, first_registered_at, last_active_at, total_generations,
+            current_user_id, risk_level, is_blocked, admin_notes, remark, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, 1, ?, 'normal', 0, NULL, '用户注册初始血缘', ?, ?)
+        `)
+        .run(lineageId, targetEmail, now, now, user.id, now, now);
+    } else {
+      this.db
+        .prepare(`
+          UPDATE account_lineages
+          SET total_generations = total_generations + 1,
+              current_user_id = ?,
+              last_active_at = ?,
+              updated_at = ?
+          WHERE id = ?
+        `)
+        .run(user.id, now, now, lineageId);
+    }
+
     try {
       this.db
         .prepare(
-          'INSERT INTO users (id, email, password_hash, created_at, token_invalidated_at, deleted_at, generation) VALUES (?, ?, ?, ?, NULL, NULL, ?)'
+          'INSERT INTO users (id, email, password_hash, created_at, token_invalidated_at, deleted_at, generation, lineage_id, account_status, remark) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)'
         )
-        .run(user.id, user.email, passwordHash, user.createdAt, generation);
+        .run(user.id, user.email, passwordHash, user.createdAt, generation, lineageId, 'active', '正常注册');
     } catch (err) {
       // better-sqlite3 抛的是扩展错误码（SQLITE_CONSTRAINT_UNIQUE / SQLITE_CONSTRAINT_PRIMARYKEY），
       // 需用前缀匹配才能兼容并发注册同邮箱时的唯一索引兜底，保证返回 409 而非 500。
@@ -208,8 +248,11 @@ export class UserRepo {
   async softDeleteUser(userId: string): Promise<void> {
     const now = new Date().toISOString();
     this.db
-      .prepare('UPDATE users SET deleted_at = ?, token_invalidated_at = ? WHERE id = ? AND deleted_at IS NULL')
+      .prepare("UPDATE users SET deleted_at = ?, token_invalidated_at = ?, account_status = 'deleted' WHERE id = ? AND deleted_at IS NULL")
       .run(now, now, userId);
+    this.db
+      .prepare('UPDATE account_lineages SET current_user_id = NULL, updated_at = ? WHERE current_user_id = ?')
+      .run(now, userId);
   }
 
   async getUserStats(userId: string): Promise<UserStats | null> {
@@ -521,8 +564,92 @@ export class UserRepo {
   async deleteAdminUser(userId: string): Promise<boolean> {
     const now = new Date().toISOString();
     this.db
-      .prepare('UPDATE users SET deleted_at = ?, token_invalidated_at = ? WHERE id = ?')
+      .prepare("UPDATE users SET deleted_at = ?, token_invalidated_at = ?, account_status = 'deleted' WHERE id = ?")
       .run(now, now, userId);
+    this.db
+      .prepare('UPDATE account_lineages SET current_user_id = NULL, updated_at = ? WHERE current_user_id = ?')
+      .run(now, userId);
     return true;
+  }
+
+  getAccountLineage(lineageId: string): AccountLineageSummary | null {
+    const row = this.db
+      .prepare('SELECT * FROM account_lineages WHERE id = ?')
+      .get(lineageId) as any;
+    if (!row) return null;
+    return {
+      id: row.id,
+      rootKey: row.root_key,
+      firstRegisteredAt: row.first_registered_at,
+      lastActiveAt: row.last_active_at,
+      totalGenerations: row.total_generations,
+      currentUserId: row.current_user_id,
+      riskLevel: row.risk_level,
+      isBlocked: row.is_blocked,
+      adminNotes: row.admin_notes,
+      remark: row.remark,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  getAccountLineageByRootKey(rootKey: string): AccountLineageSummary | null {
+    const target = (rootKey || '').trim().toLowerCase();
+    const row = this.db
+      .prepare('SELECT * FROM account_lineages WHERE root_key = ?')
+      .get(target) as any;
+    if (!row) return null;
+    return {
+      id: row.id,
+      rootKey: row.root_key,
+      firstRegisteredAt: row.first_registered_at,
+      lastActiveAt: row.last_active_at,
+      totalGenerations: row.total_generations,
+      currentUserId: row.current_user_id,
+      riskLevel: row.risk_level,
+      isBlocked: row.is_blocked,
+      adminNotes: row.admin_notes,
+      remark: row.remark,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  getLineageGenerations(lineageId: string): UserRow[] {
+    return this.db
+      .prepare('SELECT * FROM users WHERE lineage_id = ? ORDER BY generation ASC')
+      .all(lineageId) as UserRow[];
+  }
+
+  updateLineageRisk(
+    lineageId: string,
+    input: { riskLevel?: string; isBlocked?: number; adminNotes?: string; remark?: string }
+  ): boolean {
+    const now = new Date().toISOString();
+    const updates: string[] = ['updated_at = ?'];
+    const params: unknown[] = [now];
+
+    if (input.riskLevel !== undefined) {
+      updates.push('risk_level = ?');
+      params.push(input.riskLevel);
+    }
+    if (input.isBlocked !== undefined) {
+      updates.push('is_blocked = ?');
+      params.push(input.isBlocked ? 1 : 0);
+    }
+    if (input.adminNotes !== undefined) {
+      updates.push('admin_notes = ?');
+      params.push(input.adminNotes);
+    }
+    if (input.remark !== undefined) {
+      updates.push('remark = ?');
+      params.push(input.remark);
+    }
+    params.push(lineageId);
+
+    const result = this.db
+      .prepare(`UPDATE account_lineages SET ${updates.join(', ')} WHERE id = ?`)
+      .run(...params);
+    return result.changes > 0;
   }
 }

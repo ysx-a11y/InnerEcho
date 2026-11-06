@@ -428,3 +428,61 @@ export interface InterrogationSummaryResponse {
   message?: string;
 }
 
+/** 动态数据字典大类 */
+export interface SysDictType {
+  code: string;
+  name: string;
+  description: string | null;
+  remark: string | null;
+  isSystem: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 动态数据字典子项 */
+export interface SysDictItem {
+  id: string;
+  typeCode: string;
+  value: string;
+  label: string;
+  badgeColor: string;
+  badgeVariant: string;
+  sortOrder: number;
+  isDefault: number;
+  isActive: number;
+  remark: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 有限状态机流转规则 */
+export interface SysStateTransition {
+  id: string;
+  typeCode: string;
+  fromValue: string;
+  toValue: string;
+  actionName: string;
+  requiredRole: string;
+  isAllowed: number;
+  remark: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 根账号血缘摘要 */
+export interface AccountLineageSummary {
+  id: string;
+  rootKey: string;
+  firstRegisteredAt: string;
+  lastActiveAt: string;
+  totalGenerations: number;
+  currentUserId: string | null;
+  riskLevel: string;
+  isBlocked: number;
+  adminNotes: string | null;
+  remark: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+

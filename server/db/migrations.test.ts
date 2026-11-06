@@ -170,4 +170,120 @@ describe('migrateDatabase', () => {
     expect(eventTable?.name).toBe('security_events');
     expect(stateTable?.name).toBe('security_event_chain_state');
   });
+
+  it('v36 creates account_lineages, data dictionary, and state transition tables with remarks', () => {
+    const database = createMemoryDatabase();
+    migrateDatabase(database);
+
+    const lineageTable = database
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='account_lineages'")
+      .get() as { name: string } | undefined;
+    const dictTypesTable = database
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sys_dict_types'")
+      .get() as { name: string } | undefined;
+    const dictItemsTable = database
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sys_dict_items'")
+      .get() as { name: string } | undefined;
+    const transitionsTable = database
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sys_state_transitions'")
+      .get() as { name: string } | undefined;
+
+    expect(lineageTable?.name).toBe('account_lineages');
+    expect(dictTypesTable?.name).toBe('sys_dict_types');
+    expect(dictItemsTable?.name).toBe('sys_dict_items');
+    expect(transitionsTable?.name).toBe('sys_state_transitions');
+
+    // 验证备注字段存在
+    const lineageRemark = database
+      .prepare("SELECT name FROM pragma_table_info('account_lineages') WHERE name='remark'")
+      .get() as { name: string } | undefined;
+    const lineageAdminNotes = database
+      .prepare("SELECT name FROM pragma_table_info('account_lineages') WHERE name='admin_notes'")
+      .get() as { name: string } | undefined;
+    const userRemark = database
+      .prepare("SELECT name FROM pragma_table_info('users') WHERE name='remark'")
+      .get() as { name: string } | undefined;
+    const userAdminNotes = database
+      .prepare("SELECT name FROM pragma_table_info('users') WHERE name='admin_notes'")
+      .get() as { name: string } | undefined;
+    const dictItemRemark = database
+      .prepare("SELECT name FROM pragma_table_info('sys_dict_items') WHERE name='remark'")
+      .get() as { name: string } | undefined;
+    const transitionRemark = database
+      .prepare("SELECT name FROM pragma_table_info('sys_state_transitions') WHERE name='remark'")
+      .get() as { name: string } | undefined;
+
+    expect(lineageRemark?.name).toBe('remark');
+    expect(lineageAdminNotes?.name).toBe('admin_notes');
+    expect(userRemark?.name).toBe('remark');
+    expect(userAdminNotes?.name).toBe('admin_notes');
+    expect(dictItemRemark?.name).toBe('remark');
+    expect(transitionRemark?.name).toBe('remark');
+
+    // 验证 6 大内置字典及子项注入成功
+    const dictCount = database
+      .prepare("SELECT COUNT(*) as c FROM sys_dict_types")
+      .get() as { c: number };
+    expect(dictCount.c).toBe(6);
+
+    const activeUserStatus = database
+      .prepare("SELECT * FROM sys_dict_items WHERE type_code = 'user_account_status' AND value = 'active'")
+      .get() as { label: string; badge_color: string; remark: string } | undefined;
+    expect(activeUserStatus?.label).toBe('正常活跃');
+    expect(activeUserStatus?.badge_color).toBe('teal');
+    expect(activeUserStatus?.remark).toBeTruthy();
+
+    const transition = database
+      .prepare("SELECT * FROM sys_state_transitions WHERE type_code = 'echo_audit_status' AND from_value = 'pending' AND to_value = 'approved'")
+      .get() as { action_name: string; remark: string } | undefined;
+    expect(transition?.action_name).toBe('审核通过');
+    expect(transition?.remark).toBeTruthy();
+  });
+
+  it('v36 backfills account_lineages and links existing multi-generation users', () => {
+    const database = createMemoryDatabase();
+    // 模拟 v35 状态：存在注销后重生的两代用户
+    database.exec(`
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        email TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        token_invalidated_at TEXT,
+        deleted_at TEXT,
+        generation INTEGER NOT NULL DEFAULT 1
+      );
+      PRAGMA user_version = 35;
+
+      INSERT INTO users (id, email, password_hash, created_at, deleted_at, generation)
+      VALUES 
+        ('usr_gen1', 'test@domain.com', 'hash1', '2026-01-01T00:00:00.000Z', '2026-01-10T00:00:00.000Z', 1),
+        ('usr_gen2', 'test@domain.com', 'hash2', '2026-02-01T00:00:00.000Z', NULL, 2),
+        ('usr_other', 'other@domain.com', 'hash3', '2026-03-01T00:00:00.000Z', NULL, 1);
+    `);
+
+    migrateDatabase(database);
+
+    // 检查是否回填了两个血缘
+    const lineages = database
+      .prepare("SELECT * FROM account_lineages ORDER BY root_key ASC")
+      .all() as { id: string; root_key: string; total_generations: number; current_user_id: string; remark: string }[];
+    expect(lineages).toHaveLength(2);
+
+    const testLineage = lineages.find((l) => l.root_key === 'test@domain.com');
+    expect(testLineage).toBeDefined();
+    expect(testLineage?.total_generations).toBe(2);
+    expect(testLineage?.current_user_id).toBe('usr_gen2');
+    expect(testLineage?.remark).toBeTruthy();
+
+    // 检查 users 表上的关联与状态回填
+    const users = database
+      .prepare("SELECT id, lineage_id, account_status, remark FROM users WHERE email = 'test@domain.com' ORDER BY generation ASC")
+      .all() as { id: string; lineage_id: string; account_status: string; remark: string }[];
+    expect(users).toHaveLength(2);
+    expect(users[0].lineage_id).toBe(testLineage?.id);
+    expect(users[0].account_status).toBe('deleted');
+    expect(users[1].lineage_id).toBe(testLineage?.id);
+    expect(users[1].account_status).toBe('active');
+  });
 });

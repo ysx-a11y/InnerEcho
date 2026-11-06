@@ -9,6 +9,8 @@ import { adminSecurityAuditMiddleware } from '../utils/securityAudit.js';
 import { reanalyzeDossierData } from '../services/analyzeService.js';
 import { dossierRowToFullDossierData } from '../services/dossierPayload.js';
 import { createBankSchema, updateBankSchema, adminBankListQuerySchema } from '../schemas.js';
+import { adminDictRouter } from './admin/adminDict.js';
+import { adminLineageRouter } from './admin/adminLineage.js';
 
 export const adminRouter = Router();
 adminRouter.use(adminSecurityAuditMiddleware);
@@ -59,6 +61,11 @@ function timingSafeEqual(a: string, b: string): boolean {
 adminRouter.post('/verify', adminLoginLimiter, requireAdmin, (_req, res) => {
   res.json({ success: true, message: 'admin token valid' });
 });
+
+// 动态数据字典与有限状态机
+adminRouter.use('/dict', adminActionLimiter, requireAdmin, adminDictRouter);
+// 账号血缘、跨世代族谱与风控
+adminRouter.use('/users/lineage', adminActionLimiter, requireAdmin, adminLineageRouter);
 
 const dossierListQuerySchema = z.object({
   search: z.string().max(100).optional().default(''),

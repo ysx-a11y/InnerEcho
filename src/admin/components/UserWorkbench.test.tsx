@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { MantineProvider } from '@mantine/core';
 import { UserWorkbench } from './UserWorkbench';
 import { usersApi } from '../adminApi';
 import type { AdminUserSummary, AdminUserStats, AdminUserDetails } from '../adminTypes';
@@ -138,7 +139,11 @@ describe('UserWorkbench Component Test Suite', () => {
   });
 
   it('renders stats overview, user table and switches category tabs', async () => {
-    render(<UserWorkbench />);
+    render(
+      <MantineProvider>
+        <UserWorkbench />
+      </MantineProvider>
+    );
 
     // 统计看板渲染
     expect(await screen.findByText('总注册用户')).toBeTruthy();
@@ -159,7 +164,11 @@ describe('UserWorkbench Component Test Suite', () => {
   });
 
   it('clicks user profile button to inspect details drawer and triggers user soft-delete', async () => {
-    render(<UserWorkbench />);
+    render(
+      <MantineProvider>
+        <UserWorkbench />
+      </MantineProvider>
+    );
     expect(await screen.findByText('architect@example.com')).toBeTruthy();
 
     // 点击【全维画像】按钮打开详情抽屉

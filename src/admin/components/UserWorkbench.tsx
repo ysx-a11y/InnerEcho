@@ -31,7 +31,8 @@ import { UserProfileModal } from './UserProfileModal';
 import { DossierDetailModal } from './DossierDetailModal';
 import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
 import { AdminImageLightbox } from './ui/AdminImageLightbox';
-import { AdminToast, type ToastMessage } from './ui/AdminToast';
+import { adminNotify } from './ui/adminNotify';
+import { DictBadge } from './ui/DictBadge';
 
 interface UserWorkbenchProps {
   refreshTrigger?: number;
@@ -44,14 +45,11 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Toast messages
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  // Toast notifications via Mantine
   const addToast = (type: 'success' | 'error' | 'info', content: string) => {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    setToasts((prev) => [...prev, { id, type, content }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3200);
+    if (type === 'success') adminNotify.success(content);
+    else if (type === 'error') adminNotify.error(content);
+    else adminNotify.info(content);
   };
 
   // Image Zoom Lightbox
@@ -352,11 +350,11 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                             <span style={{ color: '#fff', fontWeight: 700 }}>{u.email}</span>
-                            {isDeleted && (
-                              <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: 4, background: 'rgba(255, 51, 119, 0.2)', color: '#ff3377' }}>
-                                已注销
-                              </span>
-                            )}
+                            <DictBadge
+                              dictCode="user_account_status"
+                              value={isDeleted ? 'deleted' : 'active'}
+                              size="xs"
+                            />
                           </div>
                           <span style={{ fontSize: '0.68rem', color: 'var(--admin-text-muted)' }}>
                             第 {u.generation} 代 · 注册于 {formatTime(u.createdAt).slice(0, 10)}
@@ -568,9 +566,6 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
         onConfirm={executeDeleteUser}
         onCancel={() => setDeleteConfirmUser(null)}
       />
-
-      {/* 统一 Toast 提示 */}
-      <AdminToast toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
     </div>
   );
 }

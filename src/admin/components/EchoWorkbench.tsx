@@ -16,7 +16,8 @@ import {
 import { echoesApi, formatTime } from '../adminApi';
 import type { AdminEchoWhisper } from '../adminTypes';
 import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
-import { AdminToast, type ToastMessage } from './ui/AdminToast';
+import { DictBadge } from './ui/DictBadge';
+import { adminNotify } from './ui/adminNotify';
 
 const PAGE_SIZE = 20;
 
@@ -32,14 +33,11 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Toast messages
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  // Toast messages via Mantine
   const addToast = (type: 'success' | 'error' | 'info', content: string) => {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    setToasts((prev) => [...prev, { id, type, content }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3200);
+    if (type === 'success') adminNotify.success(content);
+    else if (type === 'error') adminNotify.error(content);
+    else adminNotify.info(content);
   };
 
   // Filters
@@ -297,70 +295,11 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
                   >
                     {/* 状态徽标 */}
                     <td style={{ padding: '12px 8px' }}>
-                      {echo.auditStatus === 'approved' && (
-                        <span
-                          style={{
-                            background: 'rgba(79, 209, 161, 0.12)',
-                            border: '1px solid rgba(79, 209, 161, 0.35)',
-                            color: '#4fd1a1',
-                            padding: '3px 8px',
-                            borderRadius: '10px',
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            display: 'inline-block',
-                          }}
-                        >
-                          已公开
-                        </span>
-                      )}
-                      {echo.auditStatus === 'pending' && (
-                        <span
-                          style={{
-                            background: 'rgba(245, 185, 95, 0.12)',
-                            border: '1px solid rgba(245, 185, 95, 0.35)',
-                            color: '#f5b95f',
-                            padding: '3px 8px',
-                            borderRadius: '10px',
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            display: 'inline-block',
-                          }}
-                        >
-                          待审核
-                        </span>
-                      )}
-                      {echo.auditStatus === 'rejected' && (
-                        <span
-                          style={{
-                            background: 'rgba(240, 113, 120, 0.12)',
-                            border: '1px solid rgba(240, 113, 120, 0.35)',
-                            color: '#f07178',
-                            padding: '3px 8px',
-                            borderRadius: '10px',
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            display: 'inline-block',
-                          }}
-                        >
-                          已驳回
-                        </span>
-                      )}
-                      {echo.auditStatus === 'flagged' && (
-                        <span
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.06)',
-                            border: '1px solid rgba(255, 255, 255, 0.12)',
-                            color: '#a8b0bf',
-                            padding: '3px 8px',
-                            borderRadius: '10px',
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            display: 'inline-block',
-                          }}
-                        >
-                          已下架
-                        </span>
-                      )}
+                      <DictBadge
+                        dictCode="echo_audit_status"
+                        value={echo.auditStatus === 'flagged' ? 'hidden' : echo.auditStatus}
+                        size="sm"
+                      />
                     </td>
 
                     {/* 角色面具 */}
@@ -637,9 +576,6 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
         onConfirm={executeDelete}
         onCancel={() => setDeleteConfirmEcho(null)}
       />
-
-      {/* 统一 Toast 提示 */}
-      <AdminToast toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
     </div>
   );
 };

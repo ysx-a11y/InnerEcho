@@ -37,6 +37,7 @@ import { AnalyticsRepo } from './repositories/analyticsRepo.js';
 import { PromptRepo } from './repositories/promptRepo.js';
 import { WhisperMailboxRepo } from './repositories/whisperMailboxRepo.js';
 import { InterrogationRepo } from './repositories/interrogationRepo.js';
+import { DictRepo } from './repositories/dictRepo.js';
 import {
   SecurityRepo,
   type RegisterHoneypotTriggerInput,
@@ -75,6 +76,7 @@ export {
   SecurityRepo,
   AbuseRepo,
   WhisperMailboxRepo,
+  DictRepo,
 };
 
 import { upgradeSensitiveStorageEncryption as upgradeSensitiveStorageEncryptionInternal } from './crypto.js';
@@ -99,6 +101,8 @@ export class DatabaseFacade {
   public mailbox: WhisperMailboxRepo;
   /** 审讯室（测试功能）：额度配置 + 会话/消息，全部按 user_id 归属。 */
   public interrogation: InterrogationRepo;
+  /** 动态数据字典与状态机引擎 */
+  public dict: DictRepo;
 
   constructor(rawDb?: Database.Database) {
     this.rawDb = initDatabaseSync(rawDb);
@@ -113,6 +117,7 @@ export class DatabaseFacade {
     this.abuse = new AbuseRepo(this.rawDb);
     this.mailbox = new WhisperMailboxRepo(this.rawDb);
     this.interrogation = new InterrogationRepo(this.rawDb);
+    this.dict = new DictRepo(this.rawDb);
   }
 
   // ================= Security Methods =================
