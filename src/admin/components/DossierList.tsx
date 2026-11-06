@@ -1,53 +1,68 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, Trash2, Eye, ArrowUpDown, ChevronRight, ChevronDown } from 'lucide-react';
-import { adminApi, formatDuration, formatTime } from '../adminApi';
-import type { AdminAuditStatus, AdminDossier, DossierListParams } from '../adminTypes';
-import { getQuestionnaireName } from '../adminUtils';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ArrowUpDown,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  FileSpreadsheet,
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+  Search,
+  Trash2,
+  UserCheck,
+  Users,
+} from 'lucide-react';
+import { adminApi, formatTime } from '../adminApi';
+import type { AdminDossier, DossierListParams } from '../adminTypes';
 import { DossierDetailModal } from './DossierDetailModal';
 import { RespondentProfileModal } from './RespondentProfileModal';
-import { DossierFilterToolbar } from './dossier/DossierFilterToolbar';
-import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
-import { AdminToast, type ToastMessage } from './ui/AdminToast';
+import {
+  groupDossiersByUser,
+  type UserGroupData,
+} from './dossier/dossierGroupUtils';
+import { DossierSubTable } from './dossier/DossierSubTable';
 import { AdminImageLightbox } from './ui/AdminImageLightbox';
-import { DictBadge } from './ui/DictBadge';
+import { adminNotify } from './ui/adminNotify';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardDescription,
+} from './ui/card';
+import { Checkbox } from './ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Input } from './ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
 
-function depthLabel(d: Pick<AdminDossier, 'depthRating'>): { text: string; bg: string; fg: string } {
-  if (d.depthRating === 'deep') return { text: '深度', bg: 'rgba(99,102,241,0.15)', fg: '#a5b4fc' };
-  if (d.depthRating === 'medium') return { text: '中度', bg: 'rgba(14,165,233,0.15)', fg: '#38bdf8' };
-  return { text: '浅层', bg: 'rgba(148,163,184,0.12)', fg: '#94a3b8' };
-}
-
-const STATUS_LABEL: Record<AdminAuditStatus, string> = {
-  pending: '待核准',
-  approved: '已核准',
-  flagged: '已作废',
-};
-
-export interface UserGroupData {
-  userKey: string;
-  userId?: string;
-  nickname: string;
-  avatarUrl?: string;
-  email?: string;
-  deviceId?: string;
-  gender?: string;
-  occupation?: string;
-  personaTrait?: string;
-  age?: string;
-  maritalStatus?: string;
-  hasBoyfriend?: string;
-  dossiers: AdminDossier[];
-  guestDossierCount: number;
-  userDossierCount: number;
-  isPureGuest: boolean;
-}
+export type { UserGroupData };
 
 interface DossierListProps {
   refreshTrigger?: number;
   onNavigateToUsers?: () => void;
 }
 
-export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavigateToUsers }) => {
+export const DossierList: React.FC<DossierListProps> = ({
+  refreshTrigger,
+  onNavigateToUsers,
+}) => {
   const [dossiers, setDossiers] = useState<AdminDossier[]>([]);
   const [bankNames, setBankNames] = useState<Record<string, string>>({});
   const [total, setTotal] = useState(0);
@@ -55,96 +70,93 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
   const [pageSize, setPageSize] = useState(50);
   const [deviceUserMap, setDeviceUserMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Toast messages
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const addToast = (type: 'success' | 'error' | 'info', content: string) => {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    setToasts((prev) => [...prev, { id, type, content }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3200);
-  };
-
+  // 搜索与过滤条件
   const [searchInput, setSearchInput] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [filterCredibility, setFilterCredibility] = useState('all');
   const [filterDepth, setFilterDepth] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [sortField, setSortField] = useState<'submitTime' | 'credibilityScore' | 'durationSeconds'>('submitTime');
+  const [sortField, setSortField] = useState<
+    'submitTime' | 'credibilityScore' | 'durationSeconds'
+  >('submitTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+  // 选中项与展开行
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectedDossier, setSelectedDossier] = useState<AdminDossier | null>(null);
-  const [selectedUserGroup, setSelectedUserGroup] = useState<UserGroupData | null>(null);
-  const [modalLoading, setModalLoading] = useState(false);
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+
+  // 模态弹窗与详情
+  const [selectedDossier, setSelectedDossier] = useState<AdminDossier | null>(
+    null
+  );
+  const [selectedUserGroup, setSelectedUserGroup] =
+    useState<UserGroupData | null>(null);
   const [reanalyzing, setReanalyzing] = useState<string | null>(null);
   const [zoomedImg, setZoomedImg] = useState<string | null>(null);
 
-  // Delete confirm dialogs
-  const [deleteConfirmDossierId, setDeleteConfirmDossierId] = useState<string | null>(null);
+  // 删除确认对话框
+  const [deleteConfirmDossierId, setDeleteConfirmDossierId] = useState<
+    string | null
+  >(null);
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
   const [deleteActionLoading, setDeleteActionLoading] = useState(false);
 
-  // Group expand/collapse states
-  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
-  const [isAllExpanded, setIsAllExpanded] = useState(false);
-
-  const load = useCallback(async (isManual = false) => {
-    setLoading(true);
-    setError(null);
-    const params: DossierListParams = {
-      search: searchTerm,
-      depth: filterDepth,
-      credibility: filterCredibility,
-      status: filterStatus,
-      sort: sortField,
-      order: sortOrder,
-      limit: pageSize,
-      offset: page * pageSize,
-    };
-    try {
-      const res = await adminApi.listDossiers(params);
-      setDossiers(res.items);
-      setTotal(res.total);
-      setDeviceUserMap(res.deviceUserMap ?? {});
-      if (res.bankNames) setBankNames(res.bankNames);
-      setSelectedIds((prev) => prev.filter((id) => res.items.some((d) => d.id === id)));
-      if (isManual) {
-        addToast('success', '卷宗列表已刷新');
+  // 数据拉取核心函数
+  const load = useCallback(
+    async (isManual = false) => {
+      setLoading(true);
+      const params: DossierListParams = {
+        search: searchInput.trim(),
+        depth: filterDepth,
+        credibility: filterCredibility,
+        status: filterStatus,
+        sort: sortField,
+        order: sortOrder,
+        limit: pageSize,
+        offset: page * pageSize,
+      };
+      try {
+        const res = await adminApi.listDossiers(params);
+        setDossiers(res.items);
+        setTotal(res.total);
+        setDeviceUserMap(res.deviceUserMap ?? {});
+        if (res.bankNames) setBankNames(res.bankNames);
+        setSelectedIds((prev) =>
+          prev.filter((id) => res.items.some((d) => d.id === id))
+        );
+        if (isManual) {
+          adminNotify.success('卷宗档案列表已刷新');
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '加载失败';
+        adminNotify.error(msg, '数据拉取错误');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : '加载失败';
-      setError(msg);
-      addToast('error', msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm, filterDepth, filterCredibility, filterStatus, sortField, sortOrder, page, pageSize]);
-
-  // 搜索输入防抖
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchTerm(searchInput.trim());
-      setPage(0);
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+    },
+    [
+      searchInput,
+      filterDepth,
+      filterCredibility,
+      filterStatus,
+      sortField,
+      sortOrder,
+      page,
+      pageSize,
+    ]
+  );
 
   useEffect(() => {
     void load();
   }, [load, refreshTrigger]);
 
+  // 打开卷宗详情
   const openDossier = async (id: string) => {
-    setModalLoading(true);
     try {
       const res = await adminApi.getDossier(id);
       setSelectedDossier(res.dossier);
     } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '加载卷宗失败');
-    } finally {
-      setModalLoading(false);
+      adminNotify.error(err instanceof Error ? err.message : '加载卷宗详情失败');
     }
   };
 
@@ -155,9 +167,12 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
     }
   };
 
-  const handleSort = (field: typeof sortField) => {
+  // 排序触发
+  const handleSortChange = (
+    field: 'submitTime' | 'credibilityScore' | 'durationSeconds'
+  ) => {
     if (sortField === field) {
-      setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
       setSortOrder('desc');
@@ -165,730 +180,717 @@ export const DossierList: React.FC<DossierListProps> = ({ refreshTrigger, onNavi
     setPage(0);
   };
 
-  const handleSelectAll = (checked: boolean) => {
-    setSelectedIds(checked ? dossiers.map((d) => d.id) : []);
-  };
-
-  const handleSelectItem = (id: string, checked: boolean) => {
-    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((i) => i !== id)));
-  };
-
-  const handleSelectGroup = (groupDossiers: AdminDossier[], checked: boolean) => {
-    const ids = groupDossiers.map((d) => d.id);
-    setSelectedIds((prev) => {
-      if (checked) {
-        return [...prev, ...ids.filter((id) => !prev.includes(id))];
-      } else {
-        return prev.filter((id) => !ids.includes(id));
-      }
-    });
-  };
-
-  const handleBatchDelete = async () => {
-    if (selectedIds.length === 0) return;
-    setBatchDeleteConfirmOpen(true);
-  };
-
+  // 批量物理删除
   const executeBatchDelete = async () => {
+    if (selectedIds.length === 0) return;
     setDeleteActionLoading(true);
     try {
       await adminApi.batchDelete(selectedIds);
-      addToast('success', `已成功物理删除 ${selectedIds.length} 份卷宗`);
+      adminNotify.success(`已成功物理删除 ${selectedIds.length} 份卷宗`);
       setSelectedIds([]);
       setBatchDeleteConfirmOpen(false);
       await load();
     } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '批量删除失败');
+      adminNotify.error(err instanceof Error ? err.message : '批量删除失败');
     } finally {
       setDeleteActionLoading(false);
     }
   };
 
-  const handleDeleteItem = async (id: string) => {
-    setDeleteConfirmDossierId(id);
-  };
-
+  // 单条物理删除
   const executeSingleDelete = async () => {
     if (!deleteConfirmDossierId) return;
     setDeleteActionLoading(true);
     try {
       await adminApi.deleteDossier(deleteConfirmDossierId);
-      addToast('success', '已成功物理删除该测评卷宗');
+      adminNotify.success('已物理删除该测评卷宗');
       setSelectedDossier(null);
       setDeleteConfirmDossierId(null);
       await load();
     } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '删除失败');
+      adminNotify.error(err instanceof Error ? err.message : '删除失败');
     } finally {
       setDeleteActionLoading(false);
     }
   };
 
-  const handleUpdateDossierParams = async (id: string, updates: Partial<Pick<AdminDossier, 'auditStatus' | 'adminNotes'>>) => {
-    try {
-      await adminApi.updateDossier(id, updates);
-      addToast('success', '卷宗信息已更新');
-      await refreshDetail(id);
-      await load();
-    } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '更新失败');
-    }
-  };
-
+  // 触发重新评估
   const handleReanalyze = async (id: string) => {
     setReanalyzing(id);
     try {
       await adminApi.reanalyze(id);
       await refreshDetail(id);
       await load();
-      addToast('success', 'LLM 深度心理重新评估完成');
+      adminNotify.success('LLM 深度心理重新评估完成');
     } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '重新评估失败');
+      adminNotify.error(err instanceof Error ? err.message : '重新评估失败');
     } finally {
       setReanalyzing(null);
     }
   };
 
+  // 导出 CSV
   const handleExportCSV = async () => {
     try {
       const res = await adminApi.listDossiers({
-        search: searchTerm,
+        search: searchInput.trim(),
         depth: filterDepth,
         credibility: filterCredibility,
         status: filterStatus,
         sort: sortField,
         order: sortOrder,
-        limit: 2000,
+        limit: 10000,
         offset: 0,
       });
-      const headers = ['提交ID', '时间', '答题用时(秒)', '称呼/姓名', '注册邮箱', '绑定设备ID', '心理深度', '可信度分', '审核状态', '真实职业', '面具特质', '隐秘渴望', '管理者备注'];
+
+      const headers = [
+        'ID',
+        '称呼',
+        '真实职业',
+        '人前特质',
+        '提交时间',
+        '用时秒数',
+        '深度等级',
+        '可信度评分',
+        '审核状态',
+        '设备ID',
+      ];
       const rows = res.items.map((d) => [
         d.id,
-        formatTime(d.createdAt),
+        d.nickname || '匿名',
+        d.occupation || '-',
+        d.personaTrait || '-',
+        formatTime(d.submitTime),
         d.durationSeconds,
-        d.nickname,
-        d.email ?? '',
-        d.deviceId ?? '',
         d.depthRating,
-        d.credibilityScore,
+        d.credibilityScore ?? '-',
         d.auditStatus,
-        d.q_occupation,
-        d.personaTrait,
-        d.q_innerDesire,
-        d.adminNotes,
+        d.deviceId || '-',
       ]);
+
       const csvContent = [
         headers.join(','),
-        ...rows.map((row) => row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(',')),
+        ...rows.map((row) =>
+          row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(',')
+        ),
       ].join('\n');
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+      const blob = new Blob(['\uFEFF' + csvContent], {
+        type: 'text/csv;charset=utf-8;',
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `镜界自白_卷宗表_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.download = `深层回响_测评卷宗库_${new Date()
+        .toISOString()
+        .slice(0, 10)}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      addToast('success', `已成功导出 ${res.items.length} 份卷宗为 CSV`);
+      adminNotify.success(`已成功导出 ${res.items.length} 份卷宗数据`);
     } catch (err) {
-      addToast('error', err instanceof Error ? err.message : '导出失败');
+      adminNotify.error(err instanceof Error ? err.message : '导出 CSV 失败');
     }
+  };
+
+  // 用户聚合
+  const userGroups = useMemo<UserGroupData[]>(() => {
+    return groupDossiersByUser(dossiers, deviceUserMap);
+  }, [dossiers, deviceUserMap]);
+
+  // 全选/反选
+  const handleSelectGroup = (group: UserGroupData, checked: boolean) => {
+    const ids = group.dossiers.map((d) => d.id);
+    setSelectedIds((prev) => {
+      if (checked) {
+        return [...prev, ...ids.filter((id) => !prev.includes(id))];
+      }
+      return prev.filter((id) => !ids.includes(id));
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? dossiers.map((d) => d.id) : []);
+  };
+
+  const toggleExpand = (key: string) => {
+    setExpandedKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   };
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
-  // User Grouping logic: coalesce(user_id, device_id)
-  const userGroups = React.useMemo(() => {
-    // 1. Build device-to-user mappings across ALL dossiers (server-provided, 跨页生效),
-    //    再以当前页数据补充兜底（例如历史数据未出现在服务端映射中）
-    const deviceToUserKey = new Map<string, string>();
-    for (const [deviceId, userId] of Object.entries(deviceUserMap)) {
-      if (deviceId && userId) deviceToUserKey.set(deviceId, `user-${userId}`);
-    }
-
-    dossiers.forEach((d) => {
-      if (d.userId && d.deviceId) {
-        deviceToUserKey.set(d.deviceId, `user-${d.userId}`);
-      } else if (d.email && d.deviceId && !deviceToUserKey.has(d.deviceId)) {
-        deviceToUserKey.set(d.deviceId, `email-${d.email}`);
-      }
-    });
-
-    const groupsMap = new Map<string, UserGroupData>();
-
-    dossiers.forEach((d) => {
-      // Group key: coalesce(user_id, device_id)
-      let groupKey = '';
-      if (d.userId) {
-        groupKey = `user-${d.userId}`;
-      } else if (d.email) {
-        groupKey = `email-${d.email}`;
-      } else if (d.deviceId) {
-        // Coalesce: if this device is associated with a logged in user, merge into user group; otherwise group by device
-        groupKey = deviceToUserKey.get(d.deviceId) || `device-${d.deviceId}`;
-      } else {
-        groupKey = `guest-${d.nickname || 'anonymous'}-${d.id}`;
-      }
-
-      let existing = groupsMap.get(groupKey);
-      if (!existing) {
-        existing = {
-          userKey: groupKey,
-          userId: d.userId || undefined,
-          nickname: d.nickname || '匿名访客',
-          avatarUrl: d.avatarUrls?.[0],
-          email: d.email || undefined,
-          deviceId: d.deviceId || undefined,
-          gender: d.gender || undefined,
-          occupation: d.occupation || undefined,
-          personaTrait: d.personaTrait || undefined,
-          age: d.age || undefined,
-          maritalStatus: d.maritalStatus || undefined,
-          hasBoyfriend: d.hasBoyfriend || undefined,
-          dossiers: [],
-          guestDossierCount: 0,
-          userDossierCount: 0,
-          isPureGuest: !d.userId && !d.email,
-        };
-        groupsMap.set(groupKey, existing);
-      }
-
-      // Upgrade group display info if a subsequent dossier has richer profile info
-      if (d.userId && !existing.userId) existing.userId = d.userId;
-      if (d.email && !existing.email) existing.email = d.email;
-      if (d.avatarUrls?.[0] && !existing.avatarUrl) existing.avatarUrl = d.avatarUrls[0];
-      if (d.nickname && (existing.nickname === '匿名访客' || !existing.nickname)) existing.nickname = d.nickname;
-      if (d.occupation && !existing.occupation) existing.occupation = d.occupation;
-      if (d.personaTrait && !existing.personaTrait) existing.personaTrait = d.personaTrait;
-      if (d.gender && !existing.gender) existing.gender = d.gender;
-      if (d.age && !existing.age) existing.age = d.age;
-      if (d.maritalStatus && !existing.maritalStatus) existing.maritalStatus = d.maritalStatus;
-      if (d.hasBoyfriend && !existing.hasBoyfriend) existing.hasBoyfriend = d.hasBoyfriend;
-
-      const isGuest = !d.userId && !d.email;
-      if (isGuest) {
-        existing.guestDossierCount += 1;
-      } else {
-        existing.userDossierCount += 1;
-        existing.isPureGuest = false;
-      }
-
-      existing.dossiers.push(d);
-    });
-
-    return Array.from(groupsMap.values());
-  }, [dossiers, deviceUserMap]);
-
-  const isExpanded = (userKey: string) => {
-    if (expandedKeys[userKey] !== undefined) {
-      return expandedKeys[userKey];
-    }
-    return isAllExpanded;
-  };
-
-  const toggleExpand = (userKey: string) => {
-    setExpandedKeys((prev) => ({
-      ...prev,
-      [userKey]: !isExpanded(userKey),
-    }));
-  };
-
-  const handleExpandAll = () => {
-    setIsAllExpanded(true);
-    setExpandedKeys({});
-  };
-
-  const handleCollapseAll = () => {
-    setIsAllExpanded(false);
-    setExpandedKeys({});
-  };
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', boxSizing: 'border-box' }}>
-      {/* 顶部工具栏与过滤器 */}
-      <DossierFilterToolbar
-        total={total}
-        selectedIdsCount={selectedIds.length}
-        loading={loading}
-        searchInput={searchInput}
-        onSearchInputChange={setSearchInput}
-        filterCredibility={filterCredibility}
-        onFilterCredibilityChange={(val) => {
-          setFilterCredibility(val);
-          setPage(0);
-        }}
-        filterDepth={filterDepth}
-        onFilterDepthChange={(val) => {
-          setFilterDepth(val);
-          setPage(0);
-        }}
-        filterStatus={filterStatus}
-        onFilterStatusChange={(val) => {
-          setFilterStatus(val);
-          setPage(0);
-        }}
-        onBatchDelete={handleBatchDelete}
-        onExportCSV={handleExportCSV}
-        onRefresh={() => void load(true)}
-        onNavigateToUsers={onNavigateToUsers}
-        onExpandAll={handleExpandAll}
-        onCollapseAll={handleCollapseAll}
-      />
+    <div className="space-y-4">
+      {/* 1. 顶部控制栏卡片 (Card) */}
+      <Card className="border-white/10 bg-slate-900/90 shadow-lg">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="default"
+                  className="bg-indigo-600/20 text-indigo-300 border-indigo-500/30"
+                >
+                  <FileSpreadsheet className="h-3 w-3 mr-1" />
+                  卷宗档案库
+                </Badge>
+                {onNavigateToUsers && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onNavigateToUsers}
+                    className="text-xs text-slate-400 hover:text-slate-100 hover:bg-white/5 h-6 px-2"
+                  >
+                    <UserCheck className="h-3 w-3 mr-1 text-indigo-400" />
+                    <span>注册用户画像中心 &gt;</span>
+                  </Button>
+                )}
+              </div>
+              <CardDescription className="text-slate-400 text-xs mt-1">
+                直连生产库 · 共 {total} 份测评卷宗 · 诊断与数据实时同步
+              </CardDescription>
+            </div>
 
-      {/* 卷宗表格 */}
-      <div
-        style={{
-          background: '#0f172a',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: 12,
-          overflow: 'hidden',
-          overflowX: 'auto',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-        }}
-      >
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.76rem' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: '#94a3b8', background: 'rgba(2, 6, 23, 0.5)' }}>
-              <th style={{ padding: '10px 8px', width: '38px', textAlign: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={dossiers.length > 0 && selectedIds.length === dossiers.length}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
+            {/* 右侧全局操作 */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setExpandedKeys(
+                    expandedKeys.length > 0
+                      ? []
+                      : userGroups.map((g) => g.userKey)
+                  )
+                }
+                className="text-xs text-slate-300 border-white/10"
+              >
+                {expandedKeys.length > 0 ? (
+                  <>
+                    <Minimize2 className="h-3 w-3 mr-1.5" />
+                    全部折叠
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="h-3 w-3 mr-1.5" />
+                    全部展开
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCSV}
+                className="text-xs text-slate-300 border-white/10"
+              >
+                <Download className="h-3 w-3 mr-1.5" />
+                导出 CSV
+              </Button>
+
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => void load(true)}
+                disabled={loading}
+                className="text-xs bg-indigo-600 hover:bg-indigo-500"
+              >
+                <RefreshCw
+                  className={`h-3 w-3 mr-1.5 ${loading ? 'animate-spin' : ''}`}
                 />
-              </th>
-              <th style={{ padding: '8px 6px', fontWeight: 600, cursor: 'pointer' }} onClick={() => handleSort('submitTime')}>
-                提交时间 <ArrowUpDown size={11} style={{ display: 'inline', verticalAlign: 'middle' }} />
-              </th>
-              <th style={{ padding: '8px 6px', fontWeight: 600, cursor: 'pointer' }} onClick={() => handleSort('durationSeconds')}>
-                用时 <ArrowUpDown size={11} style={{ display: 'inline', verticalAlign: 'middle' }} />
-              </th>
-              <th style={{ padding: '8px 6px', fontWeight: 600 }}>卷轴名称</th>
-              <th style={{ padding: '8px 6px', fontWeight: 600 }}>称呼</th>
-              <th style={{ padding: '8px 6px', fontWeight: 600 }}>职业</th>
-              <th style={{ padding: '8px 6px', fontWeight: 600 }}>设备ID</th>
-              <th style={{ padding: '8px 6px', fontWeight: 600 }}>深度</th>
-              <th style={{ padding: '8px 6px', fontWeight: 600, cursor: 'pointer' }} onClick={() => handleSort('credibilityScore')}>
-                可信度 <ArrowUpDown size={11} style={{ display: 'inline', verticalAlign: 'middle' }} />
-              </th>
-              <th style={{ padding: '8px 6px', fontWeight: 600 }}>审核</th>
-              <th style={{ padding: '8px 6px', fontWeight: 600, textAlign: 'center' }}>操作</th>
-            </tr>
-          </thead>
-          <tbody>
+                刷新
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+
+        {/* 过滤输入栏 */}
+        <CardContent className="pt-0">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                placeholder="搜索称呼 / 职业 / 设备ID..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void load()}
+                className="pl-8 text-xs h-8 border-white/10 bg-slate-950/60"
+              />
+            </div>
+
+            {/* 可信度选择 */}
+            <select
+              value={filterCredibility}
+              onChange={(e) => {
+                setFilterCredibility(e.target.value);
+                setPage(0);
+              }}
+              className="h-8 rounded-md border border-white/10 bg-slate-950/80 px-2.5 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+            >
+              <option value="all">全部可信度</option>
+              <option value="high">极高可信 (≥85)</option>
+              <option value="medium">良好可信 (60-84)</option>
+              <option value="low">疑似乱填 (&lt;60)</option>
+            </select>
+
+            {/* 深度选择 */}
+            <select
+              value={filterDepth}
+              onChange={(e) => {
+                setFilterDepth(e.target.value);
+                setPage(0);
+              }}
+              className="h-8 rounded-md border border-white/10 bg-slate-950/80 px-2.5 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+            >
+              <option value="all">全部深度</option>
+              <option value="deep">深度分析</option>
+              <option value="medium">中度探索</option>
+              <option value="light">浅层测验</option>
+            </select>
+
+            {/* 状态选择 */}
+            <select
+              value={filterStatus}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setPage(0);
+              }}
+              className="h-8 rounded-md border border-white/10 bg-slate-950/80 px-2.5 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+            >
+              <option value="all">全部状态</option>
+              <option value="pending">待核准</option>
+              <option value="approved">已核准</option>
+              <option value="flagged">已作废</option>
+            </select>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void load()}
+              className="text-xs h-8"
+            >
+              查询
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchInput('');
+                setFilterCredibility('all');
+                setFilterDepth('all');
+                setFilterStatus('all');
+                setPage(0);
+              }}
+              className="text-xs text-slate-400 h-8"
+            >
+              重置
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 2. 批量操作条 (当有勾选时滑出) */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-indigo-500/30 bg-indigo-950/40 px-4 py-2 text-xs">
+          <div className="flex items-center gap-2 text-indigo-200">
+            <span>
+              已选择{' '}
+              <strong className="text-white font-semibold">
+                {selectedIds.length}
+              </strong>{' '}
+              份测评卷宗
+            </span>
+            <Button
+              variant="link"
+              size="sm"
+              onClick={() => setSelectedIds([])}
+              className="h-auto p-0 text-indigo-400"
+            >
+              取消全选
+            </Button>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setBatchDeleteConfirmOpen(true)}
+            className="text-xs"
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            批量物理删除 ({selectedIds.length})
+          </Button>
+        </div>
+      )}
+
+      {/* 3. 数据表格容器 (Card + Table) */}
+      <Card className="border-white/10 bg-slate-900/90 shadow-xl overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10 text-center">
+                <Checkbox
+                  checked={
+                    dossiers.length > 0 &&
+                    selectedIds.length === dossiers.length
+                  }
+                  onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
+                />
+              </TableHead>
+              <TableHead className="w-10 text-center"></TableHead>
+              <TableHead>用户身份 / 社交画像</TableHead>
+              <TableHead>真实社会职业 · 表里人设</TableHead>
+              <TableHead>卷宗归档</TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => handleSortChange('submitTime')}
+              >
+                <div className="flex items-center gap-1">
+                  <span>最新作答时间</span>
+                  <ArrowUpDown className="h-3 w-3 opacity-60" />
+                </div>
+              </TableHead>
+              <TableHead className="text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading ? (
-              <tr>
-                <td colSpan={11} style={{ textAlign: 'center', padding: '3rem', color: '#6e677c' }}>
-                  <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px', display: 'block' }} />
-                  加载中...
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="h-36 text-center text-slate-400"
+                >
+                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-indigo-400" />
+                  <span>卷宗数据同步中...</span>
+                </TableCell>
+              </TableRow>
             ) : userGroups.length === 0 ? (
-              <tr>
-                <td colSpan={11} style={{ textAlign: 'center', padding: '3rem', color: '#6e677c' }}>
-                  无匹配的卷宗数据
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="h-36 text-center text-slate-500"
+                >
+                  暂无匹配的卷宗档案
+                </TableCell>
+              </TableRow>
             ) : (
-              userGroups.map((g) => {
-                const isGroupExpanded = isExpanded(g.userKey);
-                const isGroupSelected = g.dossiers.length > 0 && g.dossiers.every((d) => selectedIds.includes(d.id));
+              userGroups.map((group) => {
+                const isGroupExpanded = expandedKeys.includes(group.userKey);
+                const isGroupSelected =
+                  group.dossiers.length > 0 &&
+                  group.dossiers.every((d) => selectedIds.includes(d.id));
 
                 return (
-                  <React.Fragment key={g.userKey}>
-                    {/* 父级行：用户分组栏 */}
-                    <tr
-                      style={{
-                        background: 'rgba(30, 41, 59, 0.45)',
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        borderTop: '1px solid rgba(255,255,255,0.05)',
-                      }}
+                  <React.Fragment key={group.userKey}>
+                    {/* 父级行：用户画像汇总 */}
+                    <TableRow
+                      className={
+                        isGroupSelected ? 'bg-indigo-950/20' : 'bg-slate-900/40'
+                      }
                     >
-                      <td style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
-                        <input
-                          type="checkbox"
+                      <TableCell className="text-center">
+                        <Checkbox
                           checked={isGroupSelected}
-                          onChange={(e) => handleSelectGroup(g.dossiers, e.target.checked)}
+                          onCheckedChange={(checked) =>
+                            handleSelectGroup(group, Boolean(checked))
+                          }
                         />
-                      </td>
-                      <td colSpan={5} style={{ padding: '10px 6px', verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                          <button
-                            onClick={() => toggleExpand(g.userKey)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#8d879e',
-                              cursor: 'pointer',
-                              padding: 0,
-                              display: 'flex',
-                              alignItems: 'center',
-                            }}
-                          >
-                            {isGroupExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                          </button>
-
-                          {/* 用户头像 (点击可打开基础信息画像) */}
-                          <div
-                            onClick={() => setSelectedUserGroup(g)}
-                            style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: '6px',
-                              background: '#1e293b',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#a5b4fc',
-                              fontWeight: 700,
-                              fontSize: '0.8rem',
-                              flexShrink: 0,
-                              overflow: 'hidden',
-                              cursor: 'pointer',
-                              border: '1px solid rgba(99,102,241,0.3)',
-                            }}
-                            title="点击查看此填写人完整基础信息"
-                          >
-                            {g.avatarUrl ? (
-                              <img src={g.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              g.nickname.slice(0, 1) || '匿'
-                            )}
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <strong
-                                onClick={() => setSelectedUserGroup(g)}
-                                style={{ color: '#fff', fontSize: '0.85rem', cursor: 'pointer' }}
-                                title="点击查看此填写人完整基础信息"
-                              >
-                                {g.nickname}
-                              </strong>
-                              {g.email && (
-                                <span style={{ color: '#ffd180', fontSize: '0.72rem', background: 'rgba(255,209,128,0.1)', padding: '1px 5px', borderRadius: '4px' }}>
-                                  {g.email}
-                                </span>
-                              )}
-                              {g.isPureGuest ? (
-                                <span style={{ color: '#ffd180', fontSize: '0.64rem', background: 'rgba(255,209,128,0.14)', border: '1px solid rgba(255,209,128,0.35)', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                                  游客组
-                                </span>
-                              ) : g.guestDossierCount > 0 ? (
-                                <span style={{ color: '#38bdf8', fontSize: '0.64rem', background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                                  含同设备游客卷轴 {g.guestDossierCount} 份
-                                </span>
-                              ) : null}
-                            </div>
-                            <span style={{ color: '#6e677c', fontSize: '0.68rem', fontFamily: 'monospace' }}>
-                              设备ID: {g.deviceId || '未知设备'}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td colSpan={3} style={{ padding: '10px 6px', verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                          {g.gender && (
-                            <span style={{ background: 'rgba(99,102,241,0.08)', color: '#c7d2fe', border: '1px solid rgba(99,102,241,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
-                              性别: {g.gender}
-                            </span>
-                          )}
-                          {g.occupation && (
-                            <span style={{ background: 'rgba(14,165,233,0.08)', color: '#7dd3fc', border: '1px solid rgba(14,165,233,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
-                              职业: {g.occupation}
-                            </span>
-                          )}
-                          {g.personaTrait && (
-                            <span style={{ background: 'rgba(168,85,247,0.08)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
-                              社交形象: {g.personaTrait}
-                            </span>
-                          )}
-                          {g.age && (
-                            <span style={{ background: 'rgba(255,255,255,0.03)', color: '#8d879e', border: '1px solid rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
-                              {g.age}岁
-                            </span>
-                          )}
-                          {g.maritalStatus && (
-                            <span style={{ background: 'rgba(255,255,255,0.03)', color: '#8d879e', border: '1px solid rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
-                              婚姻: {g.maritalStatus}
-                            </span>
-                          )}
-                          {g.hasBoyfriend && (
-                            <span style={{ background: 'rgba(255,255,255,0.03)', color: '#8d879e', border: '1px solid rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.68rem' }}>
-                              伴侣: {g.hasBoyfriend}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td colSpan={2} style={{ padding: '10px 6px', verticalAlign: 'middle', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedUserGroup(g);
-                            }}
-                            style={{
-                              background: 'rgba(99,102,241,0.08)',
-                              color: '#a5b4fc',
-                              border: '1px solid rgba(99,102,241,0.25)',
-                              padding: '3px 9px',
-                              borderRadius: '6px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              whiteSpace: 'nowrap',
-                            }}
-                            title="查看该填写人的第一阶段基础信息与表里自白档案"
-                          >
-                            <Eye size={11} />
-                            <span>基础信息</span>
-                          </button>
-                          <span
-                            onClick={() => toggleExpand(g.userKey)}
-                            style={{
-                              background: 'rgba(99,102,241,0.08)',
-                              color: '#a5b4fc',
-                              border: '1px solid rgba(99,102,241,0.25)',
-                              padding: '3px 10px',
-                              borderRadius: '6px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-block',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            共 {g.dossiers.length} 份卷轴
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-
-                    {/* 子级行：具体测评卷轴 */}
-                    {isGroupExpanded && g.dossiers.map((d) => {
-                      const dl = depthLabel(d);
-                      return (
-                        <tr
-                          key={d.id}
-                          style={{
-                            borderBottom: '1px solid rgba(255,255,255,0.02)',
-                            background: 'rgba(10,8,18,0.2)',
-                          }}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(group.userKey)}
+                          className="flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                         >
-                          <td style={{ padding: '8px 6px', paddingLeft: '1.25rem', verticalAlign: 'middle' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ color: '#4a4458', fontSize: '0.85rem', fontFamily: 'monospace', userSelect: 'none' }}>└─</span>
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.includes(d.id)}
-                                onChange={(e) => handleSelectItem(d.id, e.target.checked)}
+                          {isGroupExpanded ? (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-7 w-7 border-white/10">
+                            {group.avatarUrl && (
+                              <AvatarImage
+                                src={group.avatarUrl}
+                                alt={group.nickname}
                               />
-                            </div>
-                          </td>
-                          <td style={{ padding: '8px 6px', color: '#ffffff', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
-                            {formatTime(d.createdAt)}
-                          </td>
-                          <td style={{ padding: '8px 6px', color: '#8d879e', verticalAlign: 'middle' }}>
-                            {formatDuration(d.durationSeconds)}
-                          </td>
-                          <td style={{ padding: '8px 6px', color: '#80f3ff', fontWeight: 600, verticalAlign: 'middle', maxWidth: '190px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getQuestionnaireName(d, bankNames)}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              {(!d.userId && !d.email) ? (
-                                <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(255, 209, 128, 0.15)', color: '#ffd180', border: '1px solid rgba(255, 209, 128, 0.35)', fontWeight: 700, flexShrink: 0 }}>
-                                  游客
-                                </span>
+                            )}
+                            <AvatarFallback className="bg-indigo-700/60 text-[10px]">
+                              {group.nickname.slice(0, 1)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-white">
+                                {group.nickname}
+                              </span>
+                              {group.userId ? (
+                                <Badge
+                                  variant="default"
+                                  className="text-[10px] py-0 px-1.5"
+                                >
+                                  注册会员
+                                </Badge>
                               ) : (
-                                <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(79, 209, 161, 0.12)', color: '#70dcb4', border: '1px solid rgba(79, 209, 161, 0.3)', fontWeight: 700, flexShrink: 0 }}>
-                                  已登录
-                                </span>
-                              )}
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{getQuestionnaireName(d, bankNames)}</span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '8px 6px', verticalAlign: 'middle' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ color: '#ffd180', fontWeight: 600 }}>{d.nickname || '未填'}</span>
-                              {d.resonanceLevel && (
-                                <span style={{ fontSize: '0.62rem', color: '#a5b4fc', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', padding: '1px 4px', borderRadius: '3px', width: 'fit-content' }}>
-                                  {d.resonanceLevel === 'exact' ? '💎 90%共鸣' : d.resonanceLevel === 'partial' ? '🪞 60%契合' : d.resonanceLevel === 'guarded' ? '🛡️ 理性防备' : '✍️ 手写心声'}
-                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] py-0 px-1.5 text-slate-400 border-white/10"
+                                >
+                                  访客设备
+                                </Badge>
                               )}
                             </div>
-                          </td>
-                          <td style={{ padding: '8px 6px', color: '#8d879e', verticalAlign: 'middle' }}>
-                            {d.occupation || '-'}
-                          </td>
-                          <td style={{ padding: '8px 6px', color: '#6e677c', fontFamily: 'monospace', verticalAlign: 'middle' }}>
-                            {d.deviceId ? d.deviceId.slice(0, 10) + '...' : '-'}
-                          </td>
-                          <td style={{ padding: '8px 6px', verticalAlign: 'middle' }}>
-                            <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', background: dl.bg, color: dl.fg }}>
-                              {dl.text}
-                            </span>
-                          </td>
-                          <td style={{ padding: '8px 6px', verticalAlign: 'middle' }}>
-                            <span style={{ color: d.credibilityScore >= 70 ? '#4fd1a1' : d.credibilityScore >= 40 ? '#ffd180' : '#f07178', fontWeight: 600 }}>
-                              {d.credibilityScore}分
-                            </span>
-                          </td>
-                          <td style={{ padding: '8px 6px', verticalAlign: 'middle' }}>
-                            <DictBadge dictCode="dossier_audit_status" value={d.auditStatus} size="xs" />
-                          </td>
-                          <td style={{ padding: '8px 6px', textAlign: 'center', verticalAlign: 'middle' }}>
-                            <div style={{ display: 'inline-flex', gap: '4px' }}>
-                              <button
-                                onClick={() => openDossier(d.id)}
-                                style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc', padding: '4px 8px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 500 }}
-                                title="查看全景卷宗详情"
-                              >
-                                <Eye size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '2px' }} />
-                                查看
-                              </button>
-                              <button
-                                onClick={() => handleDeleteItem(d.id)}
-                                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', padding: '4px 6px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.72rem' }}
-                                title="物理删除该卷宗"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            <p className="text-[11px] text-slate-400">
+                              {group.email ||
+                                (group.deviceId
+                                  ? `设备: ${group.deviceId.slice(0, 12)}...`
+                                  : '纯匿名作答')}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          <p className="text-slate-200">
+                            {group.occupation || '未登记职业'}
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            {group.personaTrait
+                              ? `人前: ${group.personaTrait}`
+                              : '未登记人前特质'}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="secondary"
+                          className="text-[11px] bg-slate-800 text-slate-300"
+                        >
+                          共 {group.dossiers.length} 份卷宗
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-400 font-mono text-[11px]">
+                        {group.dossiers[0]?.submitTime
+                          ? formatTime(group.dossiers[0].submitTime)
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedUserGroup(group)}
+                          className="h-7 text-xs border-white/10"
+                        >
+                          <Users className="h-3 w-3 mr-1 text-indigo-400" />
+                          画像档案
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+
+                    {/* 展开的明细子表组件 (DossierSubTable) */}
+                    {isGroupExpanded && (
+                      <TableRow className="bg-slate-950/80 hover:bg-slate-950/80">
+                        <TableCell colSpan={7} className="p-3 pl-12">
+                          <DossierSubTable
+                            dossiers={group.dossiers}
+                            bankNames={bankNames}
+                            selectedIds={selectedIds}
+                            onToggleSelect={(id, checked) => {
+                              setSelectedIds((prev) =>
+                                checked
+                                  ? [...prev, id]
+                                  : prev.filter((item) => item !== id)
+                              );
+                            }}
+                            onOpenDossier={openDossier}
+                            onReanalyze={handleReanalyze}
+                            onDelete={(id) => setDeleteConfirmDossierId(id)}
+                            reanalyzingId={reanalyzing}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </React.Fragment>
                 );
               })
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
 
-      {/* 分页与页码 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
-        <span style={{ fontSize: '0.76rem', color: '#6e677c' }}>
-          共 {total} 份测评卷宗 · 当前第 {page + 1} / {pageCount} 页
-        </span>
+        {/* 4. 底部分页控制栏 */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t border-white/10 px-4 py-3 gap-3 bg-slate-950/60">
+          <p className="text-xs text-slate-400">
+            共 <strong className="text-white">{total}</strong> 份测评卷宗 ·
+            当前第 <strong className="text-white">{page + 1}</strong> /{' '}
+            {pageCount} 页
+          </p>
 
-        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: page === 0 ? '#444' : '#9e97ad',
-              padding: '5px 12px',
-              borderRadius: '8px',
-              cursor: page === 0 ? 'not-allowed' : 'pointer',
-              fontSize: '0.76rem',
-            }}
-          >
-            上一页
-          </button>
-          <span style={{ color: '#fff', fontSize: '0.76rem', padding: '0 4px' }}>
-            {page + 1}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-            disabled={page >= pageCount - 1}
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: page >= pageCount - 1 ? '#444' : '#9e97ad',
-              padding: '5px 12px',
-              borderRadius: '8px',
-              cursor: page >= pageCount - 1 ? 'not-allowed' : 'pointer',
-              fontSize: '0.76rem',
-            }}
-          >
-            下一页
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <span>每页</span>
+              <select
+                value={String(pageSize)}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(0);
+                }}
+                className="h-7 rounded border border-white/10 bg-slate-900 px-2 text-xs text-slate-200 outline-none cursor-pointer"
+              >
+                <option value="10">10 条/页</option>
+                <option value="20">20 条/页</option>
+                <option value="50">50 条/页</option>
+                <option value="100">100 条/页</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(0)}
+                disabled={page === 0}
+                className="h-7 px-2 text-xs"
+              >
+                首页
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="h-7 px-2 text-xs"
+              >
+                上一页
+              </Button>
+              <span className="px-2 text-xs font-mono text-slate-300">
+                {page + 1}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                disabled={page >= pageCount - 1}
+                className="h-7 px-2 text-xs"
+              >
+                下一页
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(pageCount - 1)}
+                disabled={page >= pageCount - 1}
+                className="h-7 px-2 text-xs"
+              >
+                末页
+              </Button>
+            </div>
+          </div>
         </div>
+      </Card>
 
-        <select
-          value={pageSize}
-          onChange={(e) => {
-            setPageSize(Number(e.target.value));
-            setPage(0);
-          }}
-          style={{
-            background: 'rgba(10,8,18,0.8)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '8px',
-            padding: '5px 10px',
-            color: '#fff',
-            fontSize: '0.8rem',
-            outline: 'none',
-            cursor: 'pointer',
-            marginLeft: '0.6rem',
-          }}
-        >
-          <option value={20}>20 条/页</option>
-          <option value={50}>50 条/页</option>
-          <option value={100}>100 条/页</option>
-        </select>
-      </div>
-
-      {/* 填写人基础信息全景画像弹窗 */}
-      <RespondentProfileModal
-        userGroup={selectedUserGroup}
-        bankNames={bankNames}
-        onClose={() => setSelectedUserGroup(null)}
-        onSelectDossier={(d) => {
-          setSelectedUserGroup(null);
-          openDossier(d.id);
+      {/* 5. 卷宗详情全景档案模态框 */}
+      <DossierDetailModal
+        dossier={selectedDossier}
+        onClose={() => setSelectedDossier(null)}
+        onUpdateParams={async (id, patch) => {
+          try {
+            await adminApi.updateDossier(id, patch);
+            adminNotify.success('卷宗审核状态已更新');
+            await refreshDetail(id);
+            await load();
+          } catch (err) {
+            adminNotify.error(err instanceof Error ? err.message : '更新状态失败');
+          }
         }}
-        onZoomImage={(url: string) => setZoomedImg(url)}
+        onReanalyze={handleReanalyze}
+        onDelete={(id) => setDeleteConfirmDossierId(id)}
+        reanalyzingId={reanalyzing}
+        onZoomImage={(url) => setZoomedImg(url)}
       />
 
-      {/* 用户全景审计多标签报告 Modal */}
-      {selectedDossier && (
-        <DossierDetailModal
-          dossier={selectedDossier}
-          onClose={() => setSelectedDossier(null)}
-          onUpdateParams={handleUpdateDossierParams}
-          onReanalyze={handleReanalyze}
-          onDelete={handleDeleteItem}
-          reanalyzingId={reanalyzing}
-          onZoomImage={(url: string) => setZoomedImg(url)}
+      {/* 6. 用户画像全景模态框 */}
+      {selectedUserGroup && (
+        <RespondentProfileModal
+          userGroup={selectedUserGroup}
+          bankNames={bankNames}
+          onClose={() => setSelectedUserGroup(null)}
+          onSelectDossier={(d) => setSelectedDossier(d)}
+          onZoomImage={(url) => setZoomedImg(url)}
         />
       )}
 
-      {/* 单个卷宗物理删除确认弹窗 */}
-      <AdminConfirmDialog
-        isOpen={Boolean(deleteConfirmDossierId)}
-        title="物理删除卷宗记录"
-        description="确认物理删除该测评卷宗吗？删除后相关深度心理倾向数据及答案记录将永久清空。"
-        confirmText="确认删除"
-        cancelText="取消"
-        danger={true}
-        loading={deleteActionLoading}
-        onConfirm={executeSingleDelete}
-        onCancel={() => setDeleteConfirmDossierId(null)}
+      {/* 7. 单条删除确认对话框 (Dialog) */}
+      <Dialog
+        open={Boolean(deleteConfirmDossierId)}
+        onOpenChange={(open) => !open && setDeleteConfirmDossierId(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认物理删除测评卷宗</DialogTitle>
+            <DialogDescription>
+              此操作将永久抹除该条测评卷宗及关联的所有作答与分析记录，该操作不可恢复。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmDossierId(null)}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteActionLoading}
+              onClick={executeSingleDelete}
+            >
+              {deleteActionLoading ? '正在删除...' : '确认物理删除'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 8. 批量删除确认对话框 (Dialog) */}
+      <Dialog
+        open={batchDeleteConfirmOpen}
+        onOpenChange={(open) => !open && setBatchDeleteConfirmOpen(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认批量物理删除</DialogTitle>
+            <DialogDescription>
+              您已选中 {selectedIds.length}{' '}
+              份卷宗，此操作将永久物理抹除所有选中记录，不可撤销。确认继续？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBatchDeleteConfirmOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteActionLoading}
+              onClick={executeBatchDelete}
+            >
+              {deleteActionLoading
+                ? '正在删除...'
+                : `确认物理删除 (${selectedIds.length})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 9. 图片灯箱放大预览 */}
+      <AdminImageLightbox
+        imageUrl={zoomedImg}
+        onClose={() => setZoomedImg(null)}
       />
-
-      {/* 批量物理删除确认弹窗 */}
-      <AdminConfirmDialog
-        isOpen={batchDeleteConfirmOpen}
-        title="批量物理删除卷宗"
-        description={`确定要永久删除选中的 ${selectedIds.length} 个卷宗吗？该操作不可逆！`}
-        confirmText={`确认批量删除 (${selectedIds.length})`}
-        cancelText="取消"
-        danger={true}
-        loading={deleteActionLoading}
-        onConfirm={executeBatchDelete}
-        onCancel={() => setBatchDeleteConfirmOpen(false)}
-      />
-
-      {/* 统一 Toast 提示 */}
-      <AdminToast toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
-
-      <AdminImageLightbox imageUrl={zoomedImg} onClose={() => setZoomedImg(null)} />
     </div>
   );
 };
