@@ -1,23 +1,13 @@
 import React, { useState } from 'react';
-import {
-  Paper,
-  Group,
-  Stack,
-  Text,
-  Badge,
-  Button,
-  Select,
-  Switch,
-  Textarea,
-  TextInput,
-  Box,
-  Divider,
-} from '@mantine/core';
-import { GitBranch, Shield, ShieldAlert, Check, Clock, UserCheck, AlertTriangle } from 'lucide-react';
+import { GitBranch, Shield, ShieldAlert, Check, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 import type { AccountLineageSummary } from '../../adminTypes';
 import { lineageApi, formatTime } from '../../adminApi';
 import { DictBadge } from '../ui/DictBadge';
 import { adminNotify } from '../ui/adminNotify';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface LineageGenerationItem {
   id: string;
@@ -53,20 +43,10 @@ export const AccountLineageCard: React.FC<AccountLineageCardProps> = ({
 }) => {
   if (!lineage) {
     return (
-      <Paper
-        p="md"
-        radius="md"
-        withBorder
-        style={{
-          background: 'rgba(25, 20, 35, 0.5)',
-          borderColor: 'rgba(255, 255, 255, 0.08)',
-        }}
-      >
-        <Group gap="xs" c="dimmed">
-          <GitBranch size={16} />
-          <Text size="xs">该用户暂无关联的根账号血缘记录（独立匿名或未初始化）</Text>
-        </Group>
-      </Paper>
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-4 text-xs text-muted-foreground">
+        <GitBranch className="size-4 shrink-0" />
+        <span>该用户暂无关联的根账号血缘记录（独立匿名或未初始化）</span>
+      </div>
     );
   }
 
@@ -96,183 +76,181 @@ export const AccountLineageCard: React.FC<AccountLineageCardProps> = ({
     }
   };
 
-  const getRiskBadgeColor = (lvl: string) => {
+  const getRiskBadgeVariant = (lvl: string) => {
     switch (lvl) {
-      case 'normal':
-        return 'teal';
-      case 'low':
-        return 'blue';
-      case 'medium':
-        return 'yellow';
       case 'high':
       case 'blocked':
-        return 'red';
+        return 'destructive';
+      case 'medium':
+        return 'secondary';
       default:
-        return 'gray';
+        return 'outline';
     }
   };
 
   return (
-    <Paper
-      p="md"
-      radius="md"
-      withBorder
-      style={{
-        background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.75) 0%, rgba(16, 8, 22, 0.85) 100%)',
-        borderColor: isBlocked ? 'rgba(255, 77, 77, 0.4)' : 'rgba(255, 112, 166, 0.25)',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-      }}
-    >
-      <Stack gap="sm">
-        {/* 头部标题与血缘概览 */}
-        <Group justify="space-between" align="center" wrap="wrap">
-          <Group gap="xs">
-            <GitBranch size={16} color="#ff70a6" />
-            <Text fw={700} size="sm" c="#fff">
-              账号根血缘与世代族谱 (Account Lineage)
-            </Text>
-            <Badge size="xs" color={getRiskBadgeColor(riskLevel)} variant="light">
-              风控: {riskLevel.toUpperCase()}
+    <Card className="border border-border shadow-xs">
+      <CardHeader className="gap-2 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <GitBranch className="size-4 text-primary" />
+            <CardTitle className="text-sm font-semibold">账号世代血缘网络 (Account Lineage)</CardTitle>
+            <Badge variant={getRiskBadgeVariant(riskLevel)} className="text-[10px] uppercase">
+              风控: {riskLevel}
             </Badge>
             {isBlocked && (
-              <Badge size="xs" color="red" variant="filled" leftSection={<ShieldAlert size={10} />}>
+              <Badge variant="destructive" className="gap-1 text-[10px]">
+                <ShieldAlert className="size-3" />
                 根血缘已硬封禁
               </Badge>
             )}
-          </Group>
+          </div>
+          <span className="font-mono text-xs text-muted-foreground">ID: {lineage.id}</span>
+        </div>
 
-          <Text size="xs" c="dimmed" ff="monospace">
-            ID: {lineage.id}
-          </Text>
-        </Group>
-
-        <Group gap="xl" wrap="wrap" style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
+        <div className="grid grid-cols-2 gap-3 pt-2 text-xs font-mono sm:grid-cols-4">
           <div>
-            <Text span c="dimmed">根凭据 (Root Key): </Text>
-            <Text span fw={600} c="#80f3ff">{lineage.rootKey}</Text>
+            <span className="text-muted-foreground">根凭据 (Root Key): </span>
+            <span className="font-semibold text-foreground">{lineage.rootKey}</span>
           </div>
           <div>
-            <Text span c="dimmed">历经总世代数: </Text>
-            <Text span fw={700} c="#ffb347">{lineage.totalGenerations} 代</Text>
+            <span className="text-muted-foreground">历经总世代数: </span>
+            <span className="font-semibold text-foreground">{lineage.totalGenerations} 代</span>
           </div>
           <div>
-            <Text span c="dimmed">首次创世时间: </Text>
-            <Text span c="#fff">{formatTime(lineage.firstRegisteredAt)}</Text>
+            <span className="text-muted-foreground">首次创世时间: </span>
+            <span className="text-foreground">{formatTime(lineage.firstRegisteredAt)}</span>
           </div>
           <div>
-            <Text span c="dimmed">跨世代最后活跃: </Text>
-            <Text span c="#fff">{formatTime(lineage.lastActiveAt)}</Text>
+            <span className="text-muted-foreground">跨世代最后活跃: </span>
+            <span className="text-foreground">{formatTime(lineage.lastActiveAt)}</span>
           </div>
-        </Group>
+        </div>
+      </CardHeader>
 
-        <Divider my={4} color="rgba(255, 255, 255, 0.08)" />
-
+      <CardContent className="space-y-4 pt-1">
         {/* 跨世代族谱时间轴 */}
-        <Box>
-          <Text size="xs" fw={700} c="#ff70a6" mb={6}>
+        <div>
+          <div className="mb-2 text-xs font-semibold text-foreground">
             世代重生脉络 ({generations.length} 世代)
-          </Text>
-          <Stack gap={6}>
+          </div>
+          <div className="space-y-2">
             {generations.map((gen) => {
               const isCurrent = gen.id === currentUserId;
               return (
-                <Paper
+                <div
                   key={gen.id}
-                  p="xs"
-                  radius="sm"
-                  withBorder
-                  style={{
-                    background: isCurrent ? 'rgba(255, 112, 166, 0.08)' : 'rgba(255, 255, 255, 0.02)',
-                    borderColor: isCurrent ? 'rgba(255, 112, 166, 0.35)' : 'rgba(255, 255, 255, 0.05)',
-                  }}
+                  className={`rounded-lg border p-2.5 transition-colors ${
+                    isCurrent
+                      ? 'border-primary/40 bg-muted/60'
+                      : 'border-border bg-card'
+                  }`}
                 >
-                  <Group justify="space-between" align="center" wrap="wrap">
-                    <Group gap="xs">
-                      <Badge size="xs" variant={isCurrent ? 'filled' : 'outline'} color={isCurrent ? 'pink' : 'gray'}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={isCurrent ? 'default' : 'outline'} className="text-[11px]">
                         第 {gen.generation} 代 {isCurrent ? '（当前查看）' : ''}
                       </Badge>
                       <DictBadge dictCode="user_account_status" value={gen.accountStatus} size="xs" />
-                      <Text size="xs" c="#fff" ff="monospace">
-                        ID: {gen.id}
-                      </Text>
-                    </Group>
+                      <span className="font-mono text-xs text-muted-foreground">ID: {gen.id}</span>
+                    </div>
 
-                    <Group gap="md" style={{ fontSize: '0.72rem', color: 'var(--admin-text-muted)' }}>
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                       <span>注册: {formatTime(gen.createdAt)}</span>
-                      {gen.deletedAt && <span style={{ color: '#f07178' }}>注销: {formatTime(gen.deletedAt)}</span>}
-                    </Group>
-                  </Group>
+                      {gen.deletedAt && (
+                        <span className="text-destructive">注销: {formatTime(gen.deletedAt)}</span>
+                      )}
+                    </div>
+                  </div>
 
                   {(gen.adminNotes || gen.remark) && (
-                    <Text size="xs" c="dimmed" mt={4} pl={4} style={{ borderLeft: '2px solid rgba(255, 255, 255, 0.15)' }}>
-                      {gen.adminNotes ? `[批注] ${gen.adminNotes} ` : ''}
-                      {gen.remark ? `[备注] ${gen.remark}` : ''}
-                    </Text>
+                    <div className="mt-1.5 border-l-2 border-border pl-2 text-xs text-muted-foreground">
+                      {gen.adminNotes && <span>[批注] {gen.adminNotes} </span>}
+                      {gen.remark && <span>[备注] {gen.remark}</span>}
+                    </div>
                   )}
-                </Paper>
+                </div>
               );
             })}
-          </Stack>
-        </Box>
+          </div>
+        </div>
 
-        <Divider my={4} color="rgba(255, 255, 255, 0.08)" />
+        <div className="border-t border-border pt-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">全域风控等级</label>
+                <p className="text-[11px] text-muted-foreground">调控该血缘跨世代的风控评估等级</p>
+                <select
+                  value={riskLevel}
+                  onChange={(e) => setRiskLevel(e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {RISK_LEVEL_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {/* 风控调控与运营批注编辑 */}
-        <Group align="flex-start" grow wrap="wrap">
-          <Stack gap="xs" style={{ minWidth: 200 }}>
-            <Select
-              label="全域风控等级"
-              description="调控该血缘跨世代的风控评估等级"
-              data={RISK_LEVEL_OPTIONS}
-              value={riskLevel}
-              onChange={(val) => setRiskLevel(val || 'normal')}
-              size="xs"
-            />
+              <div className="flex items-start gap-2 pt-1">
+                <input
+                  id="lineage-is-blocked"
+                  type="checkbox"
+                  checked={isBlocked}
+                  onChange={(e) => setIsBlocked(e.target.checked)}
+                  className="mt-0.5 size-4 rounded border-border text-primary focus:ring-ring"
+                />
+                <label htmlFor="lineage-is-blocked" className="space-y-0.5 cursor-pointer">
+                  <div className="text-xs font-medium text-foreground">根血缘硬封禁 (is_blocked)</div>
+                  <div className="text-[11px] text-muted-foreground leading-snug">
+                    封禁后，该邮箱所有世代（已注销、活跃或未来再注册）均被强制阻断
+                  </div>
+                </label>
+              </div>
+            </div>
 
-            <Switch
-              label="根血缘硬封禁 (is_blocked)"
-              description="封禁后，该邮箱所有世代（已注销、活跃或未来再注册）均被强制阻断"
-              checked={isBlocked}
-              onChange={(e) => setIsBlocked(e.currentTarget.checked)}
-              color="red"
-              size="xs"
-              mt={6}
-            />
-          </Stack>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">血缘私密运营批注 (admin_notes)</label>
+                <p className="text-[11px] text-muted-foreground">仅管理后台内部可见的风控与运营留痕记录</p>
+                <textarea
+                  rows={2}
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="例如：多次注销重建账号，存在异常刷题特征，保持密切风控关注。"
+                  className="flex w-full rounded-md border border-input bg-background p-2 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
 
-          <Stack gap="xs" style={{ minWidth: 280 }}>
-            <Textarea
-              label="血缘私密运营批注 (admin_notes)"
-              description="仅管理后台内部可见的风控与运营留痕记录"
-              placeholder="例如：多次注销重建账号，存在异常刷题特征，保持密切风控关注。"
-              minRows={2}
-              value={adminNotes}
-              onChange={(e) => setAdminNotes(e.target.value)}
-              size="xs"
-            />
-            <TextInput
-              label="业务备注 (remark)"
-              placeholder="系统业务备忘"
-              value={remark}
-              onChange={(e) => setRemark(e.target.value)}
-              size="xs"
-            />
-          </Stack>
-        </Group>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">业务备注 (remark)</label>
+                <Input
+                  value={remark}
+                  onChange={(e) => setRemark(e.target.value)}
+                  placeholder="系统业务备忘"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+          </div>
 
-        <Group justify="flex-end" mt="xs">
-          <Button
-            size="xs"
-            color="pink"
-            onClick={handleSaveRisk}
-            loading={isSaving}
-            leftSection={<Check size={12} />}
-          >
-            保存血缘风控与批注
-          </Button>
-        </Group>
-      </Stack>
-    </Paper>
+          <div className="mt-4 flex justify-end">
+            <Button
+              size="sm"
+              onClick={handleSaveRisk}
+              disabled={isSaving}
+              className="gap-1.5"
+            >
+              {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+              <span>保存血缘风控与批注</span>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
+export default AccountLineageCard;

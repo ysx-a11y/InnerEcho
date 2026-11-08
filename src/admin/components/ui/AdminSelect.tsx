@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 export interface AdminSelectOption<T extends string = string> {
   value: T;
   label: string;
-  badge?: string;
 }
 
 interface AdminSelectProps<T extends string = string> {
@@ -14,7 +14,6 @@ interface AdminSelectProps<T extends string = string> {
   onChange: (value: T) => void;
   labelPrefix?: string;
   align?: 'left' | 'right';
-  style?: React.CSSProperties;
   className?: string;
 }
 
@@ -25,7 +24,6 @@ export function AdminSelect<T extends string = string>({
   onChange,
   labelPrefix,
   align = 'left',
-  style,
   className,
 }: AdminSelectProps<T>): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,69 +46,25 @@ export function AdminSelect<T extends string = string>({
   }, [isOpen]);
 
   return (
-    <div
-      ref={containerRef}
-      id={id}
-      className={`admin-custom-select-container ${className || ''}`}
-      style={{
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        userSelect: 'none',
-        ...style,
-      }}
-    >
+    <div ref={containerRef} id={id} className={cn('relative inline-flex items-center select-none', className)}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.45rem',
-          padding: '0.38rem 0.75rem',
-          background: isOpen ? 'rgba(32, 16, 42, 0.95)' : 'rgba(18, 10, 26, 0.85)',
-          border: `1px solid ${isOpen ? '#ff70a6' : 'rgba(255, 112, 166, 0.25)'}`,
-          borderRadius: 10,
-          color: '#fff0f5',
-          fontSize: '0.76rem',
-          fontWeight: 600,
-          cursor: 'pointer',
-          boxShadow: isOpen ? '0 0 14px rgba(255, 112, 166, 0.3)' : 'none',
-          transition: 'all 0.2s ease',
-          outline: 'none',
-          whiteSpace: 'nowrap',
-        }}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-transparent px-3 py-1 text-xs font-normal text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer whitespace-nowrap"
       >
-        {labelPrefix && <span style={{ color: 'var(--admin-text-secondary)', fontWeight: 500 }}>{labelPrefix}</span>}
+        {labelPrefix && <span className="text-muted-foreground font-medium">{labelPrefix}</span>}
         <span>{selectedOption?.label}</span>
         <ChevronDown
-          size={13}
-          style={{
-            color: 'var(--admin-text-muted)',
-            transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
-            transition: 'transform 0.2s ease',
-          }}
+          className={cn('size-3.5 opacity-50 shrink-0 transition-transform duration-200', isOpen && 'rotate-180')}
         />
       </button>
 
       {isOpen && (
         <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            ...(align === 'right' ? { right: 0 } : { left: 0 }),
-            zIndex: 1000,
-            minWidth: '100%',
-            width: 'max-content',
-            background: '#160c20',
-            border: '1px solid rgba(255, 112, 166, 0.35)',
-            borderRadius: 12,
-            padding: '0.35rem',
-            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.95), 0 0 25px rgba(255, 51, 119, 0.18)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
-          }}
+          className={cn(
+            'absolute top-[calc(100%+4px)] z-50 min-w-36 overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95',
+            align === 'right' ? 'right-0' : 'left-0'
+          )}
         >
           {options.map((opt) => {
             const isSelected = opt.value === value;
@@ -122,32 +76,13 @@ export function AdminSelect<T extends string = string>({
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.8rem',
-                  padding: '0.42rem 0.7rem',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: isSelected ? 'rgba(255, 112, 166, 0.2)' : 'transparent',
-                  color: isSelected ? '#ff70a6' : '#dfb8cf',
-                  fontSize: '0.75rem',
-                  fontWeight: isSelected ? 700 : 500,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'background 0.15s ease',
-                  whiteSpace: 'nowrap',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) e.currentTarget.style.background = 'transparent';
-                }}
+                className={cn(
+                  'relative flex w-full cursor-pointer select-none items-center justify-between gap-2 rounded-sm px-2.5 py-1.5 text-xs outline-none transition-colors hover:bg-accent hover:text-accent-foreground',
+                  isSelected && 'bg-accent/60 font-medium text-accent-foreground'
+                )}
               >
                 <span>{opt.label}</span>
-                {isSelected && <Check size={12} color="#ff70a6" />}
+                {isSelected && <Check className="size-3 text-primary" />}
               </button>
             );
           })}
@@ -156,3 +91,4 @@ export function AdminSelect<T extends string = string>({
     </div>
   );
 }
+

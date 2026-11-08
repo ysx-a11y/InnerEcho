@@ -380,6 +380,40 @@ export class SecurityRepo {
     this.lastSecurityEventPruneAtMs = 0;
   }
 
+  reanchorSecurityEventChain(): boolean {
+    const rows = this.db.prepare('SELECT * FROM security_events ORDER BY sequence ASC')
+      .all() as SecurityEventRow[];
+    if (rows.length === 0) {
+      this.writeSecurityEventChainBoundary(this.emptySecurityEventChainBoundary());
+      return true;
+    }
+    const updateStmt = this.db.prepare(
+      'UPDATE security_events SET previous_event_hash = ?, event_hash = ? WHERE sequence = ?'
+    );
+    let previousHash = '';
+    const transaction = this.db.transaction(() => {
+      for (const row of rows) {
+        const { sequence: _seq, event_hash: _eh, previous_event_hash: _peh, ...hashable } = row;
+        const eventHash = securityEventHash(previousHash, {
+          ...hashable,
+          previous_event_hash: previousHash,
+        });
+        updateStmt.run(previousHash, eventHash, row.sequence);
+        previousHash = eventHash;
+      }
+      const boundary: SecurityEventChainBoundary = {
+        first_sequence: rows[0].sequence,
+        first_previous_hash: '',
+        last_sequence: rows[rows.length - 1].sequence,
+        last_event_hash: previousHash,
+        event_count: rows.length,
+      };
+      this.writeSecurityEventChainBoundary(boundary);
+    });
+    transaction.immediate();
+    return this.verifySecurityEventChain();
+  }
+
   private emptySecurityEventChainBoundary(): SecurityEventChainBoundary {
     return {
       first_sequence: null,

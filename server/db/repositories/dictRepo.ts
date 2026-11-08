@@ -246,4 +246,58 @@ export class DictRepo {
       .get(input.typeCode, input.fromValue, input.toValue, input.actionName) as StateTransitionRow;
     return mapTransition(row);
   }
+
+  /** 创建或更新字典大类 */
+  upsertDictType(input: {
+    code: string;
+    name: string;
+    description?: string;
+    remark?: string;
+    isSystem?: number;
+  }): SysDictType {
+    const now = new Date().toISOString();
+    const existing = this.getDictType(input.code);
+    this.db
+      .prepare(`
+        INSERT INTO sys_dict_types (code, name, description, remark, is_system, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(code) DO UPDATE SET
+          name = excluded.name,
+          description = excluded.description,
+          remark = excluded.remark,
+          updated_at = excluded.updated_at
+      `)
+      .run(
+        input.code,
+        input.name,
+        input.description ?? null,
+        input.remark ?? null,
+        input.isSystem ?? 0,
+        existing?.createdAt ?? now,
+        now
+      );
+    return this.getDictType(input.code)!;
+  }
+
+  /** 删除字典大类（非系统字典） */
+  deleteDictType(code: string): boolean {
+    const type = this.getDictType(code);
+    if (!type || type.isSystem) return false;
+    this.db.prepare('DELETE FROM sys_dict_items WHERE type_code = ?').run(code);
+    this.db.prepare('DELETE FROM sys_state_transitions WHERE type_code = ?').run(code);
+    const result = this.db.prepare('DELETE FROM sys_dict_types WHERE code = ? AND is_system = 0').run(code);
+    return result.changes > 0;
+  }
+
+  /** 删除字典数据项 */
+  deleteDictItem(typeCode: string, value: string): boolean {
+    const result = this.db.prepare('DELETE FROM sys_dict_items WHERE type_code = ? AND value = ?').run(typeCode, value);
+    return result.changes > 0;
+  }
+
+  /** 删除状态流转规则 */
+  deleteTransition(id: string): boolean {
+    const result = this.db.prepare('DELETE FROM sys_state_transitions WHERE id = ?').run(id);
+    return result.changes > 0;
+  }
 }

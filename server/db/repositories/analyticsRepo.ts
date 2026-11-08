@@ -425,8 +425,43 @@ export class AnalyticsRepo {
       completed: counts.completed,
     }));
 
+    const referrerLinkRows = this.db
+      .prepare(
+        `SELECT referrer, COUNT(*) c FROM page_visits
+         WHERE referrer IS NOT NULL AND referrer != ''
+           AND date(created_at, '+8 hours') BETWEEN ? AND ?
+         GROUP BY referrer ORDER BY c DESC LIMIT 10`
+      )
+      .all(start, end) as { referrer: string; c: number }[];
+
+    let effectiveReferrerLinkRows = referrerLinkRows;
+    if (effectiveReferrerLinkRows.length === 0) {
+      effectiveReferrerLinkRows = this.db
+        .prepare(
+          `SELECT referrer, COUNT(*) c FROM page_visits
+           WHERE referrer IS NOT NULL AND referrer != ''
+           GROUP BY referrer ORDER BY c DESC LIMIT 10`
+        )
+        .all() as { referrer: string; c: number }[];
+    }
+    const referrerLinks = effectiveReferrerLinkRows.map((r) => ({
+      referrer: r.referrer,
+      count: r.c,
+    }));
+
+    let effectiveSourceRows = sourceRows;
+    if (effectiveSourceRows.length === 0) {
+      effectiveSourceRows = this.db
+        .prepare(
+          `SELECT referrer, COUNT(*) c FROM page_visits
+           WHERE referrer IS NOT NULL AND referrer != ''
+           GROUP BY referrer ORDER BY c DESC`
+        )
+        .all() as typeof sourceRows;
+    }
+
     const sourceMap = new Map<string, number>();
-    for (const row of sourceRows) {
+    for (const row of effectiveSourceRows) {
       const source = classifyReferrer(row.referrer);
       sourceMap.set(source, (sourceMap.get(source) ?? 0) + row.c);
     }
@@ -440,7 +475,19 @@ export class AnalyticsRepo {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
-    const regionDistribution = buildRegionDistribution(regionRows, selectedPeriod?.visits ?? 0);
+    let effectiveRegionRows = regionRows;
+    let effectiveRegionTotal = selectedPeriod?.visits ?? 0;
+    if (effectiveRegionRows.length === 0) {
+      effectiveRegionRows = this.db
+        .prepare(
+          `SELECT region_code, COUNT(*) c FROM page_visits
+           WHERE region_code IS NOT NULL AND region_code != ''
+           GROUP BY region_code ORDER BY c DESC`
+        )
+        .all() as typeof regionRows;
+      effectiveRegionTotal = effectiveRegionRows.reduce((sum, r) => sum + r.c, 0);
+    }
+    const regionDistribution = buildRegionDistribution(effectiveRegionRows, effectiveRegionTotal);
 
     const totalEventMap = new Map(totalEventRows.map((r) => [r.event_type, r]));
     const eventStats = eventRows.map((r) => ({
@@ -468,6 +515,7 @@ export class AnalyticsRepo {
       ageDistribution: ageDistribution.map((ad) => ({ group: ad.age_group, count: ad.count })),
       taskStats,
       sourceDistribution,
+      referrerLinks,
       tasksCompleted: periodTasksCompleted,
       totalTasksCompleted,
       regionDistribution,
@@ -535,7 +583,55 @@ export class AnalyticsRepo {
       )
       .all(start, end) as { h: number; c: number }[];
 
-    const banks = bankRows.map((b) => ({
+    let isFallbackBaseline = false;
+    let effectiveBankRows = bankRows;
+    let effectiveQuestionRows = questionRows;
+    let effectiveHourRows = hourRows;
+
+    if (effectiveBankRows.length === 0) {
+      isFallbackBaseline = true;
+      effectiveBankRows = this.db
+        .prepare(
+          `SELECT bank_ids, COUNT(*) c,
+             AVG(json_extract(quiz_payload_json, '$.totalDurationSeconds')) avg_dur,
+             AVG(json_extract(telemetry_json, '$.hesitationPauses')) avg_hes,
+             AVG(json_extract(telemetry_json, '$.deletionRatePercent')) avg_del,
+             AVG(json_extract(telemetry_json, '$.flipFlopCount')) avg_ff
+           FROM dossiers
+           GROUP BY bank_ids ORDER BY c DESC`
+        )
+        .all() as typeof bankRows;
+    }
+
+    if (effectiveQuestionRows.length === 0) {
+      effectiveQuestionRows = this.db
+        .prepare(
+          `SELECT json_extract(q.value, '$.bankId') bank_id,
+                  json_extract(q.value, '$.questionId') question_id,
+                  COUNT(*) attempts,
+                  AVG(json_extract(q.value, '$.durationMs')) avg_ms,
+                  AVG(json_extract(q.value, '$.interactionCount')) avg_int
+           FROM dossiers, json_each(dossiers.quiz_payload_json, '$.questionLogs') q
+           WHERE dossiers.quiz_payload_json IS NOT NULL
+             AND json_valid(dossiers.quiz_payload_json)
+           GROUP BY bank_id, question_id
+           ORDER BY avg_ms DESC
+           LIMIT 20`
+        )
+        .all() as typeof questionRows;
+    }
+
+    if (effectiveHourRows.length === 0) {
+      effectiveHourRows = this.db
+        .prepare(
+          `SELECT CAST(strftime('%H', created_at, '+8 hours') AS INTEGER) h, COUNT(*) c
+           FROM dossiers
+           GROUP BY h`
+        )
+        .all() as typeof hourRows;
+    }
+
+    const banks = effectiveBankRows.map((b) => ({
       bankId: b.bank_ids ?? '',
       count: b.c,
       avgDurationSeconds: Math.round(b.avg_dur ?? 0),
@@ -544,7 +640,7 @@ export class AnalyticsRepo {
       avgFlipFlop: Math.round(b.avg_ff ?? 0),
     }));
 
-    const topQuestions = questionRows.map((q) => ({
+    const topQuestions = effectiveQuestionRows.map((q) => ({
       bankId: q.bank_id ?? '',
       questionId: q.question_id ?? '',
       attempts: q.attempts,
@@ -552,7 +648,7 @@ export class AnalyticsRepo {
       avgInteractions: Math.round(q.avg_int ?? 0),
     }));
 
-    const total = hourRows.reduce((sum, r) => sum + r.c, 0) || 1;
+    const total = effectiveHourRows.reduce((sum, r) => sum + r.c, 0) || 1;
     const ranges = [
       { range: '00:00 - 04:00', hours: [0, 1, 2, 3] },
       { range: '04:00 - 08:00', hours: [4, 5, 6, 7] },
@@ -561,17 +657,36 @@ export class AnalyticsRepo {
       { range: '18:00 - 24:00', hours: [18, 19, 20, 21, 22, 23] },
     ];
     const timeDistribution = ranges.map((r) => {
-      const c = hourRows.filter((h) => r.hours.includes(h.h)).reduce((sum, h) => sum + h.c, 0);
+      const c = effectiveHourRows.filter((h) => r.hours.includes(h.h)).reduce((sum, h) => sum + h.c, 0);
       return { range: r.range, rate: Math.round((c / total) * 100) };
     });
 
+    const hourMap = new Map<number, number>();
+    for (const r of effectiveHourRows) {
+      hourMap.set(r.h, r.c);
+    }
+    const hourlyTimeline = Array.from({ length: 24 }, (_, i) => ({
+      hour: i,
+      count: hourMap.get(i) ?? 0,
+    }));
+
+    const totalDossiers = (this.db.prepare('SELECT COUNT(*) as c FROM dossiers').get() as { c: number } | undefined)?.c ?? 0;
+
     const referencedBankIds = [
-      ...bankRows.flatMap((b) => (b.bank_ids ?? '').split(',').map((s) => s.trim()).filter(Boolean)),
-      ...questionRows.map((q) => q.bank_id ?? ''),
+      ...effectiveBankRows.flatMap((b) => (b.bank_ids ?? '').split(',').map((s) => s.trim()).filter(Boolean)),
+      ...effectiveQuestionRows.map((q) => q.bank_id ?? ''),
     ];
     const bankNames = resolveBankNamesFn ? await resolveBankNamesFn(referencedBankIds) : {};
 
-    return { banks, topQuestions, timeDistribution, bankNames };
+    return {
+      banks,
+      topQuestions,
+      timeDistribution,
+      bankNames,
+      isFallbackBaseline,
+      hourlyTimeline,
+      totalDossiers,
+    };
   }
 
   async getGlobalPublicStats(): Promise<GlobalStatsContract> {

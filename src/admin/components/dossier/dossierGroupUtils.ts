@@ -93,3 +93,4 @@ export function groupDossiersByUser(
 
   return Array.from(groupsMap.values());
 }
+

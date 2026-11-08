@@ -1,6 +1,9 @@
 import React from 'react';
-import { Users, FileText, Target, Flame, RefreshCw } from 'lucide-react';
+import { Users, FileText, Target, Flame, RotateCw } from 'lucide-react';
 import type { AdminUserStats } from '../../adminTypes';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 
 interface UserStatsHeaderProps {
   stats: AdminUserStats | null;
@@ -17,155 +20,81 @@ export const UserStatsHeader: React.FC<UserStatsHeaderProps> = ({
   onRefresh,
   loading,
 }) => {
+  const conversionRate =
+    stats && stats.totalUsers > 0
+      ? Math.round((stats.withDossierCount / stats.totalUsers) * 100)
+      : 0;
+
+  const filterTabs = [
+    { key: 'all' as const, label: '全部用户' },
+    { key: 'with_dossier' as const, label: '已填卷用户' },
+    { key: 'without_dossier' as const, label: '未填卷潜客' },
+    { key: 'deleted' as const, label: '已注销' },
+  ];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
-      {/* 统计指标卡群 */}
-      {stats && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '0.75rem',
-            width: '100%',
-          }}
+    <div className="flex flex-wrap items-center justify-between gap-2.5 w-full">
+      {/* 筛选 Tab 与紧凑指标条 */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) =>
+            onTabChange(val as 'all' | 'with_dossier' | 'without_dossier' | 'deleted')
+          }
         >
-          <div
-            className="glass-card"
-            style={{
-              padding: '0.9rem 1.1rem',
-              borderRadius: 14,
-              background: 'linear-gradient(135deg, rgba(255, 112, 166, 0.12) 0%, rgba(18, 6, 24, 0.8) 100%)',
-              border: '1px solid rgba(255, 112, 166, 0.25)',
-            }}
-          >
-            <div style={{ fontSize: '0.72rem', color: 'var(--admin-text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Users size={13} color="#ff70a6" />
+          <TabsList className="h-8">
+            {filterTabs.map((tab) => (
+              <TabsTrigger
+                key={tab.key}
+                value={tab.key}
+                onClick={() => onTabChange(tab.key)}
+                className="text-xs px-2.5"
+              >
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        {/* 紧凑指标徽章条 (代替巨幅卡片，彻底释放垂直空间) */}
+        {stats && (
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground ml-1">
+            <span className="text-muted-foreground/40">|</span>
+            <span className="inline-flex items-center gap-1">
               <span>总注册用户</span>
-            </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', marginTop: '0.2rem' }}>
-              {stats.totalUsers.toLocaleString()}{' '}
-              <span style={{ fontSize: '0.7rem', color: 'var(--admin-text-muted)', fontWeight: 400 }}>人</span>
-            </div>
+              <strong className="text-foreground font-mono">{(stats?.totalUsers ?? 0).toLocaleString()}</strong>
+            </span>
+            <span className="text-muted-foreground/30">·</span>
+            <span className="inline-flex items-center gap-1">
+              <span>已测算卷宗</span>
+              <strong className="text-foreground font-mono">{(stats?.withDossierCount ?? 0).toLocaleString()}</strong>
+            </span>
+            <span className="text-muted-foreground/30">·</span>
+            <span className="inline-flex items-center gap-1">
+              <span>未答卷潜客</span>
+              <strong className="text-foreground font-mono">{(stats?.withoutDossierCount ?? 0).toLocaleString()}</strong>
+            </span>
+            <span className="text-muted-foreground/30">·</span>
+            <span className="inline-flex items-center gap-1">
+              <span>转化率</span>
+              <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{conversionRate}%</strong>
+            </span>
           </div>
-
-          <div
-            className="glass-card"
-            style={{
-              padding: '0.9rem 1.1rem',
-              borderRadius: 14,
-              background: 'linear-gradient(135deg, rgba(128, 243, 255, 0.12) 0%, rgba(18, 6, 24, 0.8) 100%)',
-              border: '1px solid rgba(128, 243, 255, 0.25)',
-            }}
-          >
-            <div style={{ fontSize: '0.72rem', color: 'var(--admin-text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <FileText size={13} color="#80f3ff" />
-              <span>已测算生成卷宗</span>
-            </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#80f3ff', marginTop: '0.2rem' }}>
-              {stats.withDossierCount.toLocaleString()}{' '}
-              <span style={{ fontSize: '0.7rem', color: 'var(--admin-text-muted)', fontWeight: 400 }}>人</span>
-            </div>
-          </div>
-
-          <div
-            className="glass-card"
-            style={{
-              padding: '0.9rem 1.1rem',
-              borderRadius: 14,
-              background: 'linear-gradient(135deg, rgba(255, 209, 128, 0.12) 0%, rgba(18, 6, 24, 0.8) 100%)',
-              border: '1px solid rgba(255, 209, 128, 0.25)',
-            }}
-          >
-            <div style={{ fontSize: '0.72rem', color: 'var(--admin-text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Target size={13} color="#ffd180" />
-              <span>未答卷仅探索</span>
-            </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ffd180', marginTop: '0.2rem' }}>
-              {stats.withoutDossierCount.toLocaleString()}{' '}
-              <span style={{ fontSize: '0.7rem', color: 'var(--admin-text-muted)', fontWeight: 400 }}>人</span>
-            </div>
-          </div>
-
-          <div
-            className="glass-card"
-            style={{
-              padding: '0.9rem 1.1rem',
-              borderRadius: 14,
-              background: 'linear-gradient(135deg, rgba(192, 132, 252, 0.12) 0%, rgba(18, 6, 24, 0.8) 100%)',
-              border: '1px solid rgba(192, 132, 252, 0.25)',
-            }}
-          >
-            <div style={{ fontSize: '0.72rem', color: 'var(--admin-text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Flame size={13} color="#c084fc" />
-              <span>卷宗转化率</span>
-            </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#c084fc', marginTop: '0.2rem' }}>
-              {stats.totalUsers > 0 ? Math.round((stats.withDossierCount / stats.totalUsers) * 100) : 0}%
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 筛选 Tab 栏 */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '0.6rem',
-        }}
-      >
-        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-          {[
-            { key: 'all', label: '全部用户' },
-            { key: 'with_dossier', label: '已填卷用户' },
-            { key: 'without_dossier', label: '未填卷潜客' },
-            { key: 'deleted', label: '已注销' },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => onTabChange(tab.key as any)}
-              style={{
-                padding: '0.35rem 0.8rem',
-                borderRadius: 10,
-                fontSize: '0.74rem',
-                fontWeight: activeTab === tab.key ? 800 : 500,
-                background: activeTab === tab.key ? 'linear-gradient(135deg, rgba(255, 112, 166, 0.25), rgba(225, 0, 255, 0.2))' : 'rgba(255, 255, 255, 0.04)',
-                border: `1px solid ${activeTab === tab.key ? '#ff70a6' : 'rgba(255, 255, 255, 0.08)'}`,
-                color: activeTab === tab.key ? '#ff70a6' : 'var(--admin-text-secondary)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={loading}
-          style={{
-            padding: '0.35rem 0.75rem',
-            borderRadius: 10,
-            background: 'rgba(255, 112, 166, 0.12)',
-            border: '1px solid rgba(255, 112, 166, 0.3)',
-            color: '#ff70a6',
-            fontSize: '0.74rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-          }}
-        >
-          <RefreshCw size={12} className={loading ? 'spin-rotate' : ''} />
-          <span>刷新画像</span>
-        </button>
+        )}
       </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onRefresh}
+        disabled={loading}
+        className="h-8 text-xs gap-1.5"
+      >
+        <RotateCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+        <span>刷新画像</span>
+      </Button>
     </div>
   );
 };
+
+export default UserStatsHeader;

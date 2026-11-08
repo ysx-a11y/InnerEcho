@@ -4,19 +4,11 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Shield,
-  FileText,
-  Layers,
   Smartphone,
-  Calendar,
-  Flame,
-  Target,
-  Sparkles,
-  AlertTriangle,
   Clock,
-  UserCheck,
-  UserX,
   Trash2,
+  Eye,
+  Loader2,
 } from 'lucide-react';
 import { usersApi, adminApi, formatTime } from '../adminApi';
 import type {
@@ -29,10 +21,36 @@ import type {
 import { UserStatsHeader } from './users/UserStatsHeader';
 import { UserProfileModal } from './UserProfileModal';
 import { DossierDetailModal } from './DossierDetailModal';
-import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
 import { AdminImageLightbox } from './ui/AdminImageLightbox';
 import { adminNotify } from './ui/adminNotify';
 import { DictBadge } from './ui/DictBadge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Badge } from './ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 
 interface UserWorkbenchProps {
   refreshTrigger?: number;
@@ -44,13 +62,6 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Toast notifications via Mantine
-  const addToast = (type: 'success' | 'error' | 'info', content: string) => {
-    if (type === 'success') adminNotify.success(content);
-    else if (type === 'error') adminNotify.error(content);
-    else adminNotify.info(content);
-  };
 
   // Image Zoom Lightbox
   const [zoomedImg, setZoomedImg] = useState<string | null>(null);
@@ -99,22 +110,22 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
       }
 
       const res = await usersApi.listUsers(params);
-      if (res.success) {
-        setUsers(res.items);
+      setUsers(res.items);
+      setTotal(res.total);
+      if (res.stats) {
         setStats(res.stats);
-        setTotal(res.total);
       }
-    } catch (err: any) {
-      const msg = err?.message || '获取用户列表失败';
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '拉取用户列表失败';
       setError(msg);
-      addToast('error', msg);
+      adminNotify.error(msg, '数据加载失败');
     } finally {
       setLoading(false);
     }
-  }, [activeTab, search, sortField, sortOrder, page]);
+  }, [search, sortField, sortOrder, page, activeTab]);
 
   useEffect(() => {
-    fetchUsers();
+    void fetchUsers();
   }, [fetchUsers, refreshTrigger]);
 
   const handleOpenDetails = async (userId: string) => {
@@ -122,13 +133,27 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
     setDetailsLoading(true);
     try {
       const res = await usersApi.getUserDetails(userId);
-      if (res.success) {
-        setUserDetails(res.details);
-      }
-    } catch (err: any) {
-      addToast('error', err?.message || '获取用户详情画像失败');
+      setUserDetails(res.details);
+    } catch (err) {
+      adminNotify.error(err instanceof Error ? err.message : '加载用户画像失败');
+      setSelectedUserId(null);
     } finally {
       setDetailsLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteConfirmUser) return;
+    setDeleteLoading(true);
+    try {
+      await usersApi.deleteUser(deleteConfirmUser.id);
+      adminNotify.success(`用户 ${deleteConfirmUser.email} 已成功注销`);
+      setDeleteConfirmUser(null);
+      void fetchUsers();
+    } catch (err) {
+      adminNotify.error(err instanceof Error ? err.message : '注销失败');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -136,63 +161,16 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
     try {
       const res = await adminApi.getDossier(dossierId);
       setSelectedDossier(res.dossier);
-    } catch (err: any) {
-      addToast('error', err?.message || '获取卷宗详情失败');
+    } catch (err) {
+      adminNotify.error(err instanceof Error ? err.message : '加载卷宗详情失败');
     }
   };
 
-  const handleReanalyzeDossier = async (id: string) => {
-    setReanalyzingId(id);
-    try {
-      await adminApi.reanalyze(id);
-      const res = await adminApi.getDossier(id);
-      setSelectedDossier(res.dossier);
-      addToast('success', '重新诊断成功');
-    } catch (err: any) {
-      addToast('error', err?.message || '重新诊断失败');
-    } finally {
-      setReanalyzingId(null);
-    }
-  };
-
-  const handleUpdateDossierParams = async (
-    id: string,
-    updates: Partial<Pick<AdminDossier, 'auditStatus' | 'adminNotes'>>
-  ) => {
-    try {
-      const res = await adminApi.updateDossier(id, updates);
-      setSelectedDossier(res.dossier);
-      addToast('success', '卷宗审核状态已更新');
-    } catch (err: any) {
-      addToast('error', err?.message || '更新失败');
-    }
-  };
-
-  const executeDeleteUser = async () => {
-    if (!deleteConfirmUser) return;
-    setDeleteLoading(true);
-    try {
-      const res = await usersApi.deleteUser(deleteConfirmUser.id);
-      if (res.success) {
-        addToast('success', `已成功注销/禁用用户「${deleteConfirmUser.email}」`);
-        fetchUsers();
-        if (selectedUserId === deleteConfirmUser.id) {
-          setSelectedUserId(null);
-        }
-        setDeleteConfirmUser(null);
-      }
-    } catch (err: any) {
-      addToast('error', err?.message || '注销用户失败');
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-
-  const totalPages = Math.ceil(total / pageSize) || 1;
+  const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', boxSizing: 'border-box' }}>
-      {/* 1. Header & KPI Cards */}
+    <div className="flex flex-col gap-2.5 w-full">
+      {/* 1. 顶部紧凑控制与统计栏 */}
       <UserStatsHeader
         stats={stats}
         activeTab={activeTab}
@@ -200,372 +178,352 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
           setActiveTab(tab);
           setPage(1);
         }}
-        onRefresh={fetchUsers}
+        onRefresh={() => {
+          void fetchUsers();
+        }}
         loading={loading}
       />
 
-      {/* 2. 搜索与排序栏 */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '0.85rem 1.1rem',
-          borderRadius: 16,
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.75) 0%, rgba(16, 8, 22, 0.85) 100%)',
-          border: '1px solid rgba(255, 112, 166, 0.2)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '0.8rem',
-        }}
-      >
-        <div style={{ position: 'relative', width: 260, maxWidth: '100%' }}>
-          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--admin-text-muted)' }} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="搜索邮箱 / 昵称 / 职业 / ID"
-            style={{
-              width: '100%',
-              padding: '0.4rem 0.75rem 0.4rem 2rem',
-              background: 'rgba(12, 4, 16, 0.8)',
-              border: '1px solid rgba(255, 112, 166, 0.25)',
-              borderRadius: 10,
-              color: '#fff0f5',
-              fontSize: '0.76rem',
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
+      {/* 2. 搜索与排序工具栏 */}
+      <Card className="shadow-xs border-border/80">
+        <CardContent className="p-2.5 sm:p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div className="relative w-72 max-w-full">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="搜索邮箱 / 昵称 / 职业 / ID"
+                className="pl-8 h-8 text-xs"
+              />
+            </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--admin-text-muted)', fontWeight: 600 }}>排序维度:</span>
-          <select
-            value={sortField}
-            onChange={(e) => {
-              setSortField(e.target.value as any);
-              setPage(1);
-            }}
-            style={{
-              background: 'rgba(12, 4, 16, 0.8)',
-              border: '1px solid rgba(255, 112, 166, 0.25)',
-              borderRadius: 10,
-              padding: '0.35rem 0.65rem',
-              color: '#fff0f5',
-              fontSize: '0.74rem',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="createdAt">注册时间</option>
-            <option value="lastLoginAt">最后活跃时间</option>
-            <option value="dossierCount">卷宗生成数</option>
-            <option value="userBankCount">自建题库数</option>
-            <option value="taskCount">认领任务数</option>
-            <option value="echoCount">投掷回响数</option>
-          </select>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground font-medium">排序维度:</span>
+              <Select
+                value={sortField}
+                onValueChange={(val) => {
+                  setSortField(val as any);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger size="sm" className="h-8 w-[125px] text-xs bg-background">
+                  <SelectValue placeholder="排序维度" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt">注册时间</SelectItem>
+                  <SelectItem value="lastLoginAt">最后活跃时间</SelectItem>
+                  <SelectItem value="dossierCount">卷宗生成数</SelectItem>
+                  <SelectItem value="userBankCount">自建题库数</SelectItem>
+                  <SelectItem value="taskCount">认领任务数</SelectItem>
+                  <SelectItem value="echoCount">投掷回响数</SelectItem>
+                </SelectContent>
+              </Select>
 
-          <select
-            value={sortOrder}
-            onChange={(e) => {
-              setSortOrder(e.target.value as any);
-              setPage(1);
-            }}
-            style={{
-              background: 'rgba(12, 4, 16, 0.8)',
-              border: '1px solid rgba(255, 112, 166, 0.25)',
-              borderRadius: 10,
-              padding: '0.35rem 0.65rem',
-              color: '#fff0f5',
-              fontSize: '0.74rem',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="desc">降序 ↓</option>
-            <option value="asc">升序 ↑</option>
-          </select>
-        </div>
-      </div>
+              <Select
+                value={sortOrder}
+                onValueChange={(val) => {
+                  setSortOrder(val as any);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger size="sm" className="h-8 w-[95px] text-xs bg-background">
+                  <SelectValue placeholder="顺序" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">降序 ↓</SelectItem>
+                  <SelectItem value="asc">升序 ↑</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 3. 用户列表表格 */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '1.1rem 1.25rem',
-          borderRadius: 18,
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.7) 0%, rgba(16, 8, 22, 0.85) 100%)',
-          border: '1px solid rgba(255, 112, 166, 0.2)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
-        }}
-      >
-        {loading && users.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#ff70a6', fontSize: '0.8rem' }}>
-            正在拉取用户画像...
+      <Card className="shadow-xs border-border/80 overflow-hidden">
+        <CardHeader className="px-3.5 py-2.5 border-b border-border/80 flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-xs sm:text-sm font-semibold">用户与世系名录</CardTitle>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+              共 {total} 名用户
+            </Badge>
           </div>
-        ) : error ? (
-          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#ff3377', fontSize: '0.8rem' }}>
-            {error}
-          </div>
-        ) : users.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--admin-text-muted)', fontSize: '0.8rem' }}>
-            暂无符合条件的用户
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.76rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--admin-text-muted)' }}>
-                  <th style={{ padding: '0.55rem 0.6rem', fontWeight: 600 }}>注册账号 / 邮箱</th>
-                  <th style={{ padding: '0.55rem 0.6rem', fontWeight: 600 }}>基础档案（第一章）</th>
-                  <th style={{ padding: '0.55rem 0.6rem', fontWeight: 600 }}>卷宗测评进展</th>
-                  <th style={{ padding: '0.55rem 0.6rem', fontWeight: 600 }}>绑定设备</th>
-                  <th style={{ padding: '0.55rem 0.6rem', fontWeight: 600 }}>多维贡献</th>
-                  <th style={{ padding: '0.55rem 0.6rem', fontWeight: 600, textAlign: 'right' }}>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => {
-                  const hasDossier = u.dossierCount > 0;
-                  const isDeleted = Boolean(u.deletedAt);
-                  const hasBasic = Boolean(u.latestNickname || u.latestOccupation);
+          <span className="text-[11px] text-muted-foreground hidden sm:inline">全站注册画像与跨设备世系</span>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading && users.length === 0 ? (
+            <div className="h-44 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin text-primary" />
+              正在拉取用户画像...
+            </div>
+          ) : error ? (
+            <div className="h-44 flex items-center justify-center text-sm text-destructive">
+              {error}
+            </div>
+          ) : users.length === 0 ? (
+            <div className="h-44 flex items-center justify-center text-sm text-muted-foreground">
+              暂无符合条件的用户
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border/60 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>注册账号 / 邮箱</TableHead>
+                    <TableHead>基础档案（第一章）</TableHead>
+                    <TableHead>卷宗测评进展</TableHead>
+                    <TableHead>绑定设备</TableHead>
+                    <TableHead>多维贡献</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u) => {
+                    const hasDossier = u.dossierCount > 0;
+                    const isDeleted = Boolean(u.deletedAt);
+                    const hasBasic = Boolean(u.latestNickname || u.latestOccupation);
 
-                  return (
-                    <tr
-                      key={u.id}
-                      style={{
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
-                        transition: 'background 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 112, 166, 0.06)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      {/* Email / ID */}
-                      <td style={{ padding: '0.65rem 0.6rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                            <span style={{ color: '#fff', fontWeight: 700 }}>{u.email}</span>
-                            <DictBadge
-                              dictCode="user_account_status"
-                              value={u.accountStatus || (isDeleted ? 'deleted' : 'active')}
-                              size="xs"
-                            />
+                    return (
+                      <TableRow key={u.id}>
+                        {/* Email / ID */}
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-foreground text-xs">{u.email}</span>
+                              <DictBadge
+                                dictCode="user_account_status"
+                                value={u.accountStatus || (isDeleted ? 'deleted' : 'active')}
+                                size="xs"
+                              />
+                            </div>
+                            <span className="text-[11px] text-muted-foreground">
+                              第 {u.generation} 代 · {formatTime(u.createdAt).slice(0, 10)}
+                            </span>
                           </div>
-                          <span style={{ fontSize: '0.68rem', color: 'var(--admin-text-muted)' }}>
-                            第 {u.generation} 代 · 注册于 {formatTime(u.createdAt).slice(0, 10)}
-                          </span>
-                        </div>
-                      </td>
+                        </TableCell>
 
-                      {/* Basic Info (Chapter 1) */}
-                      <td style={{ padding: '0.65rem 0.6rem' }}>
-                        {hasBasic ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <span style={{ color: '#80f3ff', fontWeight: 700 }}>
-                                👤 {u.latestNickname || '神秘访客'}
-                              </span>
-                              {u.latestOccupation && (
-                                <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: 4, background: 'rgba(128, 243, 255, 0.12)', color: '#80f3ff', border: '1px solid rgba(128, 243, 255, 0.25)' }}>
-                                  {u.latestOccupation}
+                        {/* Basic Info */}
+                        <TableCell>
+                          {hasBasic ? (
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-foreground text-xs">
+                                  {u.latestNickname || '神秘访客'}
+                                </span>
+                                {u.latestOccupation && (
+                                  <Badge variant="secondary" className="text-[10px] px-1 py-0 font-normal">
+                                    {u.latestOccupation}
+                                  </Badge>
+                                )}
+                              </div>
+                              {u.latestPersonaTrait && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  人前: {u.latestPersonaTrait}
                                 </span>
                               )}
                             </div>
-                            {u.latestPersonaTrait && (
-                              <span style={{ fontSize: '0.68rem', color: 'var(--admin-text-secondary)' }}>
-                                人前: {u.latestPersonaTrait}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ color: 'var(--admin-text-muted)', fontSize: '0.7rem' }}>
-                            未填基础信息
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Dossiers */}
-                      <td style={{ padding: '0.65rem 0.6rem' }}>
-                        {hasDossier ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                            <span style={{ color: '#c084fc', fontWeight: 700 }}>
-                              📑 已测算 {u.dossierCount} 份卷宗
-                            </span>
-                            {u.latestDepthRating && (
-                              <span style={{ fontSize: '0.68rem', color: 'var(--admin-text-secondary)' }}>
-                                深度: {u.latestDepthRating === 'deep' ? '暗夜破局 (Deep)' : u.latestDepthRating === 'medium' ? '双重倒错 (Medium)' : '暗光萌芽 (Light)'}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ color: '#ffd180', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                            <Clock size={11} /> 尚未完成测评
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Devices */}
-                      <td style={{ padding: '0.65rem 0.6rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#80f3ff' }}>
-                          <Smartphone size={13} />
-                          <span>{u.deviceCount} 台设备</span>
-                        </div>
-                      </td>
-
-                      {/* Contributions */}
-                      <td style={{ padding: '0.65rem 0.6rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.72rem', color: 'var(--admin-text-secondary)' }}>
-                          <span>📚 {u.userBankCount}</span>
-                          <span>🎯 {u.taskCount}</span>
-                          <span>🕯️ {u.echoCount}</span>
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td style={{ padding: '0.65rem 0.6rem', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDetails(u.id)}
-                            style={{
-                              padding: '0.2rem 0.55rem',
-                              borderRadius: 6,
-                              background: 'rgba(255, 112, 166, 0.12)',
-                              border: '1px solid rgba(255, 112, 166, 0.3)',
-                              color: '#ff70a6',
-                              fontSize: '0.7rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            全维画像
-                          </button>
-                          {!isDeleted && (
-                            <button
-                              type="button"
-                              onClick={() => setDeleteConfirmUser(u)}
-                              style={{
-                                padding: '0.2rem 0.55rem',
-                                borderRadius: 6,
-                                background: 'rgba(255, 51, 119, 0.1)',
-                                border: '1px solid rgba(255, 51, 119, 0.25)',
-                                color: '#ff3377',
-                                fontSize: '0.7rem',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.2rem',
-                              }}
-                              title="注销该用户"
-                              aria-label="注销"
-                            >
-                              <Trash2 size={11} />
-                              <span>注销</span>
-                            </button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">未填基础信息</span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        </TableCell>
 
-        {/* Pagination */}
-        {total > pageSize && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '0.6rem', borderTop: '1px solid rgba(255, 255, 255, 0.06)', fontSize: '0.74rem', color: 'var(--admin-text-muted)' }}>
-            <div>
-              共 {total} 位用户 · 第 {page} / {totalPages} 页
+                        {/* Dossiers */}
+                        <TableCell>
+                          {hasDossier ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-medium text-foreground text-xs">
+                                已测算 {u.dossierCount} 份卷宗
+                              </span>
+                              {u.latestDepthRating && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  深度:{' '}
+                                  {u.latestDepthRating === 'deep'
+                                    ? '深度回响'
+                                    : u.latestDepthRating === 'medium'
+                                    ? '中度剖析'
+                                    : '浅度探索'}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="size-3" /> 尚未测评
+                            </span>
+                          )}
+                        </TableCell>
+
+                        {/* Devices */}
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Smartphone className="size-3.5" />
+                            <span>{u.deviceCount} 台设备</span>
+                          </div>
+                        </TableCell>
+
+                        {/* Contributions */}
+                        <TableCell>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span title="题库数">📚 {u.userBankCount}</span>
+                            <span title="任务数">🎯 {u.taskCount}</span>
+                            <span title="回响数">🕯️ {u.echoCount}</span>
+                          </div>
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell className="text-right">
+                          <div className="inline-flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void handleOpenDetails(u.id)}
+                              className="h-7 px-2 text-xs gap-1"
+                            >
+                              <Eye className="size-3.5" />
+                              <span>全维画像</span>
+                            </Button>
+                            {!isDeleted && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteConfirmUser(u)}
+                                className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                                aria-label="注销"
+                                title="注销"
+                              >
+                                <Trash2 className="size-3.5" />
+                                <span>注销</span>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
-            <div style={{ display: 'flex', gap: '0.35rem' }}>
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: 'none',
-                  borderRadius: 6,
-                  padding: '0.25rem 0.5rem',
-                  color: page <= 1 ? 'var(--admin-text-muted)' : '#fff',
-                  cursor: page <= 1 ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <ChevronLeft size={13} />
-              </button>
-              <button
-                type="button"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: 'none',
-                  borderRadius: 6,
-                  padding: '0.25rem 0.5rem',
-                  color: page >= totalPages ? 'var(--admin-text-muted)' : '#fff',
-                  cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <ChevronRight size={13} />
-              </button>
+          )}
+
+          {/* Pagination */}
+          {total > pageSize && (
+            <div className="flex items-center justify-between mt-4 text-xs text-muted-foreground">
+              <div>
+                共 {total} 位用户 · 第 {page} / {totalPages} 页
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="h-8 px-2.5"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="h-8 px-2.5"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* 4. Full Profile Modal */}
-      <UserProfileModal
-        userId={selectedUserId}
-        userDetails={userDetails}
-        loading={detailsLoading}
-        onClose={() => {
-          setSelectedUserId(null);
-          setUserDetails(null);
-        }}
-        onZoomImage={(url) => setZoomedImg(url)}
-        onOpenDossier={handleOpenDossier}
-      />
+      {/* Selected User Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          userDetails={userDetails}
+          loading={detailsLoading}
+          onClose={() => {
+            setSelectedUserId(null);
+            setUserDetails(null);
+          }}
+          onZoomImage={(url) => setZoomedImg(url)}
+          onOpenDossier={handleOpenDossier}
+        />
+      )}
 
-      {/* 5. Nested Dossier Detail Modal */}
+      {/* Nested Dossier Detail Modal */}
       {selectedDossier && (
         <DossierDetailModal
           dossier={selectedDossier}
           reanalyzingId={reanalyzingId}
           onClose={() => setSelectedDossier(null)}
-          onReanalyze={handleReanalyzeDossier}
-          onUpdateParams={handleUpdateDossierParams}
+          onReanalyze={async (id) => {
+            setReanalyzingId(id);
+            try {
+              await adminApi.reanalyze(id);
+              const res = await adminApi.getDossier(id);
+              setSelectedDossier(res.dossier);
+              adminNotify.success('LLM 重新评估完成');
+            } catch (err) {
+              adminNotify.error(err instanceof Error ? err.message : '重新评估失败');
+            } finally {
+              setReanalyzingId(null);
+            }
+          }}
+          onUpdateParams={async (id, patch) => {
+            await adminApi.updateDossier(id, patch);
+            setSelectedDossier((prev) => (prev ? { ...prev, ...patch } : null));
+          }}
           onDelete={async (id) => {
             await adminApi.deleteDossier(id);
             setSelectedDossier(null);
-            addToast('success', '卷宗已成功删除');
-            if (selectedUserId) handleOpenDetails(selectedUserId);
+            void fetchUsers();
           }}
           onZoomImage={(url) => setZoomedImg(url)}
         />
       )}
 
-      {/* 6. Image Zoom Lightbox Overlay */}
-      <AdminImageLightbox imageUrl={zoomedImg} onClose={() => setZoomedImg(null)} />
+      {/* Image Lightbox */}
+      {zoomedImg && (
+        <AdminImageLightbox imageUrl={zoomedImg} onClose={() => setZoomedImg(null)} />
+      )}
 
-      {/* 注销用户确认弹窗 */}
-      <AdminConfirmDialog
-        isOpen={Boolean(deleteConfirmUser)}
-        title="注销/禁用用户账号"
-        description={`确定注销/禁用用户「${deleteConfirmUser?.email}」吗？该操作将使该用户当前 Token 立即失效，并禁止登录。`}
-        confirmText="确认注销"
-        cancelText="取消"
-        danger={true}
-        loading={deleteLoading}
-        onConfirm={executeDeleteUser}
-        onCancel={() => setDeleteConfirmUser(null)}
-      />
+      {/* Delete User Confirm Dialog */}
+      <Dialog
+        open={Boolean(deleteConfirmUser)}
+        onOpenChange={(open) => !open && setDeleteConfirmUser(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>注销用户确认</DialogTitle>
+            <DialogDescription>
+              确定注销用户 <strong>{deleteConfirmUser?.email}</strong> 吗？
+              注销后该账号将无法再登录前台，但历史卷宗与行为轨迹将受合规保留。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmUser(null)}
+              disabled={deleteLoading}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteUser}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? '正在注销...' : '确认注销'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+export default UserWorkbench;

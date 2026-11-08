@@ -250,6 +250,7 @@ export interface AdminOverview {
     completed: number;
   }[];
   sourceDistribution: { source: string; count: number }[];
+  referrerLinks?: { referrer: string; count: number }[];
   tasksCompleted: number;
   totalTasksCompleted: number;
   regionDistribution: { code: string; city: string; count: number }[];
@@ -288,6 +289,9 @@ export interface AdminTelemetry {
   timeDistribution: { range: string; rate: number }[];
   /** 遥测中出现的题库 id → 名称（内置 + 用户自建），供管理端展示。 */
   bankNames: Record<string, string>;
+  isFallbackBaseline?: boolean;
+  hourlyTimeline?: { hour: number; count: number }[];
+  totalDossiers?: number;
 }
 
 /** 用户自建题库的轻量元数据 (列表展示用，不含 questions 数组)。 */

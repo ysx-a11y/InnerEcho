@@ -1,66 +1,65 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import {
-  Tabs,
-  Paper,
-  Group,
-  Stack,
-  Text,
-  Badge,
-  Button,
-  Table,
-  Modal,
-  TextInput,
-  Textarea,
-  Select,
-  NumberInput,
-  Switch,
-  ActionIcon,
-  Tooltip,
-  Box,
-} from '@mantine/core';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Sliders,
   Database,
-  ArrowRight,
+  Layers,
   Plus,
   Edit2,
-  CheckCircle2,
-  Shield,
-  Layers,
-  BookOpen,
+  Trash2,
+  Search,
   RefreshCw,
   GitFork,
+  CheckCircle2,
+  Lock,
+  ArrowRight,
+  Shield,
+  Tag,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import type { SysDictType, SysDictItem, SysStateTransition } from '../adminTypes';
 import { dictApi } from '../adminApi';
-import { AdminWorkbenchShell } from './ui/AdminWorkbenchShell';
 import { DictBadge } from './ui/DictBadge';
 import { adminNotify } from './ui/adminNotify';
-
-const BADGE_COLOR_OPTIONS = [
-  { value: 'teal', label: '青翠绿 (teal)' },
-  { value: 'blue', label: '天空蓝 (blue)' },
-  { value: 'yellow', label: '琥珀黄 (yellow)' },
-  { value: 'red', label: '警示红 (red)' },
-  { value: 'pink', label: '深魅粉 (pink)' },
-  { value: 'violet', label: '幽邃紫 (violet)' },
-  { value: 'indigo', label: '沉稳靛 (indigo)' },
-  { value: 'gray', label: '素雅灰 (gray)' },
-];
-
-const BADGE_VARIANT_OPTIONS = [
-  { value: 'light', label: '轻盈浅底 (light)' },
-  { value: 'filled', label: '实心强调 (filled)' },
-  { value: 'outline', label: '边框极简 (outline)' },
-];
+import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { cn } from '../lib/utils';
+import { DictTypeModal } from './dict/DictTypeModal';
+import { DictItemModal } from './dict/DictItemModal';
+import { DictTransitionModal } from './dict/DictTransitionModal';
 
 export const DictWorkbench: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string | null>('items');
+  const [activeTab, setActiveTab] = useState<'items' | 'transitions'>('items');
   const [types, setTypes] = useState<SysDictType[]>([]);
-  const [selectedTypeCode, setSelectedTypeCode] = useState<string>('user_account_status');
+  const [selectedTypeCode, setSelectedTypeCode] = useState<string>('echo_audit_status');
   const [items, setItems] = useState<SysDictItem[]>([]);
   const [transitions, setTransitions] = useState<SysStateTransition[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Search & Filter state
+  const [typeSearch, setTypeSearch] = useState('');
+  const [itemSearch, setItemSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+
+  // Add / Edit Type Modal State
+  const [typeModalOpen, setTypeModalOpen] = useState(false);
+  const [typeEditing, setTypeEditing] = useState<{
+    code: string;
+    name: string;
+    description: string;
+    remark: string;
+    isEdit: boolean;
+  }>({
+    code: '',
+    name: '',
+    description: '',
+    remark: '',
+    isEdit: false,
+  });
 
   // Edit / Add Item Modal State
   const [itemModalOpen, setItemModalOpen] = useState(false);
@@ -73,6 +72,7 @@ export const DictWorkbench: React.FC = () => {
     isDefault: number;
     isActive: number;
     remark: string;
+    isEdit: boolean;
   }>({
     value: '',
     label: '',
@@ -82,6 +82,7 @@ export const DictWorkbench: React.FC = () => {
     isDefault: 0,
     isActive: 1,
     remark: '',
+    isEdit: false,
   });
 
   // Edit / Add Transition Modal State
@@ -100,180 +101,393 @@ export const DictWorkbench: React.FC = () => {
     remark: '',
   });
 
-  const loadTypes = useCallback(async () => {
-    try {
-      const res = await dictApi.listTypes();
-      if (res.success && res.types.length > 0) {
-        setTypes(res.types);
-        if (!selectedTypeCode || !res.types.some((t) => t.code === selectedTypeCode)) {
-          setSelectedTypeCode(res.types[0].code);
-        }
-      }
-    } catch {
-      adminNotify.error('加载字典大类失败');
-    }
-  }, [selectedTypeCode]);
+  // Delete Confirm Dialog
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: async () => {},
+  });
 
-  const loadData = useCallback(async () => {
-    if (!selectedTypeCode) return;
+  const loadData = useCallback(async (preferredCode?: string) => {
     setLoading(true);
     try {
-      const [itemsRes, transRes] = await Promise.all([
-        dictApi.listItems(selectedTypeCode, true),
-        dictApi.listTransitions(selectedTypeCode),
-      ]);
-      if (itemsRes.success) setItems(itemsRes.items);
-      if (transRes.success) setTransitions(transRes.transitions);
+      const typeRes = await dictApi.listTypes();
+      const typeList = typeRes.types || [];
+      setTypes(typeList);
+
+      const targetCode = preferredCode || selectedTypeCode || typeList[0]?.code;
+      if (targetCode) {
+        setSelectedTypeCode(targetCode);
+        const [itemListRes, transitionListRes] = await Promise.all([
+          dictApi.listItems(targetCode, true),
+          dictApi.listTransitions(targetCode),
+        ]);
+        setItems(itemListRes.items || []);
+        setTransitions(transitionListRes.transitions || []);
+      }
     } catch {
-      adminNotify.error('加载字典数据失败');
+      adminNotify.error('加载系统字典与状态机数据失败');
     } finally {
       setLoading(false);
     }
   }, [selectedTypeCode]);
 
   useEffect(() => {
-    void loadTypes();
-  }, [loadTypes]);
-
-  useEffect(() => {
     void loadData();
   }, [loadData]);
 
-  const handleSaveItem = async () => {
-    if (!itemEditing.value.trim() || !itemEditing.label.trim()) {
-      adminNotify.error('枚举值和中文标签不能为空');
-      return;
-    }
+  const handleSelectType = async (code: string) => {
+    setSelectedTypeCode(code);
+    setItemSearch('');
+    setStatusFilter('all');
+    setLoading(true);
     try {
-      const res = await dictApi.upsertItem({
-        typeCode: selectedTypeCode,
-        value: itemEditing.value.trim(),
-        label: itemEditing.label.trim(),
-        badgeColor: itemEditing.badgeColor,
-        badgeVariant: itemEditing.badgeVariant,
-        sortOrder: itemEditing.sortOrder,
-        isDefault: itemEditing.isDefault,
-        isActive: itemEditing.isActive,
-        remark: itemEditing.remark.trim() || undefined,
-      });
-      if (res.success) {
-        adminNotify.success(`字典项「${res.item.label}」已保存生效`);
-        setItemModalOpen(false);
-        void loadData();
-      }
-    } catch (err: any) {
-      adminNotify.error(err?.message || '保存字典项失败');
+      const [itemListRes, transitionListRes] = await Promise.all([
+        dictApi.listItems(code, true),
+        dictApi.listTransitions(code),
+      ]);
+      setItems(itemListRes.items || []);
+      setTransitions(transitionListRes.transitions || []);
+    } catch {
+      adminNotify.error('加载字典数据失败');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSaveTransition = async () => {
-    if (!transitionEditing.fromValue || !transitionEditing.toValue || !transitionEditing.actionName.trim()) {
-      adminNotify.error('流转源状态、目标状态与动作名不能为空');
+  const handleSaveType = async () => {
+    if (!typeEditing.code.trim() || !typeEditing.name.trim()) {
+      adminNotify.error('字典编码 (code) 与字典名称 (name) 不能为空');
       return;
     }
     try {
-      const res = await dictApi.upsertTransition({
-        typeCode: selectedTypeCode,
-        fromValue: transitionEditing.fromValue,
-        toValue: transitionEditing.toValue,
-        actionName: transitionEditing.actionName.trim(),
-        requiredRole: transitionEditing.requiredRole,
-        isAllowed: 1,
-        remark: transitionEditing.remark.trim() || undefined,
+      await dictApi.upsertType({
+        code: typeEditing.code.trim(),
+        name: typeEditing.name.trim(),
+        description: typeEditing.description.trim() || undefined,
+        remark: typeEditing.remark.trim() || undefined,
       });
-      if (res.success) {
-        adminNotify.success(`状态机动作「${res.transition.actionName}」已配置生效`);
-        setTransitionModalOpen(false);
-        void loadData();
-      }
-    } catch (err: any) {
-      adminNotify.error(err?.message || '配置状态机流转失败');
+      adminNotify.success('字典大类保存成功');
+      setTypeModalOpen(false);
+      void loadData(typeEditing.code.trim());
+    } catch {
+      adminNotify.error('保存字典大类失败');
     }
   };
+
+  const handleDeleteType = (type: SysDictType) => {
+    if (type.isSystem) {
+      adminNotify.error('系统核心预设字典受保护，禁止删除');
+      return;
+    }
+    setDeleteConfirm({
+      isOpen: true,
+      title: '删除字典大类',
+      description: `确定要删除字典大类「${type.name} (${type.code})」吗？该操作将连带清空其下的所有枚举数据项与流转规则！`,
+      onConfirm: async () => {
+        try {
+          await dictApi.deleteType(type.code);
+          adminNotify.success('字典大类已删除');
+          void loadData(types.find((t) => t.code !== type.code)?.code);
+        } catch {
+          adminNotify.error('删除字典大类失败');
+        }
+      },
+    });
+  };
+
+  const handleSaveItem = async () => {
+    if (!itemEditing.value.trim() || !itemEditing.label.trim()) {
+      adminNotify.error('状态枚举值 (value) 与展示标签 (label) 不能为空');
+      return;
+    }
+
+    try {
+      await dictApi.upsertItem({
+        typeCode: selectedTypeCode,
+        ...itemEditing,
+      });
+      adminNotify.success('字典项保存成功');
+      setItemModalOpen(false);
+      const res = await dictApi.listItems(selectedTypeCode, true);
+      setItems(res.items || []);
+    } catch {
+      adminNotify.error('保存字典项失败');
+    }
+  };
+
+  const handleToggleItemActive = async (item: SysDictItem) => {
+    try {
+      const nextActive = item.isActive ? 0 : 1;
+      await dictApi.upsertItem({
+        typeCode: selectedTypeCode,
+        value: item.value,
+        label: item.label,
+        badgeColor: item.badgeColor,
+        badgeVariant: item.badgeVariant,
+        sortOrder: item.sortOrder,
+        isDefault: item.isDefault,
+        isActive: nextActive,
+        remark: item.remark || undefined,
+      });
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, isActive: nextActive } : it))
+      );
+      adminNotify.success(nextActive ? `已启用「${item.label}」` : `已停用「${item.label}」`);
+    } catch {
+      adminNotify.error('修改状态失败');
+    }
+  };
+
+  const handleDeleteItem = (item: SysDictItem) => {
+    setDeleteConfirm({
+      isOpen: true,
+      title: '删除字典数据项',
+      description: `确定要删除枚举项「${item.label} (${item.value})」吗？删除后相关业务数据若引用此键值可能降级为纯文本显示。`,
+      onConfirm: async () => {
+        try {
+          await dictApi.deleteItem(selectedTypeCode, item.value);
+          adminNotify.success('字典项已删除');
+          const res = await dictApi.listItems(selectedTypeCode, true);
+          setItems(res.items || []);
+        } catch {
+          adminNotify.error('删除字典项失败');
+        }
+      },
+    });
+  };
+
+  const handleSaveTransition = async () => {
+    if (!transitionEditing.actionName.trim()) {
+      adminNotify.error('流转动作名称不能为空');
+      return;
+    }
+
+    try {
+      await dictApi.upsertTransition({
+        typeCode: selectedTypeCode,
+        ...transitionEditing,
+        isAllowed: 1,
+      });
+      adminNotify.success('状态机流转规则新增成功');
+      setTransitionModalOpen(false);
+      const res = await dictApi.listTransitions(selectedTypeCode);
+      setTransitions(res.transitions || []);
+    } catch {
+      adminNotify.error('保存状态机规则失败');
+    }
+  };
+
+  const handleDeleteTransition = (t: SysStateTransition) => {
+    setDeleteConfirm({
+      isOpen: true,
+      title: '删除流转规则',
+      description: `确定要删除流转规则「${t.fromValue} -> ${t.toValue} (${t.actionName})」吗？`,
+      onConfirm: async () => {
+        try {
+          await dictApi.deleteTransition(t.id);
+          adminNotify.success('流转规则已删除');
+          const res = await dictApi.listTransitions(selectedTypeCode);
+          setTransitions(res.transitions || []);
+        } catch {
+          adminNotify.error('删除规则失败');
+        }
+      },
+    });
+  };
+
+  // Filtered types on left
+  const filteredTypes = useMemo(() => {
+    if (!typeSearch.trim()) return types;
+    const q = typeSearch.toLowerCase();
+    return types.filter(
+      (t) => t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)
+    );
+  }, [types, typeSearch]);
+
+  // Filtered items on right
+  const filteredItems = useMemo(() => {
+    return items.filter((it) => {
+      if (statusFilter === 'active' && !it.isActive) return false;
+      if (statusFilter === 'inactive' && it.isActive) return false;
+      if (itemSearch.trim()) {
+        const q = itemSearch.toLowerCase();
+        return (
+          it.label.toLowerCase().includes(q) ||
+          it.value.toLowerCase().includes(q) ||
+          (it.remark && it.remark.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [items, itemSearch, statusFilter]);
 
   const currentType = types.find((t) => t.code === selectedTypeCode);
 
   return (
-    <AdminWorkbenchShell
-      title="系统数据字典与动态状态机引擎"
-      description="统一管理全域业务枚举、渲染色彩徽章与有限状态机合法转移规则矩阵，彻底告别硬编码"
-      icon={<Sliders size={22} color="#80f3ff" />}
-      loading={loading}
-      onRefresh={loadData}
-    >
-      {/* 字典大类切换胶囊栏 */}
-      <Paper
-        p="sm"
-        radius="lg"
-        withBorder
-        style={{
-          background: 'rgba(28, 14, 38, 0.75)',
-          borderColor: 'rgba(255, 112, 166, 0.2)',
-        }}
-      >
-        <Group justify="space-between" align="center" wrap="wrap" gap="sm">
-          <Group gap="xs" wrap="wrap">
-            {types.map((t) => {
+    <div className="flex flex-col md:flex-row gap-3 w-full h-[calc(100vh-80px)] min-h-[580px] overflow-hidden">
+      {/* ================= 左侧：标准字典类型列表 (Master) ================= */}
+      <Card className="w-full md:w-72 lg:w-80 shrink-0 border-border/80 shadow-xs flex flex-col h-full overflow-hidden">
+        {/* 左侧头部：标题、新增按钮、检索框 */}
+        <div className="p-3 border-b border-border/80 flex flex-col gap-2.5 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Database className="size-4 text-primary" />
+              <span className="font-semibold text-xs tracking-tight text-foreground">字典类型</span>
+              <Badge variant="secondary" className="font-mono text-[10px] px-1.5 py-0 h-4">
+                {types.length}
+              </Badge>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs px-2 gap-1"
+              onClick={() => {
+                setTypeEditing({
+                  code: '',
+                  name: '',
+                  description: '',
+                  remark: '',
+                  isEdit: false,
+                });
+                setTypeModalOpen(true);
+              }}
+            >
+              <Plus className="size-3" />
+              <span>新增类型</span>
+            </Button>
+          </div>
+
+          <div className="relative w-full">
+            <Search className="size-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <Input
+              placeholder="搜索字典名称或编码..."
+              value={typeSearch}
+              onChange={(e) => setTypeSearch(e.target.value)}
+              className="h-7.5 pl-8 text-xs bg-background"
+            />
+          </div>
+        </div>
+
+        {/* 左侧列表项 */}
+        <div className="flex-1 overflow-y-auto divide-y divide-border/40 p-1.5 space-y-1">
+          {filteredTypes.length === 0 ? (
+            <div className="py-12 text-center text-xs text-muted-foreground">未找到匹配的字典类型</div>
+          ) : (
+            filteredTypes.map((t) => {
               const isSelected = t.code === selectedTypeCode;
               return (
-                <Button
+                <div
                   key={t.code}
-                  size="xs"
-                  variant={isSelected ? 'filled' : 'subtle'}
-                  color={isSelected ? 'pink' : 'gray'}
-                  radius="md"
-                  onClick={() => setSelectedTypeCode(t.code)}
-                  leftSection={<Database size={13} />}
+                  onClick={() => handleSelectType(t.code)}
+                  className={cn(
+                    'px-3 py-2.5 rounded-lg border transition-all cursor-pointer group select-none flex flex-col gap-0.5',
+                    isSelected
+                      ? 'border-l-4 border-l-primary border-t-transparent border-r-transparent border-b-transparent bg-primary/10 shadow-xs'
+                      : 'border-l-4 border-transparent hover:bg-muted/40'
+                  )}
                 >
-                  {t.name} ({t.code})
-                </Button>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className={cn('text-xs truncate max-w-[170px]', isSelected ? 'font-bold text-primary' : 'font-semibold text-foreground')}>
+                      {t.name}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {t.isSystem ? (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 text-muted-foreground border-border/80">
+                          系统
+                        </Badge>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteType(t);
+                          }}
+                        >
+                          <Trash2 className="size-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+                    <span className="truncate max-w-[180px]">{t.code}</span>
+                  </div>
+                </div>
               );
-            })}
-          </Group>
-        </Group>
+            })
+          )}
+        </div>
+      </Card>
 
-        {currentType && (
-          <Group gap="md" mt="xs" style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted)' }}>
-            <Text size="xs" c="dimmed">
-              业务定位：<Text span c="#80f3ff">{currentType.description || '无说明'}</Text>
-            </Text>
-            <Text size="xs" c="dimmed">
-              系统备注：<Text span c="#ffd180">{currentType.remark || '无备注'}</Text>
-            </Text>
-          </Group>
-        )}
-      </Paper>
+      {/* ================= 右侧：标准字典数据与流转规则 (Detail) ================= */}
+      <Card className="flex-1 border-border/80 shadow-xs flex flex-col h-full overflow-hidden">
+        {/* 右侧顶部工作台工具栏 */}
+        <div className="p-3 sm:p-3.5 border-b border-border/80 flex flex-wrap items-center justify-between gap-2.5 bg-card">
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold tracking-tight text-foreground truncate">
+                {currentType?.name || selectedTypeCode}
+              </h2>
+              <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground px-1.5 py-0">
+                {selectedTypeCode}
+              </Badge>
+              {currentType?.isSystem ? (
+                <Badge variant="secondary" className="text-[10px] px-1 py-0 flex items-center gap-1">
+                  <Lock className="size-2.5" /> 核心预设
+                </Badge>
+              ) : null}
+            </div>
+            {currentType?.description && (
+              <p className="text-[11px] text-muted-foreground truncate max-w-xl">
+                {currentType.description}
+              </p>
+            )}
+          </div>
 
-      {/* 主面板：字典项 & 状态机切换 */}
-      <Tabs value={activeTab} onChange={setActiveTab} color="pink" variant="pills">
-        <Tabs.List mb="md">
-          <Tabs.Tab value="items" leftSection={<Layers size={14} />}>
-            字典枚举与色彩徽章 ({items.length})
-          </Tabs.Tab>
-          <Tabs.Tab value="transitions" leftSection={<GitFork size={14} />}>
-            有限状态机规则矩阵 ({transitions.length})
-          </Tabs.Tab>
-        </Tabs.List>
+          <div className="flex items-center gap-2">
+            {/* 子 Tab 切换 */}
+            <div className="flex items-center p-0.5 bg-muted/60 rounded-lg border border-border/60">
+              <button
+                type="button"
+                onClick={() => setActiveTab('items')}
+                className={cn(
+                  'text-xs px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5',
+                  activeTab === 'items'
+                    ? 'bg-background text-foreground font-medium shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Layers className="size-3.5" />
+                <span>字典数据 ({items.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('transitions')}
+                className={cn(
+                  'text-xs px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5',
+                  activeTab === 'transitions'
+                    ? 'bg-background text-foreground font-medium shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <GitFork className="size-3.5" />
+                <span>流转规则 ({transitions.length})</span>
+              </button>
+            </div>
 
-        {/* Tab 1: 字典项列表 */}
-        <Tabs.Panel value="items">
-          <Paper
-            p="md"
-            radius="lg"
-            withBorder
-            style={{
-              background: 'rgba(28, 14, 38, 0.7)',
-              borderColor: 'rgba(255, 112, 166, 0.2)',
-            }}
-          >
-            <Group justify="space-between" align="center" mb="md">
-              <Text fw={700} size="sm" c="#fff">
-                「{currentType?.name || selectedTypeCode}」包含的枚举项
-              </Text>
+            {/* 新增按钮 */}
+            {activeTab === 'items' ? (
               <Button
-                size="xs"
-                color="pink"
-                leftSection={<Plus size={13} />}
+                size="sm"
+                className="h-7 text-xs px-2.5 gap-1"
                 onClick={() => {
                   setItemEditing({
                     value: '',
@@ -284,107 +498,22 @@ export const DictWorkbench: React.FC = () => {
                     isDefault: 0,
                     isActive: 1,
                     remark: '',
+                    isEdit: false,
                   });
                   setItemModalOpen(true);
                 }}
               >
-                新增字典枚举项
+                <Plus className="size-3.5" />
+                <span>新增字典项</span>
               </Button>
-            </Group>
-
-            <Table verticalSpacing="sm" style={{ fontSize: '0.78rem' }}>
-              <Table.Thead>
-                <Table.Tr style={{ color: 'var(--admin-text-muted)' }}>
-                  <Table.Th style={{ width: 80 }}>排序</Table.Th>
-                  <Table.Th style={{ width: 140 }}>枚举值 (value)</Table.Th>
-                  <Table.Th style={{ width: 140 }}>中文标签 (label)</Table.Th>
-                  <Table.Th style={{ width: 130 }}>渲染徽章效果</Table.Th>
-                  <Table.Th style={{ width: 100 }}>启用状态</Table.Th>
-                  <Table.Th>业务说明与适用场景 (remark)</Table.Th>
-                  <Table.Th style={{ width: 80, textAlign: 'right' }}>操作</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {items.map((item) => (
-                  <Table.Tr key={item.id}>
-                    <Table.Td style={{ fontFamily: 'monospace', color: '#ffb347' }}>
-                      {item.sortOrder}
-                    </Table.Td>
-                    <Table.Td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#80f3ff' }}>
-                      {item.value}
-                    </Table.Td>
-                    <Table.Td style={{ fontWeight: 600, color: '#fff' }}>
-                      {item.label}
-                    </Table.Td>
-                    <Table.Td>
-                      <DictBadge dictCode={item.typeCode} value={item.value} size="sm" />
-                    </Table.Td>
-                    <Table.Td>
-                      {item.isActive ? (
-                        <Badge size="xs" color="teal" variant="light">
-                          启用中
-                        </Badge>
-                      ) : (
-                        <Badge size="xs" color="gray" variant="outline">
-                          已禁用
-                        </Badge>
-                      )}
-                    </Table.Td>
-                    <Table.Td style={{ color: 'var(--admin-text-muted)' }}>
-                      {item.remark || '无'}
-                    </Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>
-                      <ActionIcon
-                        size="sm"
-                        variant="subtle"
-                        color="pink"
-                        onClick={() => {
-                          setItemEditing({
-                            value: item.value,
-                            label: item.label,
-                            badgeColor: item.badgeColor,
-                            badgeVariant: item.badgeVariant,
-                            sortOrder: item.sortOrder,
-                            isDefault: item.isDefault,
-                            isActive: item.isActive,
-                            remark: item.remark || '',
-                          });
-                          setItemModalOpen(true);
-                        }}
-                      >
-                        <Edit2 size={13} />
-                      </ActionIcon>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Paper>
-        </Tabs.Panel>
-
-        {/* Tab 2: 状态机流转规则矩阵 */}
-        <Tabs.Panel value="transitions">
-          <Paper
-            p="md"
-            radius="lg"
-            withBorder
-            style={{
-              background: 'rgba(28, 14, 38, 0.7)',
-              borderColor: 'rgba(255, 112, 166, 0.2)',
-            }}
-          >
-            <Group justify="space-between" align="center" mb="md">
-              <Text fw={700} size="sm" c="#fff">
-                「{currentType?.name}」合法流转路径定义
-              </Text>
+            ) : (
               <Button
-                size="xs"
-                color="pink"
-                leftSection={<Plus size={13} />}
+                size="sm"
+                className="h-7 text-xs px-2.5 gap-1"
                 onClick={() => {
                   setTransitionEditing({
                     fromValue: items[0]?.value || '',
-                    toValue: items[1]?.value || '',
+                    toValue: items[1]?.value || items[0]?.value || '',
                     actionName: '',
                     requiredRole: 'admin',
                     remark: '',
@@ -392,209 +521,304 @@ export const DictWorkbench: React.FC = () => {
                   setTransitionModalOpen(true);
                 }}
               >
-                新增流转规则
+                <Plus className="size-3.5" />
+                <span>新增流转规则</span>
               </Button>
-            </Group>
+            )}
 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void loadData(selectedTypeCode)}
+              disabled={loading}
+              className="h-7 text-xs px-2.5 gap-1"
+            >
+              <RefreshCw className={cn('size-3', loading && 'animate-spin')} />
+              <span>刷新</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Tab 1: 字典数据项列表 (标准表格展示) */}
+        {activeTab === 'items' && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* 列表快捷搜索与状态过滤条 */}
+            <div className="p-2.5 border-b border-border/60 flex flex-wrap items-center justify-between gap-2 bg-muted/10">
+              <div className="flex items-center gap-2">
+                <div className="relative w-56">
+                  <Search className="size-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <Input
+                    placeholder="按标签、键值、说明检索..."
+                    value={itemSearch}
+                    onChange={(e) => setItemSearch(e.target.value)}
+                    className="h-7.5 pl-8 text-xs bg-background"
+                  />
+                </div>
+
+                <div className="flex bg-muted/60 rounded-md p-0.5 border border-border/60 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('all')}
+                    className={cn(
+                      'px-2 py-0.5 rounded transition-colors cursor-pointer',
+                      statusFilter === 'all'
+                        ? 'bg-background text-foreground font-medium shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    全部
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('active')}
+                    className={cn(
+                      'px-2 py-0.5 rounded transition-colors cursor-pointer',
+                      statusFilter === 'active'
+                        ? 'bg-background text-foreground font-medium shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    启用中
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('inactive')}
+                    className={cn(
+                      'px-2 py-0.5 rounded transition-colors cursor-pointer',
+                      statusFilter === 'inactive'
+                        ? 'bg-background text-foreground font-medium shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    已停用
+                  </button>
+                </div>
+              </div>
+
+              <span className="text-[11px] text-muted-foreground">
+                显示 {filteredItems.length} / 共 {items.length} 项
+              </span>
+            </div>
+
+            {/* 表格容器 */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredItems.length === 0 ? (
+                <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                  <Layers className="size-6 text-muted-foreground/30" />
+                  <span>暂无符合条件的字典项</span>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-xs z-10">
+                    <TableRow className="text-xs">
+                      <TableHead className="w-16 text-center">字典排序</TableHead>
+                      <TableHead className="w-40">字典标签</TableHead>
+                      <TableHead className="w-40">字典键值</TableHead>
+                      <TableHead className="w-32">回显样式</TableHead>
+                      <TableHead className="w-24 text-center">状态</TableHead>
+                      <TableHead>备注</TableHead>
+                      <TableHead className="w-28 text-center">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map((item) => (
+                      <TableRow key={item.id} className="text-xs hover:bg-muted/40 transition-colors">
+                        <TableCell className="text-center font-mono text-muted-foreground">
+                          {item.sortOrder}
+                        </TableCell>
+                        <TableCell className="font-semibold text-foreground">
+                          {item.label}
+                          {item.isDefault ? (
+                            <Badge variant="outline" className="ml-1.5 text-[9px] px-1 py-0 text-primary border-primary/40">
+                              默认
+                            </Badge>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted/60 border border-border/60 text-foreground">
+                            {item.value}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <DictBadge
+                            dictCode={selectedTypeCode}
+                            value={item.value}
+                            fallbackLabel={item.label}
+                            size="xs"
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <button
+                            type="button"
+                            onClick={() => void handleToggleItemActive(item)}
+                            className="cursor-pointer transition-transform hover:scale-105"
+                            title="点击切换启用/停用状态"
+                          >
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'text-[11px] px-2 py-0.5 font-medium',
+                                item.isActive
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                  : 'bg-muted text-muted-foreground border-border'
+                              )}
+                            >
+                              {item.isActive ? '正常' : '停用'}
+                            </Badge>
+                          </button>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground truncate max-w-xs">
+                          {item.remark || '-'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              className="text-primary hover:underline text-xs font-medium cursor-pointer"
+                              onClick={() => {
+                                setItemEditing({
+                                  value: item.value,
+                                  label: item.label,
+                                  badgeColor: item.badgeColor,
+                                  badgeVariant: item.badgeVariant,
+                                  sortOrder: item.sortOrder,
+                                  isDefault: item.isDefault,
+                                  isActive: item.isActive,
+                                  remark: item.remark || '',
+                                  isEdit: true,
+                                });
+                                setItemModalOpen(true);
+                              }}
+                            >
+                              修改
+                            </button>
+                            <span className="text-border/80">|</span>
+                            <button
+                              type="button"
+                              className="text-destructive hover:underline text-xs font-medium cursor-pointer"
+                              onClick={() => handleDeleteItem(item)}
+                            >
+                              删除
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: 状态机流转规则矩阵 (标准表格展示) */}
+        {activeTab === 'transitions' && (
+          <div className="flex-1 overflow-y-auto">
             {transitions.length === 0 ? (
-              <Text size="xs" c="dimmed" ta="center" py="xl">
-                该字典大类尚未配置状态流转规则或非状态流实体。
-              </Text>
+              <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                <GitFork className="size-6 text-muted-foreground/30" />
+                <span>当前字典尚未定义状态流转规则</span>
+                <span className="text-[11px] text-muted-foreground/60">可点击右上角「新增流转规则」设定允许的状态迁移矩阵</span>
+              </div>
             ) : (
-              <Table verticalSpacing="sm" style={{ fontSize: '0.78rem' }}>
-                <Table.Thead>
-                  <Table.Tr style={{ color: 'var(--admin-text-muted)' }}>
-                    <Table.Th style={{ width: 140 }}>当前状态 (from)</Table.Th>
-                    <Table.Th style={{ width: 120 }}>流转动作 (action)</Table.Th>
-                    <Table.Th style={{ width: 140 }}>目标状态 (to)</Table.Th>
-                    <Table.Th style={{ width: 100 }}>所需权限</Table.Th>
-                    <Table.Th style={{ width: 90 }}>阻断控制</Table.Th>
-                    <Table.Th>业务前置约束与规则备注 (remark)</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {transitions.map((tr) => (
-                    <Table.Tr key={tr.id}>
-                      <Table.Td>
-                        <DictBadge dictCode={tr.typeCode} value={tr.fromValue} size="sm" />
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap={4} c="#ff70a6">
-                          <ArrowRight size={13} />
-                          <Text fw={700} size="xs">
-                            {tr.actionName}
-                          </Text>
-                        </Group>
-                      </Table.Td>
-                      <Table.Td>
-                        <DictBadge dictCode={tr.typeCode} value={tr.toValue} size="sm" />
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge size="xs" color="violet" variant="light">
-                          {tr.requiredRole.toUpperCase()}
+              <Table>
+                <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-xs z-10">
+                  <TableRow className="text-xs">
+                    <TableHead className="w-36">起始状态 (From)</TableHead>
+                    <TableHead className="w-12 text-center">→</TableHead>
+                    <TableHead className="w-36">目标状态 (To)</TableHead>
+                    <TableHead className="w-40">触发动作 (actionName)</TableHead>
+                    <TableHead className="w-28">所需权限角色</TableHead>
+                    <TableHead>说明约束 (remark)</TableHead>
+                    <TableHead className="w-20 text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transitions.map((t) => (
+                    <TableRow key={t.id} className="text-xs">
+                      <TableCell>
+                        <DictBadge dictCode={selectedTypeCode} value={t.fromValue} size="xs" />
+                      </TableCell>
+                      <TableCell className="text-center text-muted-foreground">
+                        <ArrowRight className="size-3 mx-auto" />
+                      </TableCell>
+                      <TableCell>
+                        <DictBadge dictCode={selectedTypeCode} value={t.toValue} size="xs" />
+                      </TableCell>
+                      <TableCell className="font-semibold text-foreground">
+                        {t.actionName}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 font-mono">
+                          {t.requiredRole}
                         </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        {tr.isAllowed ? (
-                          <Badge size="xs" color="teal" variant="light">
-                            允许流转
-                          </Badge>
-                        ) : (
-                          <Badge size="xs" color="red" variant="filled">
-                            已被阻断
-                          </Badge>
-                        )}
-                      </Table.Td>
-                      <Table.Td style={{ color: 'var(--admin-text-muted)' }}>
-                        {tr.remark || '无特定前置条件'}
-                      </Table.Td>
-                    </Table.Tr>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground truncate max-w-sm">
+                        {t.remark || '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                          title="删除流转规则"
+                          onClick={() => handleDeleteTransition(t)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </Table.Tbody>
+                </TableBody>
               </Table>
             )}
-          </Paper>
-        </Tabs.Panel>
-      </Tabs>
+          </div>
+        )}
+      </Card>
 
-      {/* 字典项编辑弹窗 */}
-      <Modal
-        opened={itemModalOpen}
+      {/* ================= 字典大类 新增/编辑 模态框 ================= */}
+      <DictTypeModal
+        isOpen={typeModalOpen}
+        typeEditing={typeEditing}
+        onChange={(patch) => setTypeEditing((prev) => ({ ...prev, ...patch }))}
+        onClose={() => setTypeModalOpen(false)}
+        onSave={handleSaveType}
+      />
+
+      {/* ================= 字典数据项 新增/编辑 模态框 ================= */}
+      <DictItemModal
+        isOpen={itemModalOpen}
+        itemEditing={itemEditing}
+        onChange={(patch) => setItemEditing((prev) => ({ ...prev, ...patch }))}
         onClose={() => setItemModalOpen(false)}
-        title={<Text fw={700}>编辑 / 新增字典项</Text>}
-        centered
-        radius="md"
-      >
-        <Stack gap="sm">
-          <TextInput
-            label="状态枚举值 (value, 英文唯一键)"
-            placeholder="例如 active, pending, approved"
-            value={itemEditing.value}
-            onChange={(e) => setItemEditing({ ...itemEditing, value: e.target.value })}
-            size="xs"
-            required
-          />
-          <TextInput
-            label="中文展示标签 (label)"
-            placeholder="例如 正常活跃, 待审核"
-            value={itemEditing.label}
-            onChange={(e) => setItemEditing({ ...itemEditing, label: e.target.value })}
-            size="xs"
-            required
-          />
-          <Group grow>
-            <Select
-              label="Mantine 徽章配色"
-              data={BADGE_COLOR_OPTIONS}
-              value={itemEditing.badgeColor}
-              onChange={(val) => setItemEditing({ ...itemEditing, badgeColor: val || 'teal' })}
-              size="xs"
-            />
-            <Select
-              label="徽章样式风格"
-              data={BADGE_VARIANT_OPTIONS}
-              value={itemEditing.badgeVariant}
-              onChange={(val) => setItemEditing({ ...itemEditing, badgeVariant: val || 'light' })}
-              size="xs"
-            />
-          </Group>
-          <Group grow>
-            <NumberInput
-              label="排序权重 (越小越靠前)"
-              value={itemEditing.sortOrder}
-              onChange={(val) => setItemEditing({ ...itemEditing, sortOrder: Number(val) || 10 })}
-              size="xs"
-            />
-            <Switch
-              label="是否启用该项"
-              checked={itemEditing.isActive === 1}
-              onChange={(e) => setItemEditing({ ...itemEditing, isActive: e.currentTarget.checked ? 1 : 0 })}
-              size="xs"
-              mt={20}
-            />
-          </Group>
-          <Textarea
-            label="适用场景与业务含义备注 (remark)"
-            placeholder="说明该状态在业务流程中的具体语义"
-            value={itemEditing.remark}
-            onChange={(e) => setItemEditing({ ...itemEditing, remark: e.target.value })}
-            size="xs"
-          />
-          <Group justify="flex-end" gap="sm" mt="md">
-            <Button variant="default" size="xs" onClick={() => setItemModalOpen(false)}>
-              取消
-            </Button>
-            <Button size="xs" color="pink" onClick={handleSaveItem}>
-              保存字典项
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+        onSave={handleSaveItem}
+      />
 
-      {/* 状态流转编辑弹窗 */}
-      <Modal
-        opened={transitionModalOpen}
+      {/* ================= 状态机规则 新增 模态框 ================= */}
+      <DictTransitionModal
+        isOpen={transitionModalOpen}
+        items={items}
+        transitionEditing={transitionEditing}
+        onChange={(patch) => setTransitionEditing((prev) => ({ ...prev, ...patch }))}
         onClose={() => setTransitionModalOpen(false)}
-        title={<Text fw={700}>配置状态机流转动作</Text>}
-        centered
-        radius="md"
-      >
-        <Stack gap="sm">
-          <Group grow>
-            <Select
-              label="源状态 (from)"
-              data={items.map((i) => ({ value: i.value, label: `${i.label} (${i.value})` }))}
-              value={transitionEditing.fromValue}
-              onChange={(val) => setTransitionEditing({ ...transitionEditing, fromValue: val || '' })}
-              size="xs"
-              required
-            />
-            <Select
-              label="目标状态 (to)"
-              data={items.map((i) => ({ value: i.value, label: `${i.label} (${i.value})` }))}
-              value={transitionEditing.toValue}
-              onChange={(val) => setTransitionEditing({ ...transitionEditing, toValue: val || '' })}
-              size="xs"
-              required
-            />
-          </Group>
-          <TextInput
-            label="动作名称 (actionName)"
-            placeholder="例如 审核通过, 违规下架, 申诉公开"
-            value={transitionEditing.actionName}
-            onChange={(e) => setTransitionEditing({ ...transitionEditing, actionName: e.target.value })}
-            size="xs"
-            required
-          />
-          <Select
-            label="触发权限角色 (requiredRole)"
-            data={[
-              { value: 'admin', label: '管理员权限 (admin)' },
-              { value: 'user', label: '用户主动触发 (user)' },
-              { value: 'system', label: '系统自动流转 (system)' },
-            ]}
-            value={transitionEditing.requiredRole}
-            onChange={(val) => setTransitionEditing({ ...transitionEditing, requiredRole: (val as any) || 'admin' })}
-            size="xs"
-          />
-          <Textarea
-            label="流转约束与说明 (remark)"
-            placeholder="例如 内容涉违规人工驳回，需记录批注"
-            value={transitionEditing.remark}
-            onChange={(e) => setTransitionEditing({ ...transitionEditing, remark: e.target.value })}
-            size="xs"
-          />
-          <Group justify="flex-end" gap="sm" mt="md">
-            <Button variant="default" size="xs" onClick={() => setTransitionModalOpen(false)}>
-              取消
-            </Button>
-            <Button size="xs" color="pink" onClick={handleSaveTransition}>
-              保存流转规则
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-    </AdminWorkbenchShell>
+        onSave={handleSaveTransition}
+      />
+
+      {/* 删除确认弹窗 */}
+      <AdminConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title={deleteConfirm.title}
+        description={deleteConfirm.description}
+        confirmText="确认删除"
+        danger
+        onConfirm={async () => {
+          await deleteConfirm.onConfirm();
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false }));
+        }}
+        onCancel={() => setDeleteConfirm((prev) => ({ ...prev, isOpen: false }))}
+      />
+    </div>
   );
 };
 
+export default DictWorkbench;

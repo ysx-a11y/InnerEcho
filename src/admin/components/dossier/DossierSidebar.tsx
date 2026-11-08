@@ -1,12 +1,15 @@
 import React from 'react';
 import { Activity, AlertCircle, Shield, RefreshCw, Trash2 } from 'lucide-react';
-import type { AdminAuditStatus, AdminDossier } from '../../adminTypes';
+import type { AdminDossier } from '../../adminTypes';
 import { formatDuration } from '../../adminApi';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 
 interface DossierSidebarProps {
   dossier: AdminDossier;
   isReanalyzing: boolean;
-  onUpdateParams?: (id: string, patch: { auditStatus?: AdminAuditStatus; adminNotes?: string }) => void;
+  onUpdateParams?: (id: string, patch: { adminNotes?: string }) => void;
   onReanalyze?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -22,211 +25,104 @@ export const DossierSidebar: React.FC<DossierSidebarProps> = ({
     .filter((reason): reason is string => typeof reason === 'string' && reason.trim() !== '');
 
   return (
-    <div
-      style={{
-        flex: '1 1 35%',
-        padding: '1.5rem',
-        boxSizing: 'border-box',
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.2rem',
-        background: 'rgba(10, 8, 18, 0.4)',
-        borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
-      }}
-    >
+    <aside className="w-full md:w-80 shrink-0 border-l border-border bg-muted/10 p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto">
       {/* 遥测与防刷指标 */}
-      <div
-        style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: '12px',
-          padding: '1rem',
-        }}
-      >
-        <h4 style={{ fontSize: '0.8rem', color: '#ffd180', margin: '0 0 0.8rem 0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Activity size={14} />
-          <span>🕵️ 行为遥测与可信度</span>
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', fontSize: '0.75rem' }}>
-          <div>
-            <span style={{ color: '#6e677c', display: 'block', marginBottom: 2 }}>可信度等级</span>
-            <strong style={{ color: dossier.credibilityScore >= 80 ? '#4caf50' : '#ff3377', fontSize: '0.85rem' }}>
-              {dossier.credibilityLevel?.toUpperCase() || 'LOW'} ({dossier.credibilityScore}分)
-            </strong>
+      <Card className="shadow-xs border-border/80">
+        <CardHeader className="p-3.5 pb-2">
+          <div className="flex items-center gap-2">
+            <Activity className="size-4 text-amber-500" />
+            <CardTitle className="text-xs font-semibold">行为遥测与可信度</CardTitle>
           </div>
-          <div>
-            <span style={{ color: '#6e677c', display: 'block', marginBottom: 2 }}>总作答耗时</span>
-            <strong style={{ color: '#fff', fontSize: '0.85rem' }}>
-              {formatDuration(dossier.durationSeconds)}
-            </strong>
-          </div>
-        </div>
-
-        {/* 判定依据 */}
-        {credibilityReasons.length > 0 ? (
-          <div
-            style={{
-              marginTop: '0.7rem',
-              paddingTop: '0.6rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.3rem',
-            }}
-          >
-            <span style={{ color: '#6e677c', fontSize: '0.68rem' }}>判定依据</span>
-            {credibilityReasons.map((reason) => (
+        </CardHeader>
+        <CardContent className="p-3.5 pt-1 flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <span className="text-[11px] text-muted-foreground block mb-0.5">可信度评级</span>
               <span
-                key={reason}
-                style={{
-                  fontSize: '0.7rem',
-                  color: '#ffd180',
-                  lineHeight: 1.5,
-                  display: 'flex',
-                  gap: '0.3rem',
-                  alignItems: 'flex-start',
-                }}
+                className={`font-bold text-sm ${
+                  dossier.credibilityScore >= 80
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-rose-500'
+                }`}
               >
-                <AlertCircle size={11} style={{ flexShrink: 0, marginTop: 3 }} />
-                <span>{reason}</span>
+                {dossier.credibilityLevel?.toUpperCase() || 'LOW'} ({dossier.credibilityScore}分)
               </span>
-            ))}
+            </div>
+            <div>
+              <span className="text-[11px] text-muted-foreground block mb-0.5">作答耗时</span>
+              <span className="font-semibold text-sm text-foreground">
+                {formatDuration(dossier.durationSeconds)}
+              </span>
+            </div>
           </div>
-        ) : (
-          <div
-            style={{
-              marginTop: '0.7rem',
-              paddingTop: '0.6rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-              fontSize: '0.68rem',
-              color: '#6e677c',
-              lineHeight: 1.5,
-            }}
-          >
-            该卷宗没有记录判定依据（旧数据），可在「管理者控制中心」重新诊断后生成。
-          </div>
-        )}
-      </div>
+
+          {/* 判定依据 */}
+          {credibilityReasons.length > 0 ? (
+            <div className="pt-2 border-t border-border/60 flex flex-col gap-1.5">
+              <span className="text-[11px] text-muted-foreground font-medium">判定依据</span>
+              {credibilityReasons.map((reason) => (
+                <div key={reason} className="text-[11px] text-foreground flex items-start gap-1.5 leading-snug">
+                  <AlertCircle className="size-3 text-amber-500 shrink-0 mt-0.5" />
+                  <span>{reason}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-border/60 text-[11px] text-muted-foreground leading-snug">
+              该卷宗未记录详细判定依据（历史数据），可在下方控制中心重新诊断。
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* 控制中心 */}
-      <div
-        style={{
-          background: 'rgba(128, 243, 255, 0.03)',
-          border: '1px solid rgba(128, 243, 255, 0.12)',
-          borderRadius: '12px',
-          padding: '1rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.9rem',
-        }}
-      >
-        <h4 style={{ fontSize: '0.8rem', color: '#80f3ff', margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Shield size={14} />
-          <span>管理者控制中心</span>
-        </h4>
+      <Card className="shadow-xs border-border/80">
+        <CardHeader className="p-3.5 pb-2">
+          <div className="flex items-center gap-2">
+            <Shield className="size-4 text-primary" />
+            <CardTitle className="text-xs font-semibold">管理者控制中心</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-3.5 pt-1 flex flex-col gap-3">
+          {/* 管理备注 */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-medium text-muted-foreground">
+              内部管理备注 (内部追踪)
+            </label>
+            <textarea
+              placeholder="添加追踪备注或研判批注..."
+              value={dossier.adminNotes || ''}
+              onChange={(e) => onUpdateParams?.(dossier.id, { adminNotes: e.target.value })}
+              className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
+          </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.7rem', color: '#8d879e', marginBottom: '0.3rem' }}>
-            数据审核归档状态
-          </label>
-          <select
-            value={dossier.auditStatus}
-            onChange={(e) => onUpdateParams?.(dossier.id, { auditStatus: e.target.value as AdminAuditStatus })}
-            style={{
-              width: '100%',
-              background: 'rgba(10,8,18,0.9)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '6px',
-              padding: '7px 10px',
-              color: '#fff',
-              fontSize: '0.8rem',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="pending">待核准 (Pending)</option>
-            <option value="approved">核准并归档 (Approved)</option>
-            <option value="flagged">标记为异常/作废 (Flagged)</option>
-          </select>
-        </div>
+          {/* 操作按钮组 */}
+          <div className="flex flex-col gap-2 pt-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onReanalyze?.(dossier.id)}
+              disabled={isReanalyzing}
+              className="w-full text-xs h-8 gap-1.5"
+            >
+              <RefreshCw className={`size-3.5 ${isReanalyzing ? 'animate-spin' : ''}`} />
+              <span>{isReanalyzing ? '重新诊断中...' : '重新运行 LLM 深度诊断'}</span>
+            </Button>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.7rem', color: '#8d879e', marginBottom: '0.3rem' }}>
-            管理者审核备注 (仅内部可见)
-          </label>
-          <textarea
-            placeholder="添加审计结论或追踪备注..."
-            value={dossier.adminNotes}
-            onChange={(e) => onUpdateParams?.(dossier.id, { adminNotes: e.target.value })}
-            style={{
-              width: '100%',
-              height: '80px',
-              background: 'rgba(10,8,18,0.9)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '6px',
-              padding: '8px',
-              color: '#fff',
-              fontSize: '0.8rem',
-              outline: 'none',
-              resize: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.4rem' }}>
-          <button
-            type="button"
-            onClick={() => onReanalyze?.(dossier.id)}
-            disabled={isReanalyzing}
-            style={{
-              width: '100%',
-              background: 'rgba(128,243,255,0.1)',
-              border: '1px solid rgba(128,243,255,0.3)',
-              borderRadius: '8px',
-              padding: '9px',
-              color: '#80f3ff',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.4rem',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <RefreshCw size={13} className={isReanalyzing ? 'admin-spin' : ''} />
-            <span>{isReanalyzing ? '大模型重新诊断中...' : '重新运行 LLM 深度诊断'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onDelete?.(dossier.id)}
-            style={{
-              width: '100%',
-              background: 'rgba(255,51,119,0.08)',
-              border: '1px solid rgba(255,51,119,0.25)',
-              borderRadius: '8px',
-              padding: '9px',
-              color: '#ff3377',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.4rem',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Trash2 size={13} />
-            <span>物理删除此卷宗</span>
-          </button>
-        </div>
-      </div>
-    </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onDelete?.(dossier.id)}
+              className="w-full text-xs h-8 gap-1.5"
+            >
+              <Trash2 className="size-3.5" />
+              <span>物理删除此卷宗</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </aside>
   );
 };
-
+export default DossierSidebar;

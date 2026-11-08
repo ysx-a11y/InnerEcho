@@ -10,6 +10,7 @@ import { migrationsV21ToV35 } from './migrations/v21_v35.js';
 import { migrationV36 } from './migrations/v36.js';
 import { migrationV37 } from './migrations/v37.js';
 import { migrationV38 } from './migrations/v38.js';
+import { migrationV39 } from './migrations/v39.js';
 
 export type { Migration, BetterSqliteDatabase };
 
@@ -19,6 +20,7 @@ export const migrations: Migration[] = [
   migrationV36,
   migrationV37,
   migrationV38,
+  migrationV39,
 ];
 
 export const LATEST_DATABASE_VERSION = migrations.at(-1)?.version ?? 0;

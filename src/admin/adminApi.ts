@@ -97,6 +97,12 @@ export const adminApi = {
       chainValid: boolean;
     }>(`/api/admin/security-events${qs}`);
   },
+  reanchorSecurityEvents: () => {
+    return adminFetch<{ success: boolean; chainValid: boolean }>(
+      '/api/admin/security-events/reanchor',
+      { method: 'POST' }
+    );
+  },
   overview: (range?: string, customDate?: string) => {
     const sp = new URLSearchParams();
     if (range) sp.set('range', range);
@@ -509,6 +515,15 @@ export const aiHubApi = {
 export const dictApi = {
   listTypes: () =>
     adminFetch<{ success: boolean; types: import('./adminTypes').SysDictType[] }>('/api/admin/dict/types'),
+  upsertType: (input: { code: string; name: string; description?: string; remark?: string }) =>
+    adminFetch<{ success: boolean; type: import('./adminTypes').SysDictType }>('/api/admin/dict/types', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteType: (code: string) =>
+    adminFetch<{ success: boolean; deleted: boolean }>(`/api/admin/dict/types/${encodeURIComponent(code)}`, {
+      method: 'DELETE',
+    }),
   listItems: (typeCode: string, all = false) =>
     adminFetch<{ success: boolean; items: import('./adminTypes').SysDictItem[] }>(
       `/api/admin/dict/items/${encodeURIComponent(typeCode)}${all ? '?all=1' : ''}`
@@ -528,6 +543,11 @@ export const dictApi = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+  deleteItem: (typeCode: string, value: string) =>
+    adminFetch<{ success: boolean; deleted: boolean }>(
+      `/api/admin/dict/items/${encodeURIComponent(typeCode)}/${encodeURIComponent(value)}`,
+      { method: 'DELETE' }
+    ),
   listTransitions: (typeCode: string, fromValue?: string) => {
     const qs = fromValue ? `?fromValue=${encodeURIComponent(fromValue)}` : '';
     return adminFetch<{ success: boolean; transitions: import('./adminTypes').SysStateTransition[] }>(
@@ -551,6 +571,10 @@ export const dictApi = {
     adminFetch<{ success: boolean; transition: import('./adminTypes').SysStateTransition }>('/api/admin/dict/transitions', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  deleteTransition: (id: string) =>
+    adminFetch<{ success: boolean; deleted: boolean }>(`/api/admin/dict/transitions/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
     }),
 };
 

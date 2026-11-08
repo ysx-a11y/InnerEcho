@@ -1,5 +1,4 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
 import {
   X,
   Layers,
@@ -10,6 +9,16 @@ import {
 import { formatDuration, formatTime } from '../adminApi';
 import { getQuestionnaireName } from '../adminUtils';
 import type { AdminDossier } from '../adminTypes';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from './ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 export interface UserGroupData {
   userKey: string;
@@ -47,392 +56,167 @@ export const RespondentProfileModal: React.FC<RespondentProfileModalProps> = ({
 }) => {
   if (!userGroup) return null;
 
-  // Extract the latest dossier for rich profile attributes
   const latestDossier = userGroup.dossiers[0];
-  const surfaceTrait = latestDossier?.q_surfaceTrait || (latestDossier as any)?.dossierData?.chapter1?.surfaceTrait;
-  const innerDesire = latestDossier?.q_innerDesire || (latestDossier as any)?.dossierData?.chapter1?.innerDesire;
-  const boundaryText = latestDossier?.q_boundaryText || (latestDossier as any)?.dossierData?.chapter2?.boundaryText;
-  const secretWords = latestDossier?.q_secretWords || (latestDossier as any)?.dossierData?.chapter3?.secretWords;
+  const surfaceTrait =
+    latestDossier?.q_surfaceTrait ||
+    (latestDossier as any)?.dossierData?.chapter1?.surfaceTrait;
+  const innerDesire =
+    latestDossier?.q_innerDesire ||
+    (latestDossier as any)?.dossierData?.chapter1?.innerDesire;
+  const boundaryText =
+    latestDossier?.q_boundaryText ||
+    (latestDossier as any)?.dossierData?.chapter2?.boundaryText;
+  const secretWords =
+    latestDossier?.q_secretWords ||
+    (latestDossier as any)?.dossierData?.chapter3?.secretWords;
   const avatarPhotos = latestDossier?.avatarUrls || [];
 
-  return createPortal(
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        background: 'rgba(6, 2, 10, 0.85)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1.25rem',
-        boxSizing: 'border-box',
-      }}
-      onClick={onClose}
-    >
-      <div
-        className="animate-fade-in"
-        style={{
-          width: '100%',
-          maxWidth: '840px',
-          maxHeight: '90vh',
-          background: 'linear-gradient(145deg, #180922 0%, #0d0514 100%)',
-          border: '1px solid rgba(255, 112, 166, 0.35)',
-          borderRadius: '20px',
-          boxShadow: '0 30px 90px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 51, 119, 0.15)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          boxSizing: 'border-box',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal Header */}
-        <div
-          style={{
-            padding: '1.1rem 1.4rem',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'rgba(255, 255, 255, 0.02)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: '8px',
-                background: 'rgba(99, 102, 241, 0.15)',
-                border: '1px solid rgba(99, 102, 241, 0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-                flexShrink: 0,
-              }}
-            >
-              {userGroup.avatarUrl ? (
-                <img
-                  src={userGroup.avatarUrl}
-                  alt={userGroup.nickname}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                  onClick={() => onZoomImage?.(userGroup.avatarUrl!)}
-                />
-              ) : (
-                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#a5b4fc' }}>
-                  {userGroup.nickname.slice(0, 1) || '匿'}
-                </span>
-              )}
+  return (
+    <Dialog open={Boolean(userGroup)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0 bg-background border-border text-foreground shadow-xl">
+        <DialogHeader className="p-4 sm:p-6 pb-4 border-b border-border/80 bg-muted/20">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold">
+              <User className="size-5" />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc' }}>
-                  {userGroup.nickname || '未命名访客'}
-                </h3>
-                {userGroup.email && (
-                  <span
-                    style={{
-                      fontFamily: 'monospace',
-                      fontSize: '0.74rem',
-                      color: '#ffd180',
-                      background: 'rgba(255, 209, 128, 0.12)',
-                      border: '1px solid rgba(255, 209, 128, 0.3)',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                    }}
-                  >
-                    {userGroup.email}
-                  </span>
-                )}
-                {userGroup.isPureGuest ? (
-                  <span
-                    style={{
-                      fontSize: '0.72rem',
-                      color: '#ffd180',
-                      background: 'rgba(255, 209, 128, 0.14)',
-                      border: '1px solid rgba(255, 209, 128, 0.35)',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      fontWeight: 700,
-                    }}
-                  >
-                    游客组
-                  </span>
-                ) : userGroup.guestDossierCount && userGroup.guestDossierCount > 0 ? (
-                  <span
-                    style={{
-                      fontSize: '0.72rem',
-                      color: '#80f3ff',
-                      background: 'rgba(128, 243, 255, 0.12)',
-                      border: '1px solid rgba(128, 243, 255, 0.3)',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    含同设备游客卷轴 {userGroup.guestDossierCount} 份
-                  </span>
-                ) : null}
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    color: '#a5b4fc',
-                    background: 'rgba(99, 102, 241, 0.12)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    fontWeight: 600,
-                  }}
-                >
-                  共 {userGroup.dossiers.length} 份测评卷轴
-                </span>
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-lg font-bold">
+                  {userGroup.nickname || '神秘答卷者'} · 档案全貌
+                </DialogTitle>
+                <Badge variant={userGroup.isPureGuest ? 'secondary' : 'default'} className="text-[10px]">
+                  {userGroup.isPureGuest ? '访客设备' : '注册会员'}
+                </Badge>
               </div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255, 240, 245, 0.5)', fontFamily: 'monospace', marginTop: '2px' }}>
-                设备标识: {userGroup.deviceId || '未知'}
-              </div>
+              <DialogDescription className="font-mono text-xs text-muted-foreground mt-0.5">
+                {userGroup.email ? `邮箱: ${userGroup.email}` : `设备指纹: ${userGroup.deviceId || '—'}`}
+              </DialogDescription>
             </div>
           </div>
+        </DialogHeader>
 
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: 'none',
-              borderRadius: '8px',
-              color: 'rgba(255, 255, 255, 0.6)',
-              cursor: 'pointer',
-              padding: '6px',
-              display: 'flex',
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Modal Scroll Body */}
-        <div style={{ padding: '1.4rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* 1. 基础人口学与社交面具 */}
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '14px',
-              padding: '1.1rem',
-            }}
-          >
-            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffd180', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <User size={15} />
-              <span>第一阶段 · 真实社会面具与基础登记</span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', fontSize: '0.8rem' }}>
-              <div style={{ background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: 8 }}>
-                <span style={{ color: 'rgba(255,240,245,0.5)', display: 'block', fontSize: '0.7rem' }}>性别</span>
-                <span style={{ color: '#a5b4fc', fontWeight: 700 }}>{userGroup.gender || '保密'}</span>
-              </div>
-              <div style={{ background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: 8 }}>
-                <span style={{ color: 'rgba(255,240,245,0.5)', display: 'block', fontSize: '0.7rem' }}>真实社会职业</span>
-                <span style={{ color: '#80f3ff', fontWeight: 700 }}>{userGroup.occupation || '未填写'}</span>
-              </div>
-              <div style={{ background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: 8 }}>
-                <span style={{ color: 'rgba(255,240,245,0.5)', display: 'block', fontSize: '0.7rem' }}>人前社交形象</span>
-                <span style={{ color: '#aa26da', fontWeight: 700 }}>{userGroup.personaTrait || '未填写'}</span>
-              </div>
-              <div style={{ background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: 8 }}>
-                <span style={{ color: 'rgba(255,240,245,0.5)', display: 'block', fontSize: '0.7rem' }}>年龄</span>
-                <span style={{ color: '#fff0f5', fontWeight: 600 }}>{userGroup.age ? `${userGroup.age} 岁` : '未填写'}</span>
-              </div>
-              <div style={{ background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: 8 }}>
-                <span style={{ color: 'rgba(255,240,245,0.5)', display: 'block', fontSize: '0.7rem' }}>婚姻状态</span>
-                <span style={{ color: '#fff0f5', fontWeight: 600 }}>{userGroup.maritalStatus || '未填写'}</span>
-              </div>
-              <div style={{ background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: 8 }}>
-                <span style={{ color: 'rgba(255,240,245,0.5)', display: 'block', fontSize: '0.7rem' }}>伴侣 / 恋爱状态</span>
-                <span style={{ color: '#fff0f5', fontWeight: 600 }}>{userGroup.hasBoyfriend || '未填写'}</span>
-              </div>
-            </div>
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col gap-4">
+          {/* 属性网格 */}
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="shadow-xs border-border/80">
+              <CardContent className="p-3">
+                <span className="text-[11px] text-muted-foreground block mb-0.5">自白昵称</span>
+                <strong className="text-sm text-foreground">{userGroup.nickname || '神秘探索者'}</strong>
+              </CardContent>
+            </Card>
+            <Card className="shadow-xs border-border/80">
+              <CardContent className="p-3">
+                <span className="text-[11px] text-muted-foreground block mb-0.5">真实社会职业</span>
+                <strong className="text-sm text-foreground">{userGroup.occupation || '—'}</strong>
+              </CardContent>
+            </Card>
+            <Card className="shadow-xs border-border/80">
+              <CardContent className="p-3">
+                <span className="text-[11px] text-muted-foreground block mb-0.5">人前特质 / 面具</span>
+                <strong className="text-sm text-foreground">
+                  {userGroup.personaTrait || surfaceTrait || '—'}
+                </strong>
+              </CardContent>
+            </Card>
+            <Card className="shadow-xs border-border/80">
+              <CardContent className="p-3">
+                <span className="text-[11px] text-muted-foreground block mb-0.5">累计生成卷宗</span>
+                <strong className="text-sm text-foreground">{userGroup.dossiers.length} 份</strong>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* 2. 表里自白与深度心理渴望 */}
-          {(surfaceTrait || innerDesire || boundaryText || secretWords) && (
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '14px',
-                padding: '1.1rem',
-              }}
-            >
-              <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#a5b4fc', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sparkles size={15} />
-                <span>表里自白与隐秘暗面渴望</span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {surfaceTrait && (
-                  <div style={{ background: 'rgba(0,0,0,0.25)', padding: '10px 12px', borderRadius: 8 }}>
-                    <div style={{ fontSize: '0.72rem', color: '#ffd180', fontWeight: 700, marginBottom: 4 }}>
-                      人前外在性格表象：
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>
-                      {surfaceTrait}
-                    </div>
-                  </div>
-                )}
-
+          {/* 隐秘自白与心理渴望 */}
+          {(innerDesire || boundaryText || secretWords) && (
+            <Card className="shadow-xs border-border/80">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <div className="flex items-center gap-1.5 text-primary">
+                  <Sparkles className="size-4" />
+                  <CardTitle className="text-xs font-semibold">隐秘渴望与心理边界自白</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 pt-1 flex flex-col gap-2.5 text-xs">
                 {innerDesire && (
-                  <div style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', padding: '10px 12px', borderRadius: 8 }}>
-                    <div style={{ fontSize: '0.72rem', color: '#a5b4fc', fontWeight: 700, marginBottom: 4 }}>
-                      私密暗面真实渴望自白：
-                    </div>
-                    <div style={{ fontSize: '0.82rem', color: '#fff', fontStyle: 'italic', lineHeight: 1.5 }}>
-                      “{innerDesire}”
-                    </div>
+                  <div className="rounded-md bg-muted/40 p-2.5">
+                    <span className="font-semibold text-foreground block mb-0.5">暗面渴望:</span>
+                    <p className="text-muted-foreground leading-relaxed">{innerDesire}</p>
                   </div>
                 )}
-
                 {boundaryText && (
-                  <div style={{ background: 'rgba(0,0,0,0.25)', padding: '10px 12px', borderRadius: 8 }}>
-                    <div style={{ fontSize: '0.72rem', color: '#aa26da', fontWeight: 700, marginBottom: 4 }}>
-                      暗面触向与边界试探：
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>
-                      {boundaryText}
-                    </div>
+                  <div className="rounded-md bg-muted/40 p-2.5">
+                    <span className="font-semibold text-foreground block mb-0.5">底线与恐惧边界:</span>
+                    <p className="text-muted-foreground leading-relaxed">{boundaryText}</p>
                   </div>
                 )}
-
                 {secretWords && (
-                  <div style={{ background: 'rgba(0,0,0,0.25)', padding: '10px 12px', borderRadius: 8 }}>
-                    <div style={{ fontSize: '0.72rem', color: '#80f3ff', fontWeight: 700, marginBottom: 4 }}>
-                      密室第一句话 / 私密暗号：
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>
-                      {secretWords}
-                    </div>
+                  <div className="rounded-md bg-muted/40 p-2.5">
+                    <span className="font-semibold text-foreground block mb-0.5">隐秘独白:</span>
+                    <p className="text-muted-foreground leading-relaxed">{secretWords}</p>
                   </div>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
 
-          {/* 3. 登记私密照或附件 (若有) */}
+          {/* 上传照片 */}
           {avatarPhotos.length > 0 && (
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '14px',
-                padding: '1.1rem',
-              }}
-            >
-              <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffd180', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Eye size={15} />
-                <span>登记私密面具照片 ({avatarPhotos.length})</span>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                {avatarPhotos.map((photo: string, idx: number) => (
-                  <div
+            <div>
+              <span className="text-xs text-muted-foreground block mb-2">
+                作答自白登记照片 ({avatarPhotos.length} 张)
+              </span>
+              <div className="flex gap-2 flex-wrap">
+                {avatarPhotos.map((url, idx) => (
+                  <button
                     key={idx}
-                    onClick={() => onZoomImage?.(photo)}
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 10,
-                      overflow: 'hidden',
-                      border: '1px solid rgba(255, 112, 166, 0.3)',
-                      cursor: 'pointer',
-                      background: '#000',
-                    }}
+                    type="button"
+                    onClick={() => onZoomImage?.(url)}
+                    className="size-14 rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-primary transition-all cursor-pointer"
                   >
-                    <img src={photo} alt={`Photo ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
+                    <img src={url} alt="自白照片" className="w-full h-full object-cover" />
+                  </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* 4. 该填写人的卷宗归档记录 */}
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '14px',
-              padding: '1.1rem',
-            }}
-          >
-            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#80f3ff', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Layers size={15} />
-              <span>已提交测评卷轴列表 ({userGroup.dossiers.length})</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {userGroup.dossiers.map((d) => (
-                <div
-                  key={d.id}
-                  onClick={() => onSelectDossier?.(d)}
-                  style={{
-                    padding: '10px 14px',
-                    borderRadius: 10,
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#80f3ff' }}>
-                        {getQuestionnaireName(d, bankNames)}
-                      </span>
-                      {(!d.userId && !d.email) ? (
-                        <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(255, 209, 128, 0.15)', color: '#ffd180', border: '1px solid rgba(255, 209, 128, 0.35)', fontWeight: 700 }}>
-                          游客
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(79, 209, 161, 0.12)', color: '#70dcb4', border: '1px solid rgba(79, 209, 161, 0.3)', fontWeight: 700 }}>
-                          已登录
-                        </span>
-                      )}
-                      <span style={{ fontSize: '0.74rem', color: '#ff70a6', fontWeight: 600 }}>
-                        {d.archetypeTitle || '未命名人格'}
-                      </span>
+          {/* 卷宗历程列表 */}
+          <div>
+            <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+              <Layers className="size-3.5" />
+              测评卷宗历程 ({userGroup.dossiers.length})
+            </h4>
+            <div className="flex flex-col gap-2">
+              {userGroup.dossiers.map((dos) => (
+                <Card key={dos.id} className="shadow-xs border-border/80">
+                  <CardContent className="p-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-xs text-foreground">
+                        {getQuestionnaireName(dos, bankNames)}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {formatTime(dos.createdAt).slice(0, 16)} · 耗时 {formatDuration(dos.durationSeconds)} ·{' '}
+                        {dos.depthRating ? `深度: ${dos.depthRating}` : ''}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,240,245,0.4)', fontFamily: 'monospace' }}>
-                      提交时间: {formatTime(d.createdAt)} · 用时: {formatDuration(d.durationSeconds)}
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    style={{
-                      background: 'rgba(255, 112, 166, 0.15)',
-                      border: '1px solid rgba(255, 112, 166, 0.3)',
-                      color: '#ff70a6',
-                      borderRadius: 8,
-                      padding: '4px 10px',
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    查看卷宗 →
-                  </button>
-                </div>
+                    {onSelectDossier && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onSelectDossier(dos)}
+                        className="h-7 px-2 text-xs gap-1"
+                      >
+                        <Eye className="size-3.5" />
+                        <span>查阅详情</span>
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body
+      </DialogContent>
+    </Dialog>
   );
 };
+export default RespondentProfileModal;

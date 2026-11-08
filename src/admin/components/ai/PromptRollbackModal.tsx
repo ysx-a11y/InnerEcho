@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
-import { Modal, Select, TextInput, Button, Group, Text, Alert, Paper, Code } from '@mantine/core';
-import { RotateCcw, AlertTriangle } from 'lucide-react';
+import { RotateCcw, AlertTriangle, Loader2 } from 'lucide-react';
 import type { PromptVersionContract } from '../../adminTypes';
 import { formatTime } from '../../adminApi';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface PromptRollbackModalProps {
   opened: boolean;
@@ -21,20 +30,12 @@ export const PromptRollbackModal: React.FC<PromptRollbackModalProps> = ({
   onClose,
   onRollback,
 }) => {
-  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string>('');
   const [adminNotes, setAdminNotes] = useState('');
-  const [remark, setRemark] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedVersion = versions.find((v) => v.id === selectedVersionId) ?? null;
-
-  const versionOptions = versions.map((v) => ({
-    value: v.id,
-    label: `v${v.versionNum} · ${v.changeSummary || '未记录改动'} (${formatTime(v.createdAt)})${
-      v.id === currentVersionId ? ' [当前生效]' : ''
-    }`,
-  }));
 
   const handleConfirm = async () => {
     if (!selectedVersionId) {
@@ -51,7 +52,7 @@ export const PromptRollbackModal: React.FC<PromptRollbackModalProps> = ({
       await onRollback({
         targetVersionId: selectedVersionId,
         adminNotes: adminNotes.trim(),
-        remark: remark.trim() || '版本回滚操作',
+        remark: '版本回滚操作',
       });
       onClose();
     } catch (err: unknown) {
@@ -62,77 +63,91 @@ export const PromptRollbackModal: React.FC<PromptRollbackModalProps> = ({
   };
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title={
-        <Group gap="xs">
-          <RotateCcw size={18} color="#eab308" />
-          <Text fw={700}>版本瞬时回滚 · {templateName}</Text>
-        </Group>
-      }
-      centered
-      size="lg"
-    >
-      <Text size="sm" c="dimmed" mb="md">
-        选择历史快照版本。确认回滚后，系统将瞬时切换当前生效提示词为该快照内容，无需停机或重新发版。
-      </Text>
+    <Dialog open={opened} onOpenChange={(open) => !open && !loading && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader className="gap-1.5">
+          <div className="flex items-center gap-2">
+            <RotateCcw className="size-5 text-amber-500" />
+            <DialogTitle className="text-base font-semibold">
+              版本瞬时回滚 · {templateName}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-xs text-muted-foreground">
+            选择历史快照版本。确认回滚后，系统将瞬时切换当前生效提示词为该快照内容，无需停机或重新发版。
+          </DialogDescription>
+        </DialogHeader>
 
-      {error && (
-        <Alert icon={<AlertTriangle size={16} />} color="red" mb="md">
-          {error}
-        </Alert>
-      )}
+        <div className="flex flex-col gap-4 py-2">
+          {error && (
+            <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-2.5 text-xs text-destructive">
+              <AlertTriangle className="size-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-      <Select
-        label="选择目标历史版本"
-        placeholder="选择要回滚的版本快照"
-        data={versionOptions}
-        value={selectedVersionId}
-        onChange={setSelectedVersionId}
-        required
-        mb="md"
-      />
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">选择目标历史版本 *</label>
+            <select
+              value={selectedVersionId}
+              onChange={(e) => setSelectedVersionId(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">-- 请选择要回滚的版本快照 --</option>
+              {versions.map((v) => (
+                <option key={v.id} value={v.id}>
+                  v{v.versionNum} · {v.changeSummary || '未记录改动'} ({formatTime(v.createdAt)})
+                  {v.id === currentVersionId ? ' [当前生效]' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {selectedVersion && (
-        <Paper p="sm" withBorder mb="md" style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
-          <Text size="xs" fw={700} c="pink" mb={4}>
-            快照详情预览 (v{selectedVersion.versionNum})：
-          </Text>
-          <Text size="xs" c="dimmed" mb="xs">
-            提交人: {selectedVersion.createdBy} | 时间: {formatTime(selectedVersion.createdAt)}
-          </Text>
-          <Text size="xs" mb="xs">
-            <strong>改动说明:</strong> {selectedVersion.changeSummary}
-          </Text>
-          <Code block style={{ maxHeight: '120px', overflowY: 'auto', fontSize: '11px' }}>
-            {selectedVersion.systemPrompt.slice(0, 300)}...
-          </Code>
-        </Paper>
-      )}
+          {selectedVersion && (
+            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5 text-xs">
+              <div className="font-semibold text-foreground">
+                快照详情预览 (v{selectedVersion.versionNum})：
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                提交人: {selectedVersion.createdBy} | 时间: {formatTime(selectedVersion.createdAt)}
+              </div>
+              <div>
+                <span className="font-medium text-foreground">改动说明: </span>
+                <span className="text-muted-foreground">{selectedVersion.changeSummary}</span>
+              </div>
+              <pre className="max-h-28 overflow-y-auto rounded bg-muted/60 p-2 font-mono text-[11px] text-foreground leading-relaxed whitespace-pre-wrap">
+                {selectedVersion.systemPrompt.slice(0, 300)}...
+              </pre>
+            </div>
+          )}
 
-      <TextInput
-        label="回滚原因备忘 (Admin Notes)"
-        placeholder="如：因线上v3版本个别字段格式异常，临时回滚至v2"
-        value={adminNotes}
-        onChange={(e) => setAdminNotes(e.currentTarget.value)}
-        mb="lg"
-      />
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">回滚原因备忘 (Admin Notes)</label>
+            <Input
+              placeholder="如：因线上v3版本个别字段格式异常，临时回滚至v2"
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
 
-      <Group justify="flex-end" gap="sm">
-        <Button variant="default" onClick={onClose} disabled={loading}>
-          取消
-        </Button>
-        <Button
-          color="yellow"
-          onClick={handleConfirm}
-          loading={loading}
-          disabled={!selectedVersionId || selectedVersionId === currentVersionId}
-        >
-          确认回滚至该版本
-        </Button>
-      </Group>
-    </Modal>
+        <DialogFooter className="gap-2 sm:gap-0 pt-2">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>
+            取消
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleConfirm}
+            disabled={!selectedVersionId || selectedVersionId === currentVersionId || loading}
+            className="gap-1.5"
+          >
+            {loading && <Loader2 className="size-3.5 animate-spin" />}
+            <span>确认回滚至该版本</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
+export default PromptRollbackModal;

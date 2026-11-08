@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
-import { Modal, Textarea, TextInput, Button, Group, Text, Alert } from '@mantine/core';
-import { Sparkles, AlertCircle } from 'lucide-react';
+import { Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface PromptVersionModalProps {
   opened: boolean;
@@ -46,67 +55,73 @@ export const PromptVersionModal: React.FC<PromptVersionModalProps> = ({
   };
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title={
-        <Group gap="xs">
-          <Sparkles size={18} color="#ff70a6" />
-          <Text fw={700}>固化保存为新版本快照 · {templateName}</Text>
-        </Group>
-      }
-      centered
-      size="md"
-    >
-      <Text size="sm" c="dimmed" mb="md">
-        新版本将以不可变快照的形式存盘并分配递增版本号。历史版本将完整保留，随时支持一键比对与回滚。
-      </Text>
+    <Dialog open={opened} onOpenChange={(open) => !open && !saving && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="gap-1.5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-5 text-primary" />
+            <DialogTitle className="text-base font-semibold">
+              固化保存为新版本快照 · {templateName}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-xs text-muted-foreground">
+            将当前草稿固化为不可变版本快照并持久化留痕，支持后续秒级回滚。
+          </DialogDescription>
+        </DialogHeader>
 
-      {error && (
-        <Alert icon={<AlertCircle size={16} />} color="red" mb="md">
-          {error}
-        </Alert>
-      )}
+        <div className="flex flex-col gap-4 py-2">
+          {error && (
+            <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-2.5 text-xs text-destructive">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-      <TextInput
-        label="本次版本改动摘要 (必填)"
-        placeholder="如：强化主审官对第14题停留微信号的洞察逼问"
-        required
-        value={changeSummary}
-        onChange={(e) => setChangeSummary(e.currentTarget.value)}
-        mb="sm"
-      />
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">本次版本变更摘要 *</label>
+            <p className="text-[11px] text-muted-foreground">如：优化主审官冷峻人设追问语气，强化防注入护栏</p>
+            <textarea
+              rows={2}
+              placeholder="请准确总结本次主要变动..."
+              value={changeSummary}
+              onChange={(e) => setChangeSummary(e.target.value)}
+              className="flex w-full rounded-md border border-input bg-background p-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
 
-      <TextInput
-        label="业务备注 (Remark)"
-        placeholder="如：根据2026年11月用户自白反馈调整"
-        value={remark}
-        onChange={(e) => setRemark(e.currentTarget.value)}
-        mb="sm"
-      />
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">业务说明 (Remark)</label>
+            <Input
+              placeholder="如：2026Q4 审讯室语料迭代"
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
 
-      <Textarea
-        label="管理员运营备忘 (Admin Notes)"
-        placeholder="技术备忘或回滚参考说明..."
-        minRows={2}
-        value={adminNotes}
-        onChange={(e) => setAdminNotes(e.currentTarget.value)}
-        mb="lg"
-      />
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">管理留痕批注 (Admin Notes)</label>
+            <Input
+              placeholder="内部运营留痕信息"
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
 
-      <Group justify="flex-end" gap="sm">
-        <Button variant="default" onClick={onClose} disabled={saving}>
-          取消
-        </Button>
-        <Button
-          color="pink"
-          onClick={handleSave}
-          loading={saving}
-        >
-          确认升版快照
-        </Button>
-      </Group>
-    </Modal>
+        <DialogFooter className="gap-2 sm:gap-0 pt-2">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>
+            取消
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+            {saving && <Loader2 className="size-3.5 animate-spin" />}
+            <span>固化生成新版本</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
+export default PromptVersionModal;

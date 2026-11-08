@@ -7,12 +7,18 @@ import {
   User,
   AlertCircle,
   Sparkles,
+  Loader2,
+  RotateCcw,
 } from 'lucide-react';
-import { Table, Badge, Paper, Text, Group, Button, Loader } from '@mantine/core';
 import { interrogationApi, formatTime } from '../adminApi';
 import type { AdminInterrogationConfig, AdminInterrogationSession } from '../adminTypes';
 import { adminNotify } from './ui/adminNotify';
 import { AdminWorkbenchShell } from './ui/AdminWorkbenchShell';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
 
 const TURN_RANGE = { min: 1, max: 20 };
 const INPUT_RANGE = { min: 64, max: 8000 };
@@ -25,17 +31,12 @@ const STATUS_LABEL: Record<string, string> = {
   summarized: '已总结',
 };
 
-const STATUS_COLOR: Record<string, string> = {
-  active: 'pink',
-  exhausted: 'yellow',
-  summarized: 'teal',
-};
-
 export const InterrogationWorkbench: React.FC = () => {
   const [config, setConfig] = useState<AdminInterrogationConfig | null>(null);
   const [sessions, setSessions] = useState<AdminInterrogationSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showSessions, setShowSessions] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -106,24 +107,23 @@ export const InterrogationWorkbench: React.FC = () => {
       });
       if (res.success) {
         setConfig(res.config);
-        adminNotify.success('审讯室参数已保存，下一轮对话即刻生效');
+        adminNotify.success('审讯室配置已保存，下一轮对话即刻生效');
       } else {
-        adminNotify.error('保存失败，请稍后重试');
+        adminNotify.error('保存失败');
       }
     } catch {
-      adminNotify.error('网络异常，保存失败');
+      adminNotify.error('保存失败，请检查网络');
     } finally {
       setSaving(false);
     }
   };
 
-  /** 传空串让服务端回填默认文案，并立刻把返回的实际文本写回表单。 */
   const handleResetPrompt = async (key: 'interrogatorPrompt' | 'summaryPrompt') => {
     if (!config) return;
     try {
       setSaving(true);
       const res = await interrogationApi.updateConfig(
-        key === 'interrogatorPrompt' ? { interrogatorPrompt: '' } : { summaryPrompt: '' },
+        key === 'interrogatorPrompt' ? { interrogatorPrompt: '' } : { summaryPrompt: '' }
       );
       if (res.success) {
         setConfig(res.config);
@@ -138,244 +138,224 @@ export const InterrogationWorkbench: React.FC = () => {
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '0.55rem 0.7rem',
-    borderRadius: 10,
-    border: '1px solid rgba(255, 112, 166, 0.22)',
-    background: 'rgba(8, 3, 12, 0.65)',
-    color: '#f5e9f3',
-    fontSize: '0.86rem',
-    outline: 'none',
-  };
-
   return (
     <AdminWorkbenchShell
       title="审讯室 · 测试功能"
       description={`用户最多交互 ${config?.maxTurns ?? 5} 轮。每轮输入/输出预算为成本护栏，提示词保存后下一轮即刻生效。`}
-      icon={<Siren size={20} />}
+      icon={<Siren className="size-5" />}
       loading={loading}
       onRefresh={loadData}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="flex flex-col gap-2.5 w-full">
         {loading && !config ? (
-          <Paper p="xl" radius="lg" withBorder style={{ textAlign: 'center', background: 'rgba(25, 20, 35, 0.65)' }}>
-            <Group justify="center" gap="xs">
-              <Loader size="sm" color="pink" />
-              <Text size="sm" c="dimmed">正在读取配置…</Text>
-            </Group>
-          </Paper>
+          <Card className="border-border/80 shadow-xs">
+            <CardContent className="p-8 flex flex-col items-center justify-center text-muted-foreground gap-2 text-sm">
+              <Loader2 className="size-5 animate-spin text-primary" />
+              <span>正在读取审讯室配置…</span>
+            </CardContent>
+          </Card>
         ) : (
-          <Paper
-            p="md"
-            radius="lg"
-            withBorder
-            style={{
-              background: 'rgba(25, 20, 35, 0.65)',
-              borderColor: 'rgba(255, 255, 255, 0.08)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.85rem' }}>
-              <Sparkles size={16} color="#ff70a6" />
-              <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>参数与提示词配置</span>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '0.8rem',
-                marginBottom: '1rem',
-              }}
-            >
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', color: 'rgba(245, 233, 243, 0.65)', marginBottom: 4 }}>
-                  最大交互轮数（{TURN_RANGE.min}-{TURN_RANGE.max}）
-                </label>
-                <input
-                  type="number"
-                  min={TURN_RANGE.min}
-                  max={TURN_RANGE.max}
-                  value={config?.maxTurns ?? 5}
-                  onChange={(event) => updateField('maxTurns', event.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', color: 'rgba(245, 233, 243, 0.65)', marginBottom: 4 }}>
-                  单轮输入 token 上限（{INPUT_RANGE.min}-{INPUT_RANGE.max}）
-                </label>
-                <input
-                  type="number"
-                  min={INPUT_RANGE.min}
-                  max={INPUT_RANGE.max}
-                  step={64}
-                  value={config?.maxInputTokens ?? 1200}
-                  onChange={(event) => updateField('maxInputTokens', event.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', color: 'rgba(245, 233, 243, 0.65)', marginBottom: 4 }}>
-                  单轮输出 token 上限（{OUTPUT_RANGE.min}-{OUTPUT_RANGE.max}）
-                </label>
-                <input
-                  type="number"
-                  min={OUTPUT_RANGE.min}
-                  max={OUTPUT_RANGE.max}
-                  step={32}
-                  value={config?.maxOutputTokens ?? 300}
-                  onChange={(event) => updateField('maxOutputTokens', event.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {[
-                {
-                  key: 'interrogatorPrompt' as const,
-                  title: '审讯者系统提示词',
-                  limit: PROMPT_LIMITS.interrogatorPrompt,
-                  rows: 9,
-                },
-                {
-                  key: 'summaryPrompt' as const,
-                  title: '总结系统提示词',
-                  limit: PROMPT_LIMITS.summaryPrompt,
-                  rows: 4,
-                },
-              ].map((item) => (
-                <div key={item.key}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: '0.74rem', color: 'rgba(245, 233, 243, 0.75)', fontWeight: 600 }}>
-                      {item.title}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '0.68rem',
-                        color:
-                          (config?.[item.key].length ?? 0) > item.limit
-                            ? '#ff6b81'
-                            : 'rgba(245, 233, 243, 0.4)',
-                      }}
-                    >
-                      {config?.[item.key].length ?? 0} / {item.limit}
-                    </span>
-                    <Button
-                      variant="subtle"
-                      size="compact-xs"
-                      color="gray"
-                      onClick={() => void handleResetPrompt(item.key)}
-                      disabled={saving}
-                    >
-                      恢复默认
-                    </Button>
-                  </div>
-                  <textarea
-                    value={config?.[item.key] ?? ''}
-                    onChange={(event) => updatePrompt(item.key, event.target.value)}
-                    rows={item.rows}
-                    spellCheck={false}
-                    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, fontFamily: 'inherit' }}
-                  />
-                </div>
-              ))}
-              <Text size="xs" c="dimmed">
-                审讯者提示词里的 {'{{dossier}}'} 会被替换成来访者档案；不写这个占位符也会自动把档案追加在末尾。
-              </Text>
-            </div>
-
-            <Group mt="md" gap="sm">
+          <Card className="border-border/80 shadow-xs">
+            <CardHeader className="p-3 sm:p-3.5 border-b border-border/80 flex flex-row items-center justify-between">
+              <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2">
+                <Sparkles className="size-4 text-primary" />
+                <span>参数与提示词配置</span>
+                {config?.updatedAt && (
+                  <span className="text-[11px] text-muted-foreground font-normal hidden sm:inline-flex items-center gap-1 ml-2">
+                    <Clock className="size-3" />
+                    上次保存：{formatTime(config.updatedAt)}
+                  </span>
+                )}
+              </CardTitle>
               <Button
-                color="pink"
-                size="xs"
-                radius="md"
+                size="sm"
                 onClick={handleSave}
                 disabled={saving}
-                leftSection={saving ? <Loader size={12} color="white" /> : <Save size={13} />}
+                className="h-7 gap-1.5 text-xs px-3"
               >
-                {saving ? '保存中…' : '保存参数'}
+                {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                <span>{saving ? '保存中…' : '保存配置'}</span>
               </Button>
-              {config?.updatedAt && (
-                <Text size="xs" c="dimmed">
-                  <Clock size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
-                  上次保存：{formatTime(config.updatedAt)}
-                </Text>
-              )}
-            </Group>
-          </Paper>
+            </CardHeader>
+
+            <CardContent className="p-3 sm:p-4 space-y-3">
+              {/* 紧凑超参数与预算护栏单行化 */}
+              <div className="flex flex-wrap items-center gap-4 p-2.5 rounded-lg bg-muted/20 border border-border/60 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-foreground shrink-0">交互轮数:</span>
+                  <input
+                    type="number"
+                    min={TURN_RANGE.min}
+                    max={TURN_RANGE.max}
+                    value={config?.maxTurns ?? 5}
+                    onChange={(event) => updateField('maxTurns', event.target.value)}
+                    className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-xs font-mono font-bold"
+                  />
+                  <span className="text-muted-foreground text-[11px]">轮 (1-20)</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-foreground shrink-0">单轮输入上限:</span>
+                  <input
+                    type="number"
+                    min={INPUT_RANGE.min}
+                    max={INPUT_RANGE.max}
+                    step={64}
+                    value={config?.maxInputTokens ?? 1200}
+                    onChange={(event) => updateField('maxInputTokens', event.target.value)}
+                    className="h-7 w-20 rounded border border-input bg-background px-2 text-center text-xs font-mono font-bold"
+                  />
+                  <span className="text-muted-foreground text-[11px]">tokens</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-foreground shrink-0">单轮输出上限:</span>
+                  <input
+                    type="number"
+                    min={OUTPUT_RANGE.min}
+                    max={OUTPUT_RANGE.max}
+                    step={32}
+                    value={config?.maxOutputTokens ?? 300}
+                    onChange={(event) => updateField('maxOutputTokens', event.target.value)}
+                    className="h-7 w-20 rounded border border-input bg-background px-2 text-center text-xs font-mono font-bold"
+                  />
+                  <span className="text-muted-foreground text-[11px]">tokens</span>
+                </div>
+              </div>
+
+              {/* 核心提示词双列并排：两栏同时展示，无需下滑即可完整比对与编辑 */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                {[
+                  {
+                    key: 'interrogatorPrompt' as const,
+                    title: '审讯者系统提示词 (主审官设定)',
+                    sub: '{{dossier}} 占位符会自动替换为受访者档案',
+                    limit: PROMPT_LIMITS.interrogatorPrompt,
+                    rows: 12,
+                  },
+                  {
+                    key: 'summaryPrompt' as const,
+                    title: '总结系统提示词 (记录员设定)',
+                    sub: '整理本场审讯核心矛盾、回避问题与追问',
+                    limit: PROMPT_LIMITS.summaryPrompt,
+                    rows: 12,
+                  },
+                ].map((item) => {
+                  const len = config?.[item.key].length ?? 0;
+                  const isOver = len > item.limit;
+                  return (
+                    <div key={item.key} className="flex flex-col gap-1.5 rounded-lg border border-border/70 p-3 bg-card shadow-xs">
+                      <div className="flex items-center justify-between text-xs pb-1 border-b border-border/40">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-foreground">{item.title}</span>
+                          <span className="text-[10px] text-muted-foreground">{item.sub}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`font-mono text-[11px] ${isOver ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
+                            {len} / {item.limit}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void handleResetPrompt(item.key)}
+                            disabled={saving}
+                            className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground gap-1 border border-border/60"
+                            title="恢复默认提示词模板"
+                          >
+                            <RotateCcw className="size-2.5" />
+                            <span>恢复默认</span>
+                          </Button>
+                        </div>
+                      </div>
+                      <Textarea
+                        value={config?.[item.key] ?? ''}
+                        onChange={(event) => updatePrompt(item.key, event.target.value)}
+                        rows={item.rows}
+                        spellCheck={false}
+                        className="flex-1 w-full bg-muted/10 p-2.5 text-xs leading-relaxed font-mono resize-y min-h-[220px]"
+                        placeholder="在此配置系统提示词..."
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        <Paper
-          p="md"
-          radius="lg"
-          withBorder
-          style={{
-            background: 'rgba(25, 20, 35, 0.65)',
-            borderColor: 'rgba(255, 255, 255, 0.08)',
-          }}
-        >
-          <Group justify="space-between" mb="xs">
-            <Group gap="xs">
-              <MessageSquare size={16} color="#ff70a6" />
-              <Text size="sm" fw={700}>最近审讯会话</Text>
-            </Group>
-            <Text size="xs" c="dimmed">只读，最近 30 条</Text>
-          </Group>
+        {/* 最近审讯会话：折叠抽屉模式，默认不挤占上方核心编辑空间 */}
+        <Card className="border-border/80 shadow-xs overflow-hidden">
+          <CardHeader
+            className="p-3 border-b border-border/80 flex flex-row items-center justify-between cursor-pointer select-none hover:bg-muted/30 transition-colors"
+            onClick={() => setShowSessions((prev) => !prev)}
+          >
+            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2">
+              <MessageSquare className="size-4 text-primary" />
+              <span>最近审讯会话记录 ({sessions.length})</span>
+              <Badge variant="outline" className="text-[10px] font-normal">
+                {showSessions ? '点击收起' : '点击展开查阅'}
+              </Badge>
+            </CardTitle>
+            <span className="text-[11px] text-muted-foreground">只读 · 最近 30 条</span>
+          </CardHeader>
 
-          {sessions.length === 0 ? (
-            <Text py="xl" ta="center" size="sm" c="dimmed">
-              <AlertCircle size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-              还没有人进过审讯室
-            </Text>
-          ) : (
-            <Table.ScrollContainer minWidth={500}>
-              <Table highlightOnHover verticalSpacing="xs">
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>用户</Table.Th>
-                    <Table.Th>状态</Table.Th>
-                    <Table.Th>轮次</Table.Th>
-                    <Table.Th>开始时间</Table.Th>
-                    <Table.Th>总结生成时间</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
+          {showSessions && (
+            <CardContent className="p-0 max-h-60 overflow-y-auto">
+            {sessions.length === 0 ? (
+              <div className="py-12 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                <AlertCircle className="size-5 text-muted-foreground/40" />
+                <span>还没有人进过审讯室</span>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-xs">
+                    <TableHead>用户</TableHead>
+                    <TableHead className="w-24">状态</TableHead>
+                    <TableHead className="w-20">轮次</TableHead>
+                    <TableHead className="w-40">开始时间</TableHead>
+                    <TableHead className="w-40">总结生成时间</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {sessions.map((session) => (
-                    <Table.Tr key={session.id}>
-                      <Table.Td>
-                        <Group gap={6} wrap="nowrap">
-                          <User size={12} color="rgba(245, 233, 243, 0.5)" />
-                          <Text size="xs">{session.email || session.userId}</Text>
-                        </Group>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge size="xs" variant="light" color={STATUS_COLOR[session.status] || 'gray'}>
+                    <TableRow key={session.id} className="text-xs">
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-foreground font-medium">
+                          <User className="size-3.5 text-muted-foreground" />
+                          <span>{session.email || session.userId}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={session.status === 'active' ? 'secondary' : session.status === 'summarized' ? 'outline' : 'secondary'}
+                          className={`text-[11px] ${
+                            session.status === 'summarized'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                              : session.status === 'active'
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-muted-foreground'
+                          }`}
+                        >
                           {STATUS_LABEL[session.status] || session.status}
                         </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="xs">{session.turnCount}</Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="xs" c="dimmed">{formatTime(session.createdAt)}</Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="xs" c="dimmed">
-                          {session.summaryGeneratedAt ? formatTime(session.summaryGeneratedAt) : '—'}
-                        </Text>
-                      </Table.Td>
-                    </Table.Tr>
+                      </TableCell>
+                      <TableCell className="font-mono text-muted-foreground">{session.turnCount}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatTime(session.createdAt)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {session.summaryGeneratedAt ? formatTime(session.summaryGeneratedAt) : '—'}
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </Table.Tbody>
+                </TableBody>
               </Table>
-            </Table.ScrollContainer>
+            )}
+          </CardContent>
           )}
-        </Paper>
+        </Card>
       </div>
     </AdminWorkbenchShell>
   );
 };
+
+export default InterrogationWorkbench;

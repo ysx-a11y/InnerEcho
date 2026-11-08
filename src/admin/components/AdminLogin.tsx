@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, ShieldCheck, Lock } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Lock, Loader2, Command } from 'lucide-react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 interface AdminLoginProps {
   onLoginSuccess: (token: string) => void;
 }
 
+/**
+ * 管理端登录页（基于 shadcn/ui 官方 Authentication 分割屏标准设计）
+ * 左侧暗夜奢华品牌沉浸区 + 右侧极简高安全凭据验证表单
+ */
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +28,6 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
     setErrorMsg('口令错误，请重新输入');
 
     try {
-      // 走后端常量时间校验（与 /api/admin/* 同源鉴权），不再使用前端写死口令
       const res = await fetch('/api/admin/verify', {
         method: 'POST',
         headers: {
@@ -49,292 +54,134 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div
-      className="admin-login"
-      style={{
-        minHeight: '100vh',
-        width: '100vw',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'radial-gradient(circle at 50% 50%, #150f28 0%, #08060d 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        padding: '1.5rem',
-      }}
-    >
-      {/* 霓虹光晕背景特效 */}
-      <div
-        style={{
-          position: 'absolute',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(128, 243, 255, 0.08) 0%, rgba(0, 0, 0, 0) 70%)',
-          top: '-10%',
-          left: '-10%',
-          filter: 'blur(60px)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          width: '600px',
-          height: '600px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255, 51, 119, 0.06) 0%, rgba(0, 0, 0, 0) 70%)',
-          bottom: '-10%',
-          right: '-10%',
-          filter: 'blur(80px)',
-          pointerEvents: 'none',
-        }}
-      />
+    <div className="admin-login relative min-h-screen w-full flex flex-col items-center justify-center lg:grid lg:max-w-none lg:grid-cols-2 lg:px-0 bg-background">
+      {/* 左侧：暗夜奢华品牌氛围区（移动端隐藏，大屏展示） */}
+      <div className="relative hidden h-full flex-col justify-between p-10 text-white lg:flex border-r border-border/40 overflow-hidden bg-zinc-950">
+        {/* 背景光晕装饰 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-950/20 via-zinc-950 to-zinc-950 pointer-events-none" />
+        <div className="absolute -top-32 -left-32 size-96 rounded-full bg-purple-600/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 size-96 rounded-full bg-rose-600/10 blur-3xl pointer-events-none" />
 
-      {/* 登录卡片 */}
-      <div
-        className={`admin-login-card ${error ? 'shake-element' : ''}`}
-        style={{
-          width: '100%',
-          maxWidth: '420px',
-          background: '#0f172a',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '16px',
-          padding: '2.5rem 2rem',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-          zIndex: 10,
-          boxSizing: 'border-box',
-          transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-        }}
-      >
-        {/* Logo 与标题 */}
-        <div style={{ textAlign: 'center', marginBottom: '2.2rem' }}>
-          <div
-            style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1.2rem auto',
-              boxShadow: '0 0 20px rgba(99, 102, 241, 0.35)',
-            }}
-          >
-            <ShieldCheck size={28} color="#ffffff" />
+        {/* 顶部 Logo 标识 */}
+        <div className="relative z-20 flex items-center gap-2.5 text-base font-semibold tracking-wide">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
+            <Command className="size-4" />
           </div>
-          <h1
-            style={{
-              fontSize: '1.45rem',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              margin: '0 0 0.4rem 0',
-              color: '#f8fafc',
-            }}
-          >
-            深层回响 · 企业控制台
-          </h1>
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>
-            InnerEcho Enterprise Management Console
-          </p>
+          <span>深层回响 InnerEcho · 生产管控平台</span>
         </div>
 
-        {/* 登录表单 */}
-        <form id="admin-login-form" autoComplete="on" onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label
-              htmlFor="admin-username"
-              style={{
-                display: 'block',
-                fontSize: '0.72rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: '#94a3b8',
-                marginBottom: '0.4rem',
-                fontWeight: 600,
-              }}
-            >
-              管理员身份 (Administrator)
-            </label>
-            <input
-              id="admin-username"
-              name="adminUsername"
-              type="text"
-              autoComplete="section-admin username"
-              value="innerecho-admin"
-              readOnly
-              style={{
-                width: '100%',
-                background: '#0b1120',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px',
-                padding: '10px 12px',
-                color: '#cbd5e1',
-                fontSize: '0.85rem',
-                outline: 'none',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label
-              htmlFor="admin-security-token"
-              style={{
-                display: 'block',
-                fontSize: '0.72rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: '#94a3b8',
-                marginBottom: '0.4rem',
-                fontWeight: 600,
-              }}
-            >
-              安全管理口令 (Security Password)
-            </label>
-            <div style={{ position: 'relative' }}>
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#655e75',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                <Lock size={16} />
-              </div>
-              <input
-                id="admin-security-token"
-                name="adminSecurityToken"
-                autoComplete="section-admin current-password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="请输入管理口令..."
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setError(false);
-                }}
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  background: '#0b1120',
-                  border: `1px solid ${error ? '#ef4444' : 'rgba(255, 255, 255, 0.12)'}`,
-                  borderRadius: '8px',
-                  padding: '10px 40px 10px 36px',
-                  color: '#ffffff',
-                  fontSize: '0.9rem',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit',
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  outline: 'none',
-                }}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            {error && (
-              <span
-                style={{
-                  display: 'block',
-                  fontSize: '0.75rem',
-                  color: '#f87171',
-                  marginTop: '0.4rem',
-                  fontWeight: 500,
-                }}
-              >
-                {errorMsg}
-              </span>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              background: '#4f46e5',
-              border: '1px solid #6366f1',
-              borderRadius: '8px',
-              padding: '11px',
-              color: '#ffffff',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2), 0 0 12px rgba(99, 102, 241, 0.25)',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            {loading ? (
-              <>
-                <div
-                  style={{
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid rgba(255,255,255,0.3)',
-                    borderTopColor: '#ffffff',
-                    borderRadius: '50%',
-                    animation: 'spin 0.8s linear infinite',
-                  }}
-                />
-                <span>口令校验中...</span>
-              </>
-            ) : (
-              <span>登入控制台</span>
-            )}
-          </button>
-        </form>
-
-        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.7rem', color: '#64748b', margin: 0 }}>
-            企业受限访问区域，所有运维操作受到实时遥测与安全链审计
-          </p>
+        {/* 底部经典引言卡片 */}
+        <div className="relative z-20 mt-auto">
+          <blockquote className="space-y-3 max-w-lg border-l-2 border-purple-500/50 pl-4 py-1">
+            <p className="text-sm font-light leading-relaxed text-zinc-300">
+              “深层的欲望从不喧哗，它只在暗夜回响。管控真实的表里，是触碰灵魂最深处秩序的起点。”
+            </p>
+            <footer className="text-xs text-zinc-500 tracking-wider">
+              —— 《深层回响 · 系统管理控制台》
+            </footer>
+          </blockquote>
         </div>
       </div>
 
-      {/* 页面内嵌关键样式：密码错误震颤和 loading 旋转 */}
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20%, 60% { transform: translateX(-6px); }
-          40%, 80% { transform: translateX(6px); }
-        }
-        .shake-element {
-          animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-          border-color: #ef4444 !important;
-          box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
-        }
-      `}</style>
+      {/* 右侧：官方标准认证表单区 */}
+      <div className="p-4 sm:p-8 w-full flex items-center justify-center">
+        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[380px]">
+          {/* 移动端专属 Logo */}
+          <div className="flex lg:hidden items-center justify-center gap-2 mb-2">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
+              <ShieldCheck className="size-5" />
+            </div>
+            <span className="font-bold text-base text-foreground">深层回响 InnerEcho</span>
+          </div>
+
+          {/* 表单标题 */}
+          <div className="flex flex-col space-y-1.5 text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              控制台身份验证
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              请输入管理员专用安全口令以进入生产管控平台
+            </p>
+          </div>
+
+          {/* 认证表单 */}
+          <form id="admin-login-form" autoComplete="on" onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="admin-username"
+                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              >
+                管理员身份 (Administrator)
+              </label>
+              <Input
+                id="admin-username"
+                name="adminUsername"
+                type="text"
+                autoComplete="section-admin username"
+                value="innerecho-admin"
+                readOnly
+                className="bg-muted/50 cursor-not-allowed font-mono text-xs h-9"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="admin-security-token"
+                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              >
+                安全管理口令 (Security Password)
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  id="admin-security-token"
+                  name="adminSecurityToken"
+                  autoComplete="section-admin current-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="请输入管理口令..."
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError(false);
+                  }}
+                  disabled={loading}
+                  className={`pl-9 pr-10 h-9 text-xs ${
+                    error ? 'border-destructive focus-visible:ring-destructive' : ''
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+              {error && (
+                <p className="text-xs font-medium text-destructive pt-0.5">{errorMsg}</p>
+              )}
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full h-9 font-medium text-xs">
+              {loading ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin mr-2" />
+                  口令校验中...
+                </>
+              ) : (
+                '登入控制台'
+              )}
+            </Button>
+          </form>
+
+          {/* 底部合规说明 */}
+          <p className="px-4 text-center text-[11px] text-muted-foreground/80 leading-relaxed">
+            企业级受限管控区域，所有认证与流转操作均受实时遥测与区块链级安全链审计。
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
+export default AdminLogin;

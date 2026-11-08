@@ -1,25 +1,15 @@
 import React, { useState } from 'react';
-import {
-  Paper,
-  Group,
-  Stack,
-  Text,
-  Button,
-  Select,
-  Textarea,
-  Badge,
-  Code,
-  Tabs,
-  Alert,
-  Loader,
-} from '@mantine/core';
-import { Play, CheckCircle2, AlertTriangle, Clock, Zap, Cpu } from 'lucide-react';
+import { Play, CheckCircle2, AlertTriangle, Clock, Zap, Cpu, Loader2 } from 'lucide-react';
 import { aiHubApi } from '../../adminApi';
 import type {
   AiAgentContract,
   PromptTemplate,
   PlaygroundRunResponse,
 } from '../../adminTypes';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 
 interface PromptPlaygroundProps {
   agents: AiAgentContract[];
@@ -30,11 +20,11 @@ interface PromptPlaygroundProps {
 
 export const PromptPlayground: React.FC<PromptPlaygroundProps> = ({
   agents,
-  templates,
+  templates: _templates,
   selectedTemplateId,
   currentDraftPrompt,
 }) => {
-  const [targetAgentId, setTargetAgentId] = useState<string | null>(
+  const [targetAgentId, setTargetAgentId] = useState<string>(
     agents[0]?.id ?? 'agent_dossier_analyst'
   );
   const [mockSource, setMockSource] = useState<'preset_mock' | 'real_dossier'>('preset_mock');
@@ -42,11 +32,6 @@ export const PromptPlayground: React.FC<PromptPlaygroundProps> = ({
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<PlaygroundRunResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const agentOptions = agents.map((a) => ({
-    value: a.id,
-    label: `${a.name} (${a.interactionMode})`,
-  }));
 
   const handleRun = async () => {
     setRunning(true);
@@ -68,137 +53,150 @@ export const PromptPlayground: React.FC<PromptPlaygroundProps> = ({
   };
 
   return (
-    <Paper p="md" withBorder style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
-      <Group justify="space-between" mb="md">
-        <div>
-          <Group gap="xs">
-            <Play size={18} color="#80f3ff" />
-            <Text fw={700} size="md">
-              沙盒演练场 (Prompt Playground)
-            </Text>
-          </Group>
-          <Text size="xs" c="dimmed">
-            免做题实时 Dry-Run 测试当前编辑的提示词。支持变量自动替换、防注入包装、输出契约与耗时评估。
-          </Text>
+    <Card className="border border-border shadow-xs">
+      <CardHeader className="gap-2 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Play className="size-4 text-primary" />
+              <CardTitle className="text-sm font-semibold">沙盒演练场 (Prompt Playground)</CardTitle>
+            </div>
+            <p className="text-xs text-muted-foreground pt-1">
+              免做题实时 Dry-Run 测试当前编辑的提示词。支持变量自动替换、防注入包装、输出契约与耗时评估。
+            </p>
+          </div>
+
+          <Button
+            size="sm"
+            onClick={handleRun}
+            disabled={running}
+            className="gap-1.5"
+          >
+            {running ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+            <span>即时运行演练 (Dry-Run)</span>
+          </Button>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4 pt-1">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">目标智能体 (Agent)</label>
+            <select
+              value={targetAgentId}
+              onChange={(e) => setTargetAgentId(e.target.value)}
+              className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.interactionMode})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">模拟测试数据源</label>
+            <select
+              value={mockSource}
+              onChange={(e) => setMockSource(e.target.value as 'preset_mock' | 'real_dossier')}
+              className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="preset_mock">内置标准模拟画像 (法务精英反差自白)</option>
+              <option value="real_dossier">加载线上真实卷宗 (按卷宗ID)</option>
+            </select>
+          </div>
         </div>
 
-        <Button
-          color="cyan"
-          leftSection={running ? <Loader size={14} color="white" /> : <Play size={14} />}
-          onClick={handleRun}
-          loading={running}
-        >
-          即时运行演练 (Dry-Run)
-        </Button>
-      </Group>
+        {mockSource === 'real_dossier' && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground">真实卷宗 ID</label>
+            <input
+              type="text"
+              placeholder="输入 dos_ 开头的卷宗 ID"
+              value={dossierId}
+              onChange={(e) => setDossierId(e.target.value)}
+              className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
+        )}
 
-      <Group grow mb="md">
-        <Select
-          label="目标智能体 (Agent)"
-          data={agentOptions}
-          value={targetAgentId}
-          onChange={setTargetAgentId}
-          size="xs"
-        />
+        {error && (
+          <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-2.5 text-xs text-destructive">
+            <AlertTriangle className="size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
-        <Select
-          label="模拟测试数据源"
-          data={[
-            { value: 'preset_mock', label: '内置标准模拟画像 (法务精英反差自白)' },
-            { value: 'real_dossier', label: '加载线上真实卷宗 (按卷宗ID)' },
-          ]}
-          value={mockSource}
-          onChange={(val) => setMockSource((val as 'preset_mock' | 'real_dossier') || 'preset_mock')}
-          size="xs"
-        />
-      </Group>
-
-      {mockSource === 'real_dossier' && (
-        <Textarea
-          label="真实卷宗 ID"
-          placeholder="输入 dos_ 开头的卷宗 ID"
-          value={dossierId}
-          onChange={(e) => setDossierId(e.currentTarget.value)}
-          size="xs"
-          mb="md"
-        />
-      )}
-
-      {error && (
-        <Alert icon={<AlertTriangle size={16} />} color="red" mb="md">
-          {error}
-        </Alert>
-      )}
-
-      {result && (
-        <Stack gap="sm">
-          {/* 性能与契约指标栏 */}
-          <Paper p="xs" withBorder style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
-            <Group justify="space-between">
-              <Group gap="lg">
-                <Group gap={4}>
-                  <Clock size={14} color="#80f3ff" />
-                  <Text size="xs">耗时: {result.metrics.durationMs} ms</Text>
-                </Group>
-                <Group gap={4}>
-                  <Zap size={14} color="#eab308" />
-                  <Text size="xs">
+        {result && (
+          <div className="space-y-3 pt-2">
+            {/* 性能与契约指标栏 */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 p-3 text-xs">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-1.5 text-foreground">
+                  <Clock className="size-3.5 text-muted-foreground" />
+                  <span>耗时: {result.metrics.durationMs} ms</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-foreground">
+                  <Zap className="size-3.5 text-amber-500" />
+                  <span>
                     预估 Token: ~{result.metrics.estimatedPromptTokens + result.metrics.estimatedCompletionTokens}
-                  </Text>
-                </Group>
-                <Group gap={4}>
-                  <Cpu size={14} color="#a78bfa" />
-                  <Text size="xs">模型: {result.metrics.model}</Text>
-                </Group>
-              </Group>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-foreground">
+                  <Cpu className="size-3.5 text-muted-foreground" />
+                  <span>模型: {result.metrics.model}</span>
+                </div>
+              </div>
 
-              <Group gap="xs">
+              <div>
                 {result.validation.isValid ? (
-                  <Badge color="teal" variant="light" leftSection={<CheckCircle2 size={12} />}>
+                  <Badge variant="outline" className="gap-1 border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="size-3" />
                     契约校验通过
                   </Badge>
                 ) : (
-                  <Badge color="red" variant="light" leftSection={<AlertTriangle size={12} />}>
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertTriangle className="size-3" />
                     契约缺失: {result.validation.missingFields.join(', ') || result.validation.issues.join(', ')}
                   </Badge>
                 )}
-              </Group>
-            </Group>
-          </Paper>
+              </div>
+            </div>
 
-          {/* 渲染结果视图 */}
-          <Tabs defaultValue="response">
-            <Tabs.List>
-              <Tabs.Tab value="response">LLM 实际生成结果</Tabs.Tab>
-              <Tabs.Tab value="prompt">变量替换后的完整 Prompt</Tabs.Tab>
-              {result.parsedJson && <Tabs.Tab value="json">解析后的 JSON 结构</Tabs.Tab>}
-            </Tabs.List>
+            {/* 渲染结果视图 */}
+            <Tabs defaultValue="response" className="w-full">
+              <TabsList>
+                <TabsTrigger value="response">LLM 实际生成结果</TabsTrigger>
+                <TabsTrigger value="prompt">变量替换后的完整 Prompt</TabsTrigger>
+                {result.parsedJson && <TabsTrigger value="json">解析后的 JSON 结构</TabsTrigger>}
+              </TabsList>
 
-            <Tabs.Panel value="response" pt="xs">
-              <Paper p="sm" withBorder style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
-                <Text size="xs" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+              <TabsContent value="response" className="pt-2">
+                <div className="rounded-lg border border-border bg-card p-3 font-mono text-xs text-foreground leading-relaxed whitespace-pre-wrap">
                   {result.rawResponse}
-                </Text>
-              </Paper>
-            </Tabs.Panel>
+                </div>
+              </TabsContent>
 
-            <Tabs.Panel value="prompt" pt="xs">
-              <Code block style={{ maxHeight: '250px', overflowY: 'auto', fontSize: '11px' }}>
-                {result.renderedFullPrompt}
-              </Code>
-            </Tabs.Panel>
+              <TabsContent value="prompt" className="pt-2">
+                <pre className="max-h-64 overflow-y-auto rounded-lg border border-border bg-muted/40 p-3 font-mono text-xs text-foreground leading-relaxed whitespace-pre-wrap">
+                  {result.renderedFullPrompt}
+                </pre>
+              </TabsContent>
 
-            {result.parsedJson && (
-              <Tabs.Panel value="json" pt="xs">
-                <Code block style={{ maxHeight: '250px', overflowY: 'auto', fontSize: '11px' }}>
-                  {JSON.stringify(result.parsedJson, null, 2)}
-                </Code>
-              </Tabs.Panel>
-            )}
-          </Tabs>
-        </Stack>
-      )}
-    </Paper>
+              {result.parsedJson && (
+                <TabsContent value="json" className="pt-2">
+                  <pre className="max-h-64 overflow-y-auto rounded-lg border border-border bg-muted/40 p-3 font-mono text-xs text-foreground leading-relaxed">
+                    {JSON.stringify(result.parsedJson, null, 2)}
+                  </pre>
+                </TabsContent>
+              )}
+            </Tabs>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
+export default PromptPlayground;

@@ -359,7 +359,12 @@ describe('migrateDatabase', () => {
     migrateDatabase(database);
 
     const version = database.prepare('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(38);
+    expect(version.user_version).toBe(39);
+
+    const dossierIdx = database
+      .prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_dossiers_created_at'")
+      .get();
+    expect(dossierIdx).toBeTruthy();
 
     const echoAdminNotes = database
       .prepare("SELECT name FROM pragma_table_info('echo_whispers') WHERE name='admin_notes'")

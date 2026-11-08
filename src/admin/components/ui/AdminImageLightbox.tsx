@@ -29,7 +29,6 @@ export const AdminImageLightbox: React.FC<AdminImageLightboxProps> = ({ imageUrl
 
   return createPortal(
     <div
-      className="admin-zoomed-overlay"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -39,6 +38,7 @@ export const AdminImageLightbox: React.FC<AdminImageLightboxProps> = ({ imageUrl
         inset: 0,
         zIndex: Z_LAYER.adminLightbox,
       }}
+      className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out select-none"
     >
       <button
         type="button"
@@ -47,30 +47,18 @@ export const AdminImageLightbox: React.FC<AdminImageLightboxProps> = ({ imageUrl
           position: 'fixed',
           top: '1.25rem',
           right: '1.25rem',
-          background: 'rgba(255, 255, 255, 0.15)',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          borderRadius: '50%',
-          width: '2.5rem',
-          height: '2.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#fff',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
           zIndex: Z_LAYER.adminLightboxControl,
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
         }}
+        className="size-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 flex items-center justify-center text-white backdrop-blur-md cursor-pointer transition-colors"
         aria-label="关闭照片预览"
       >
-        <X size={18} />
+        <X className="size-5" />
       </button>
 
       <img
         src={imageUrl}
         alt="放大预览"
-        className="admin-zoomed-img"
+        className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
         onClick={onClose}
       />
     </div>,

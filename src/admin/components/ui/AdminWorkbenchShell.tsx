@@ -1,9 +1,7 @@
 import React from 'react';
-import { Button, Group, Loader, Paper, Stack, Text, Title } from '@mantine/core';
-import { RefreshCw } from 'lucide-react';
 
 export interface AdminWorkbenchShellProps {
-  title: string;
+  title?: string;
   description?: string;
   icon?: React.ReactNode;
   loading?: boolean;
@@ -13,96 +11,21 @@ export interface AdminWorkbenchShellProps {
 }
 
 /**
- * 标准化管理端工作台外壳组件（基于 Mantine）。
- * 
- * 统一各 Tab 页面的头部标题、操作按钮、刷新按钮以及主内容区结构，
- * 避免每个页面从零手写布局与标题样式。
+ * 标准化管理端工作台外壳组件（高密度纯净容器，移除多余占位横幅卡片，聚焦核心内容）
  */
 export const AdminWorkbenchShell: React.FC<AdminWorkbenchShellProps> = ({
-  title,
-  description,
-  icon,
-  loading = false,
-  onRefresh,
   actions,
   children,
 }) => {
   return (
-    <Stack gap="lg" style={{ width: '100%', boxSizing: 'border-box' }}>
-      {/* 统一页面头部 */}
-      <Paper
-        p="md"
-        radius="lg"
-        withBorder
-        style={{
-          background: 'rgba(25, 20, 35, 0.65)',
-          backdropFilter: 'blur(12px)',
-          borderColor: 'rgba(255, 255, 255, 0.08)',
-        }}
-      >
-        <Group justify="space-between" align="center" wrap="wrap" gap="sm">
-          <Group gap="sm" align="center">
-            {icon && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 38,
-                  height: 38,
-                  borderRadius: 10,
-                  background: 'rgba(255, 112, 166, 0.12)',
-                  color: '#ff70a6',
-                }}
-              >
-                {icon}
-              </div>
-            )}
-            <div>
-              <Title order={3} style={{ fontSize: '1.25rem', color: '#f3edf7', fontWeight: 700 }}>
-                {title}
-              </Title>
-              {description && (
-                <Text size="xs" c="dimmed" mt={2}>
-                  {description}
-                </Text>
-              )}
-            </div>
-          </Group>
-
-          <Group gap="xs" align="center">
-            {actions}
-            {onRefresh && (
-              <Button
-                variant="default"
-                size="xs"
-                radius="md"
-                onClick={() => void onRefresh()}
-                disabled={loading}
-                leftSection={
-                  loading ? (
-                    <Loader size={12} color="dimmed" />
-                  ) : (
-                    <RefreshCw size={13} />
-                  )
-                }
-                style={{
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  borderColor: 'rgba(255, 255, 255, 0.12)',
-                }}
-              >
-                刷新
-              </Button>
-            )}
-          </Group>
-        </Group>
-      </Paper>
-
-      {/* 主体工作区 */}
-      <div style={{ width: '100%', boxSizing: 'border-box' }}>
-        {children}
-      </div>
-    </Stack>
+    <div className="flex flex-col gap-2 sm:gap-2.5 w-full">
+      {actions && (
+        <div className="flex items-center justify-end gap-2">
+          {actions}
+        </div>
+      )}
+      <div className="w-full">{children}</div>
+    </div>
   );
 };
-
+export default AdminWorkbenchShell;

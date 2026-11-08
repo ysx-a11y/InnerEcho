@@ -26,6 +26,7 @@ export default defineConfig({
           if (id.includes('react-dom') || id.includes('/react/')) return 'vendor-react';
           if (id.includes('lucide-react')) return 'vendor-icons';
           if (id.includes('html-to-image')) return 'vendor-canvas';
+          if (id.includes('echarts')) return 'vendor-echarts';
           return undefined;
         },
       },

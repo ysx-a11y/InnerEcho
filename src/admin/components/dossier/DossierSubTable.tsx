@@ -37,46 +37,33 @@ export const DossierSubTable: React.FC<DossierSubTableProps> = ({
   reanalyzingId,
 }) => {
   return (
-    <div className="rounded-lg border border-indigo-500/20 bg-slate-950/90 overflow-hidden shadow-inner">
+    <div className="rounded-lg border border-border/80 bg-muted/30 overflow-hidden shadow-xs">
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-900/60 border-b border-white/10">
+          <TableRow className="bg-muted/50 border-b border-border/80">
             <TableHead className="w-8 text-center" />
-            <TableHead>提交时间</TableHead>
-            <TableHead>作答用时</TableHead>
-            <TableHead>问卷卷轴</TableHead>
-            <TableHead>心理深度</TableHead>
-            <TableHead>可信度</TableHead>
-            <TableHead>审核状态</TableHead>
-            <TableHead className="text-right">操作</TableHead>
+            <TableHead className="font-semibold text-xs">提交时间</TableHead>
+            <TableHead className="font-semibold text-xs">作答用时</TableHead>
+            <TableHead className="font-semibold text-xs">问卷卷轴</TableHead>
+            <TableHead className="font-semibold text-xs">心理深度</TableHead>
+            <TableHead className="font-semibold text-xs">可信度</TableHead>
+            <TableHead className="text-right font-semibold text-xs">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {dossiers.map((d) => {
             const isSelected = selectedIds.includes(d.id);
-            const depthVariant =
+            const depthVariant: 'default' | 'secondary' | 'outline' =
               d.depthRating === 'deep'
                 ? 'default'
                 : d.depthRating === 'medium'
-                ? 'cyan'
+                ? 'secondary'
                 : 'outline';
-            const statusVariant =
-              d.auditStatus === 'approved'
-                ? 'success'
-                : d.auditStatus === 'flagged'
-                ? 'destructive'
-                : 'warning';
-            const statusLabel =
-              d.auditStatus === 'approved'
-                ? '已核准'
-                : d.auditStatus === 'flagged'
-                ? '已作废'
-                : '待核准';
 
             return (
               <TableRow
                 key={d.id}
-                className={isSelected ? 'bg-indigo-950/30' : ''}
+                className={isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'}
               >
                 <TableCell className="text-center">
                   <Checkbox
@@ -86,17 +73,17 @@ export const DossierSubTable: React.FC<DossierSubTableProps> = ({
                     }
                   />
                 </TableCell>
-                <TableCell className="font-medium text-slate-100">
+                <TableCell className="font-medium text-foreground text-xs">
                   {formatTime(d.submitTime)}
                 </TableCell>
-                <TableCell className="text-slate-400">
+                <TableCell className="text-muted-foreground text-xs">
                   {formatDuration(d.durationSeconds)}
                 </TableCell>
-                <TableCell className="text-slate-300">
+                <TableCell className="text-foreground text-xs max-w-[200px] truncate" title={getQuestionnaireName(d, bankNames)}>
                   {getQuestionnaireName(d, bankNames)}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={depthVariant} className="text-[10px]">
+                  <Badge variant={depthVariant} className="text-[10px] px-1.5 py-0">
                     {d.depthRating === 'deep'
                       ? '深度'
                       : d.depthRating === 'medium'
@@ -108,8 +95,8 @@ export const DossierSubTable: React.FC<DossierSubTableProps> = ({
                   <span
                     className={`font-semibold text-xs ${
                       d.credibilityScore && d.credibilityScore >= 80
-                        ? 'text-teal-400'
-                        : 'text-slate-400'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-muted-foreground'
                     }`}
                   >
                     {d.credibilityScore != null
@@ -117,20 +104,15 @@ export const DossierSubTable: React.FC<DossierSubTableProps> = ({
                       : '-'}
                   </span>
                 </TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant} className="text-[10px]">
-                    {statusLabel}
-                  </Badge>
-                </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1.5">
+                  <div className="flex items-center justify-end gap-1">
                     <Button
-                      variant="default"
+                      variant="outline"
                       size="sm"
                       onClick={() => onOpenDossier(d.id)}
-                      className="h-6 px-2 text-[11px] bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/50"
+                      className="h-7 px-2 text-xs"
                     >
-                      <Eye className="h-3 w-3 mr-1" />
+                      <Eye className="size-3 mr-1" />
                       查阅卷宗
                     </Button>
                     <Button
@@ -138,11 +120,11 @@ export const DossierSubTable: React.FC<DossierSubTableProps> = ({
                       size="icon"
                       onClick={() => onReanalyze(d.id)}
                       disabled={reanalyzingId === d.id}
-                      className="h-6 w-6 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10"
+                      className="size-7 text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400"
                       title="触发 LLM 心理学重新评估"
                     >
                       <Sparkles
-                        className={`h-3 w-3 ${
+                        className={`size-3.5 ${
                           reanalyzingId === d.id ? 'animate-spin' : ''
                         }`}
                       />
@@ -151,10 +133,10 @@ export const DossierSubTable: React.FC<DossierSubTableProps> = ({
                       variant="ghost"
                       size="icon"
                       onClick={() => onDelete(d.id)}
-                      className="h-6 w-6 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+                      className="size-7 text-muted-foreground hover:text-destructive"
                       title="物理删除本条记录"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="size-3.5" />
                     </Button>
                   </div>
                 </TableCell>
@@ -166,3 +148,4 @@ export const DossierSubTable: React.FC<DossierSubTableProps> = ({
     </div>
   );
 };
+

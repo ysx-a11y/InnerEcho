@@ -166,6 +166,10 @@ export class DatabaseFacade {
     return this.security.verifySecurityEventChain();
   }
 
+  async reanchorSecurityEventChain(): Promise<boolean> {
+    return this.security.reanchorSecurityEventChain();
+  }
+
   async clearSecurityEvents(): Promise<void> {
     return this.security.clearSecurityEvents();
   }

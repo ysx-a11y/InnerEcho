@@ -2,7 +2,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { MantineProvider } from '@mantine/core';
 import { EchoWorkbench } from './EchoWorkbench';
 import { echoesApi } from '../adminApi';
 import type { AdminEchoWhisper } from '../adminTypes';
@@ -78,11 +77,7 @@ describe('EchoWorkbench Component Test Suite', () => {
 
   it('renders echo list and strictly adheres to status action & delete rules', async () => {
     const onStatusChanged = vi.fn();
-    render(
-      <MantineProvider>
-        <EchoWorkbench onStatusChanged={onStatusChanged} />
-      </MantineProvider>
-    );
+    render(<EchoWorkbench onStatusChanged={onStatusChanged} />);
 
     expect(await screen.findByText(/急诊科医生/i)).toBeTruthy();
     expect(screen.getByText(/高校讲师/i)).toBeTruthy();
@@ -117,11 +112,7 @@ describe('EchoWorkbench Component Test Suite', () => {
 
   it('triggers approval and deletion operations and invokes onStatusChanged callback', async () => {
     const onStatusChanged = vi.fn();
-    render(
-      <MantineProvider>
-        <EchoWorkbench onStatusChanged={onStatusChanged} />
-      </MantineProvider>
-    );
+    render(<EchoWorkbench onStatusChanged={onStatusChanged} />);
     expect(await screen.findByText(/急诊科医生/i)).toBeTruthy();
 
     // 点击待审核行的【通过】按钮

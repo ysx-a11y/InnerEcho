@@ -1,19 +1,12 @@
 import React from 'react';
-import { Badge, Group, Text, Tooltip } from '@mantine/core';
-import { Plus } from 'lucide-react';
+import { Plus, Braces } from 'lucide-react';
 import type { PromptVariableContract } from '../../adminTypes';
+import { Badge } from '../ui/badge';
 
 interface PromptVariableBarProps {
   variables: PromptVariableContract[];
   onSelectVariable: (placeholder: string) => void;
 }
-
-const NS_COLOR: Record<string, string> = {
-  user: 'pink',
-  dossier: 'violet',
-  pace: 'orange',
-  interrogate: 'red',
-};
 
 export const PromptVariableBar: React.FC<PromptVariableBarProps> = ({
   variables,
@@ -22,58 +15,26 @@ export const PromptVariableBar: React.FC<PromptVariableBarProps> = ({
   if (variables.length === 0) return null;
 
   return (
-    <div style={{ marginBottom: '0.8rem' }}>
-      <Group justify="space-between" mb="xs">
-        <Text size="xs" c="dimmed" fw={600}>
-          动态变量芯片 (点击直接插入到当前光标处)
-        </Text>
-        <Text size="xs" c="dimmed">
-          包含防注入护栏，运行时自动隔离
-        </Text>
-      </Group>
+    <div className="flex items-center gap-2 py-1 px-2.5 rounded-lg bg-muted/20 border border-border/60 overflow-hidden text-xs">
+      <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground shrink-0 pr-1.5 border-r border-border/60">
+        <Braces className="size-3 text-primary" />
+        <span>插桩变量</span>
+      </div>
 
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.4rem',
-          maxHeight: '130px',
-          overflowY: 'auto',
-          padding: '0.4rem',
-          backgroundColor: 'rgba(255, 255, 255, 0.03)',
-          borderRadius: '8px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-        }}
-      >
+      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 flex-1">
         {variables.map((v) => (
-          <Tooltip
+          <Badge
             key={v.id}
-            label={`${v.label}：${v.description || '无详细说明'} (示例: ${v.mockValue})`}
-            position="top"
-            withArrow
+            variant="outline"
+            className="cursor-pointer select-none font-mono text-[10px] gap-0.5 h-5 px-1.5 hover:bg-primary/10 hover:border-primary transition-all text-foreground shrink-0 bg-background"
+            onClick={() => onSelectVariable(`{{${v.variableKey}}}`)}
+            title={`${v.label}：${v.description || '无说明'} (示例: ${v.mockValue})`}
           >
-            <Badge
-              variant="outline"
-              color={NS_COLOR[v.namespace] || 'blue'}
-              size="sm"
-              style={{
-                cursor: 'pointer',
-                userSelect: 'none',
-                textTransform: 'none',
-                fontFamily: 'monospace',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-              onClick={() => onSelectVariable(`{{${v.variableKey}}}`)}
-            >
-              <Plus size={10} />
-              {`{{${v.variableKey}}}`}
-            </Badge>
-          </Tooltip>
+            <Plus className="size-2 text-primary" />
+            <span>{`{{${v.variableKey}}}`}</span>
+          </Badge>
         ))}
       </div>
     </div>
   );
 };
-

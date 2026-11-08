@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AdminHeader } from './AdminHeader';
 import { AdminSidebar, type TabType } from './AdminSidebar';
+import { SidebarInset, SidebarProvider } from '../ui/sidebar';
 
 interface AdminLayoutProps {
   activeTab: TabType;
@@ -21,36 +22,26 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   pendingCounts,
   children,
 }) => {
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
-    <div className="flex min-h-screen w-full bg-slate-950 text-slate-100 antialiased overflow-hidden">
-      {/* 现代折叠式侧边栏 */}
+    <SidebarProvider defaultOpen={true}>
       <AdminSidebar
         activeTab={activeTab}
         onSelectTab={onSelectTab}
-        collapsed={collapsed}
-        onToggleCollapse={() => setCollapsed((c) => !c)}
         onLogout={onLogout}
         pendingCounts={pendingCounts}
       />
-
-      {/* 主工作区 */}
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        {/* 顶部导航头 */}
+      <SidebarInset className="min-w-0 flex flex-1 flex-col">
         <AdminHeader
           activeTab={activeTab}
           onRefresh={onRefresh}
           isRefreshing={isRefreshing}
         />
-
-        {/* 页面内容区 */}
-        <main className="flex-1 overflow-y-auto p-6 bg-slate-950/50">
-          <div className="mx-auto w-full max-w-7xl space-y-6">
+        <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 sm:py-2.5">
+          <div className="mx-auto w-full max-w-7xl flex flex-col gap-2 sm:gap-2.5">
             {children}
           </div>
         </main>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 };

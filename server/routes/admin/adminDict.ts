@@ -88,3 +88,47 @@ adminDictRouter.post('/transitions', (req: Request, res: Response) => {
   const transition = db.dict.upsertTransition(parseResult.data);
   res.json({ success: true, transition });
 });
+
+const upsertDictTypeSchema = z.object({
+  code: z.string().min(1).max(64),
+  name: z.string().min(1).max(128),
+  description: z.string().max(500).optional(),
+  remark: z.string().max(500).optional(),
+});
+
+/** 保存/更新字典大类 */
+adminDictRouter.post('/types', (req: Request, res: Response) => {
+  const parseResult = upsertDictTypeSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ success: false, message: '参数格式错误', errors: parseResult.error.format() });
+    return;
+  }
+  const type = db.dict.upsertDictType(parseResult.data);
+  res.json({ success: true, type });
+});
+
+/** 删除非系统字典大类 */
+adminDictRouter.delete('/types/:code', (req: Request, res: Response) => {
+  const code = Array.isArray(req.params.code) ? req.params.code[0] : req.params.code;
+  const deleted = db.dict.deleteDictType(code);
+  if (!deleted) {
+    res.status(400).json({ success: false, message: '系统内置字典不可删除，或字典不存在' });
+    return;
+  }
+  res.json({ success: true, deleted: true });
+});
+
+/** 删除字典数据项 */
+adminDictRouter.delete('/items/:typeCode/:value', (req: Request, res: Response) => {
+  const typeCode = Array.isArray(req.params.typeCode) ? req.params.typeCode[0] : req.params.typeCode;
+  const value = Array.isArray(req.params.value) ? req.params.value[0] : req.params.value;
+  const deleted = db.dict.deleteDictItem(typeCode, value);
+  res.json({ success: true, deleted });
+});
+
+/** 删除状态机规则 */
+adminDictRouter.delete('/transitions/:id', (req: Request, res: Response) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const deleted = db.dict.deleteTransition(id);
+  res.json({ success: true, deleted });
+});

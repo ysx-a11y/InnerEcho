@@ -4,11 +4,7 @@ import {
   BookOpen,
   Check,
   CheckCircle2,
-  Edit3,
-  Eye,
   FileEdit,
-  FileText,
-  HelpCircle,
   Layers,
   Library,
   Loader2,
@@ -17,7 +13,6 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
-  Tag,
   Upload,
   X,
 } from 'lucide-react';
@@ -33,13 +28,23 @@ import { AdminToast, type ToastMessage } from './ui/AdminToast';
 import { BankEditorHeader } from './banks/BankEditorHeader';
 import { BankEditorTabs } from './banks/BankEditorTabs';
 import { DictBadge } from './ui/DictBadge';
-import { adminNotify } from './ui/adminNotify';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import { Textarea } from './ui/textarea';
 
-const CATEGORY_MAP: Record<string, { label: string; desc: string; badgeColor: string }> = {
-  scenario: { label: '情境切片', desc: '沉浸场景剧情与角色代入', badgeColor: '#ec4899' },
-  direct: { label: '真实自白', desc: '原始倾诉与社死自白', badgeColor: '#ff3377' },
-  preference: { label: '权责谱系', desc: 'BDSM / 权责与属性量表', badgeColor: '#ff70a6' },
-  scientific: { label: '心相镜像', desc: '心理学机制与客观镜像', badgeColor: '#80f3ff' },
+const CATEGORY_MAP: Record<string, { label: string; desc: string }> = {
+  scenario: { label: '情境切片', desc: '沉浸场景剧情与角色代入' },
+  direct: { label: '真实自白', desc: '原始倾诉与社死自白' },
+  preference: { label: '权责谱系', desc: 'BDSM / 权责与属性量表' },
+  scientific: { label: '心相镜像', desc: '心理学机制与客观镜像' },
 };
 
 interface BankWorkbenchProps {
@@ -67,7 +72,6 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
   // 搜索与过滤
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'scientific' | 'direct' | 'scenario' | 'preference' | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<'draft' | 'pending' | 'approved' | 'rejected' | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<'preset' | 'custom' | 'all'>('all');
 
   // 当前选中与编辑的题库
@@ -131,7 +135,6 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
       const params: AdminBankListParams = {
         search: search.trim() || undefined,
         category: categoryFilter,
-        status: statusFilter,
         source: sourceFilter,
         limit: 100,
       };
@@ -151,7 +154,7 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
     } finally {
       setLoading(false);
     }
-  }, [search, categoryFilter, statusFilter, sourceFilter, selectedId]);
+  }, [search, categoryFilter, sourceFilter, selectedId]);
 
   // 加载单个题库详情
   const loadBankDetail = async (id: string) => {
@@ -174,7 +177,7 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
   useEffect(() => {
     void loadBankList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFilter, statusFilter, sourceFilter, refreshTrigger]);
+  }, [categoryFilter, sourceFilter, refreshTrigger]);
 
   // 切换选中题库
   const handleSelectBank = (id: string) => {
@@ -224,7 +227,6 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
       setCurrentBank(JSON.parse(JSON.stringify(res.bank)));
       setOriginalBank(JSON.parse(JSON.stringify(res.bank)));
       addToast('success', '题库已成功保存');
-      // 同步更新列表中的概要信息
       setBanks((prev) =>
         prev.map((b) => (b.id === res.bank.id ? { ...b, ...res.bank, questionCount: res.bank.questions.length } : b))
       );
@@ -405,7 +407,7 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
     });
   };
 
-  // 题目列表操作
+  // 题目操作
   const handleAddQuestion = (type: 'single_choice' | 'multiple_choice' | 'open_text' | 'media_upload') => {
     if (!currentBank) return;
     const newQId = `q_${Date.now()}_${(currentBank.questions?.length || 0) + 1}`;
@@ -488,7 +490,6 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
     setExpandedQuestions((prev) => ({ ...prev, [index + 1]: true }));
   };
 
-  // 选项编辑方法
   const handleAddOption = (qIndex: number) => {
     if (!currentBank) return;
     const q = currentBank.questions[qIndex];
@@ -517,251 +518,195 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
     handleUpdateQuestion(qIndex, { ...q, options: opts });
   };
 
-  // 导入 JSON
+  // 导出 JSON
+  const handleExportJson = () => {
+    if (!currentBank) return;
+    const blob = new Blob([JSON.stringify(currentBank, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bank_${currentBank.id}_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addToast('success', '题库 JSON 导出成功');
+  };
+
+  // 执行 JSON 导入
   const handleExecuteImport = async () => {
     setImportError(null);
     try {
       const parsed = JSON.parse(importJsonText);
       if (!parsed.title || !Array.isArray(parsed.questions)) {
-        throw new Error('JSON 格式必须包含 title (题库名称) 和 questions (题目数组)');
+        throw new Error('JSON 格式不符：必须包含 title 字符串与 questions 数组');
       }
+
       setSaving(true);
       const res = await adminApi.createBank({
         title: parsed.title,
-        subtitle: parsed.subtitle || '',
-        description: parsed.description || '',
+        subtitle: parsed.subtitle,
+        description: parsed.description,
         category: parsed.category || 'direct',
-        badgeColor: parsed.badgeColor || '#9333ea',
-        estimatedMinutes: parsed.estimatedMinutes || 5,
+        badgeColor: parsed.badgeColor || '#ec4899',
+        estimatedMinutes: parsed.estimatedMinutes || 8,
         questions: parsed.questions,
-        isPublished: Boolean(parsed.isPublished),
+        isPublished: false,
       });
+
+      addToast('success', `成功导入题库《${res.bank.title}》`);
       setImportModalOpen(false);
       setImportJsonText('');
-      setNotice(`已成功导入题库《${res.bank.title}》`);
       await loadBankList(res.bank.id);
+      onStatusChanged?.();
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'JSON 格式解析失败，请检查语法');
+      setImportError(err instanceof Error ? err.message : 'JSON 解析或导入失败');
     } finally {
       setSaving(false);
     }
   };
 
-  // 导出 JSON
-  const handleExportJson = () => {
-    if (!currentBank) return;
-    const exportData = {
-      title: currentBank.title,
-      subtitle: currentBank.subtitle,
-      description: currentBank.description,
-      category: currentBank.category,
-      badgeColor: currentBank.badgeColor,
-      estimatedMinutes: currentBank.estimatedMinutes,
-      dimensions: currentBank.dimensions,
-      questions: currentBank.questions,
-    };
-    const jsonStr = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentBank.id}_${currentBank.title}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setNotice('题库 JSON 文件已导出');
-  };
-
   return (
-    <div className="admin-workbench-page animate-fade-in">
-      {/* 1. 顶部统计指标卡片栏 */}
-      <section className="admin-stats-grid bank-stats-grid">
-        <div
-          className={`admin-stat-card is-clickable ${statusFilter === 'all' && sourceFilter === 'all' ? 'is-active-filter' : ''}`}
-          onClick={() => { setStatusFilter('all'); setSourceFilter('all'); }}
-          title="点击查看全部题库"
-        >
-          <span className="admin-stat-label">
-            <Library size={14} color="#ff70a6" />
-            <span>题库总数</span>
-          </span>
-          <strong className="admin-stat-value">{stats.totalBanks}</strong>
-          <small className="admin-stat-sub">
-            内置 <span>{stats.presetCount}</span> / 自建 <span>{stats.customCount}</span>
-          </small>
-        </div>
-
-        <div
-          className={`admin-stat-card is-clickable ${statusFilter === 'approved' ? 'is-active-filter' : ''}`}
-          onClick={() => setStatusFilter('approved')}
-          title="点击筛选已发布题库"
-        >
-          <span className="admin-stat-label">
-            <CheckCircle2 size={14} color="var(--admin-success)" />
-            <span>已发布题包</span>
-          </span>
-          <strong className="admin-stat-value" style={{ color: 'var(--admin-success)' }}>
-            {stats.publishedCount}
-          </strong>
-          <small className="admin-stat-sub">可供用户端加载答题</small>
-        </div>
-
-        <div
-          className={`admin-stat-card is-clickable ${statusFilter === 'pending' ? 'is-active-filter' : ''}`}
-          onClick={() => setStatusFilter('pending')}
-          title="点击筛选待审核题库"
-        >
-          <span className="admin-stat-label">
-            <ShieldAlert size={14} color="#ffd180" />
-            <span>待审核</span>
-          </span>
-          <strong className="admin-stat-value" style={{ color: '#ffd180' }}>
-            {stats.pendingCount}
-          </strong>
-          <small className="admin-stat-sub">已驳回 <span>{stats.rejectedCount}</span> 个</small>
-        </div>
-
-        <div
-          className={`admin-stat-card is-clickable ${statusFilter === 'draft' ? 'is-active-filter' : ''}`}
-          onClick={() => setStatusFilter('draft')}
-          title="点击筛选草稿题库"
-        >
-          <span className="admin-stat-label">
-            <FileEdit size={14} color="var(--admin-warning)" />
-            <span>草稿题包</span>
-          </span>
-          <strong className="admin-stat-value" style={{ color: 'var(--admin-warning)' }}>
-            {stats.draftCount}
-          </strong>
-          <small className="admin-stat-sub">编排调试中，未公开</small>
-        </div>
-
-        <div className="admin-stat-card">
-          <span className="admin-stat-label">
-            <Layers size={14} color="#c084fc" />
-            <span>题目总题量</span>
-          </span>
-          <strong className="admin-stat-value" style={{ color: '#c084fc' }}>
-            {stats.totalQuestions}
-          </strong>
-          <small className="admin-stat-sub">包含单选、多选与手填</small>
-        </div>
-      </section>
-
-      {/* 2. 状态提示条 */}
+    <div className="flex flex-col gap-3 w-full max-w-7xl mx-auto h-[calc(100vh-100px)] min-h-[580px]">
+      {/* 1. 状态提示 */}
       {error && (
-        <div className="admin-alert admin-alert-error animate-slide-down">
-          <AlertTriangle size={16} />
-          <span>{error}</span>
-          <button className="admin-alert-close" onClick={() => setError(null)}>
-            <X size={14} />
-          </button>
+        <div className="flex items-center justify-between p-3.5 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-xs">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setError(null)} className="size-6 p-0">
+            <X className="size-3.5" />
+          </Button>
         </div>
       )}
       {notice && (
-        <div className="admin-alert admin-alert-success animate-slide-down">
-          <Check size={16} />
-          <span>{notice}</span>
-          <button className="admin-alert-close" onClick={() => setNotice(null)}>
-            <X size={14} />
-          </button>
+        <div className="flex items-center justify-between p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs">
+          <div className="flex items-center gap-2">
+            <Check className="size-4 shrink-0" />
+            <span>{notice}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setNotice(null)} className="size-6 p-0">
+            <X className="size-3.5" />
+          </Button>
         </div>
       )}
 
-      {/* 3. 搜索与操作过滤栏 */}
-      <section className="bank-toolbar admin-panel">
-        <div className="bank-search-box">
-          <Search size={16} className="bank-search-icon" />
-          <input
-            type="text"
-            placeholder="搜索题库标题、副标题、ID 或创作者…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void loadBankList()}
-          />
-          {search && (
-            <button className="bank-search-clear" onClick={() => { setSearch(''); void loadBankList(); }}>
-              <X size={14} />
-            </button>
-          )}
+      {/* 2. 紧凑操作与检索工具栏 */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-0.5">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-sm text-foreground">题库管理</span>
+          <Badge variant="outline" className="text-xs">
+            共 {banks.length} 个题库
+          </Badge>
         </div>
 
-        <div className="bank-filter-group">
-          <select
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 搜索框 */}
+          <div className="relative w-44 sm:w-56">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="搜索标题、ID、标签..."
+              className="flex h-8 w-full rounded-md border border-input bg-background pl-8 pr-7 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void loadBankList()}
+            />
+            {search && (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                onClick={() => { setSearch(''); void loadBankList(); }}
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </div>
+
+          {/* 分类筛选 (标准 shadcn Select) */}
+          <Select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value as any)}
-            aria-label="按分类筛选"
+            onValueChange={(val) => setCategoryFilter(val as any)}
           >
-            <option value="all">全部分类</option>
-            <option value="scenario">情境切片</option>
-            <option value="direct">真实自白</option>
-            <option value="preference">权责谱系</option>
-            <option value="scientific">心相镜像</option>
-          </select>
+            <SelectTrigger size="sm" className="h-8 w-[120px] text-xs bg-background">
+              <SelectValue placeholder="全部分类" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部分类</SelectItem>
+              <SelectItem value="scenario">情境切片</SelectItem>
+              <SelectItem value="direct">真实自白</SelectItem>
+              <SelectItem value="preference">权责谱系</SelectItem>
+              <SelectItem value="scientific">心相镜像</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            aria-label="按审核状态筛选"
-          >
-            <option value="pending">待审核</option>
-            <option value="approved">已通过</option>
-            <option value="rejected">未通过</option>
-            <option value="draft">草稿</option>
-            <option value="all">全部状态</option>
-          </select>
-
-          <select
+          {/* 来源筛选 (标准 shadcn Select) */}
+          <Select
             value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value as any)}
-            aria-label="按题库来源筛选"
+            onValueChange={(val) => setSourceFilter(val as any)}
           >
-            <option value="all">全部来源</option>
-            <option value="preset">官方内置</option>
-            <option value="custom">自建题库</option>
-          </select>
-        </div>
+            <SelectTrigger size="sm" className="h-8 w-[110px] text-xs bg-background">
+              <SelectValue placeholder="全部来源" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部来源</SelectItem>
+              <SelectItem value="preset">官方内置</SelectItem>
+              <SelectItem value="custom">自建题库</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <div className="bank-action-buttons">
-          <button
-            className="admin-button admin-button-quiet"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => void loadBankList(selectedId || undefined)}
             disabled={loading}
             title="刷新列表"
+            className="h-8 gap-1.5 text-xs"
           >
-            <RefreshCw size={15} className={loading ? 'admin-spin' : ''} />
+            <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>刷新</span>
-          </button>
-          <button
-            className="admin-button admin-button-quiet"
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setImportModalOpen(true)}
             title="导入 JSON 题包"
+            className="h-8 gap-1.5 text-xs"
           >
-            <Upload size={15} />
+            <Upload className="size-3.5" />
             <span>导入 JSON</span>
-          </button>
-          <button
-            className="admin-button admin-button-primary"
+          </Button>
+
+          <Button
+            variant="default"
+            size="sm"
             onClick={handleCreateBank}
             disabled={saving}
+            className="h-8 gap-1.5 text-xs"
           >
-            <Plus size={15} />
+            <Plus className="size-3.5" />
             <span>新建题库</span>
-          </button>
+          </Button>
         </div>
-      </section>
+      </div>
 
-      {/* 4. 主工作区：左侧题库列表 + 右侧详情编排区 */}
-      <div className="bank-workspace-grid">
+      {/* 3. 主工作区：左侧题库列表 + 右侧详情编排区 */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 items-start w-full overflow-hidden">
         {/* 左侧：题库列表卡片 */}
-        <aside className="bank-list-sidebar admin-panel">
-          <div className="admin-panel-header">
-            <span className="admin-panel-title">题库清单 ({banks.length})</span>
-          </div>
+        <Card className="w-full lg:w-80 shrink-0 border-border/80 shadow-xs flex flex-col h-full overflow-hidden">
+          <CardHeader className="p-3 border-b border-border/80 bg-muted/20">
+            <CardTitle className="text-xs font-semibold tracking-wider text-muted-foreground uppercase flex items-center justify-between">
+              <span>题库清单</span>
+              <Badge variant="secondary" className="font-mono text-[11px] h-4.5 px-1.5">
+                {banks.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
 
-          <div className="bank-card-scroll-list">
+          <div className="flex-1 p-2.5 overflow-y-auto space-y-2">
             {banks.length === 0 ? (
-              <div className="admin-empty-state">
-                <Library size={32} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
+              <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-xs gap-2">
+                <Library className="size-6 text-muted-foreground/30" />
                 <span>暂无符合条件的题库</span>
               </div>
             ) : (
@@ -771,31 +716,48 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
                 return (
                   <div
                     key={bank.id}
-                    className={`bank-list-item ${isSelected ? 'is-selected' : ''}`}
+                    className={`p-3 rounded-lg border cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary/30'
+                        : 'border-border/60 hover:border-border hover:bg-muted/30 bg-card'
+                    }`}
                     onClick={() => handleSelectBank(bank.id)}
                   >
-                    <div className="bank-item-top">
-                      <span
-                        className="bank-category-pill"
-                        style={{ borderColor: bank.badgeColor || cat.badgeColor, color: bank.badgeColor || cat.badgeColor }}
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 h-4 font-normal text-muted-foreground"
                       >
                         {cat.label}
-                      </span>
-                      <div className="bank-item-tags">
+                      </Badge>
+                      <div>
                         {bank.isBuiltin ? (
-                          <span className="bank-badge-preset"><Lock size={10} /> 官方内置</span>
+                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 gap-1">
+                            <Lock className="size-2.5" /> 官方内置
+                          </Badge>
+                        ) : bank.isPublished ? (
+                          <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                            已上架
+                          </Badge>
                         ) : (
-                          <DictBadge dictCode="bank_audit_status" value={bank.auditStatus || (bank.isPublished ? 'active' : 'draft')} size="xs" />
+                          <Badge variant="secondary" className="text-[10px] h-4.5 px-1.5 text-muted-foreground">
+                            未上架
+                          </Badge>
                         )}
                       </div>
                     </div>
 
-                    <strong className="bank-item-title">{bank.title}</strong>
-                    {bank.subtitle && <p className="bank-item-sub">{bank.subtitle}</p>}
+                    <strong className="text-xs font-bold text-foreground block line-clamp-1 mb-1">
+                      {bank.title}
+                    </strong>
+                    {bank.subtitle && (
+                      <p className="text-[11px] text-muted-foreground line-clamp-1 mb-1.5">
+                        {bank.subtitle}
+                      </p>
+                    )}
 
-                    <div className="bank-item-meta">
-                      <span><strong>{bank.questionCount}</strong> 题</span>
-                      {bank.estimatedMinutes && <span>约 <strong>{bank.estimatedMinutes}</strong> 分钟</span>}
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground/80 font-mono pt-1 border-t border-border/40">
+                      <span>{bank.questionCount} 题{bank.estimatedMinutes ? ` · 约 ${bank.estimatedMinutes} 分钟` : ''}</span>
                       <span>{formatTime(bank.updatedAt).slice(5, 16)}</span>
                     </div>
                   </div>
@@ -803,22 +765,22 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
               })
             )}
           </div>
-        </aside>
+        </Card>
 
         {/* 右侧：题库详情编辑工作区 */}
-        <main className="bank-editor-main admin-panel">
+        <Card className="flex-1 w-full border-border/80 shadow-xs flex flex-col h-full overflow-hidden">
           {detailLoading ? (
-            <div className="admin-empty-state" style={{ minHeight: 400 }}>
-              <Loader2 className="admin-spin" size={24} />
+            <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-2 text-sm">
+              <Loader2 className="size-6 animate-spin text-primary" />
               <span>正在读取题库详细数据…</span>
             </div>
           ) : !currentBank ? (
-            <div className="admin-empty-state" style={{ minHeight: 400 }}>
-              <BookOpen size={36} style={{ opacity: 0.3, marginBottom: '0.8rem' }} />
+            <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-2 text-sm">
+              <BookOpen className="size-8 text-muted-foreground/30" />
               <span>请从左侧选择题库，或点击上方“新建题库”</span>
             </div>
           ) : (
-            <div className="bank-editor-container">
+            <div className="flex flex-col h-full overflow-hidden">
               <BankEditorHeader
                 bank={currentBank}
                 isDirty={isDirty}
@@ -853,58 +815,60 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
               />
             </div>
           )}
-        </main>
+        </Card>
       </div>
 
       {/* 5. 导入 JSON 模态弹窗 */}
       {importModalOpen && (
-        <div className="admin-modal-overlay" onClick={() => setImportModalOpen(false)}>
-          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
-            <div className="admin-modal-header">
-              <div className="admin-modal-title">
-                <Upload size={18} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4" onClick={() => setImportModalOpen(false)}>
+          <Card className="w-full max-w-xl shadow-xl border-border bg-card" onClick={(e) => e.stopPropagation()}>
+            <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <Upload className="size-4" />
                 <span>批量导入题库 (JSON)</span>
-              </div>
-              <button className="admin-modal-close" onClick={() => setImportModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
+              </CardTitle>
+              <Button variant="ghost" size="sm" className="size-7 p-0" onClick={() => setImportModalOpen(false)}>
+                <X className="size-4" />
+              </Button>
+            </CardHeader>
 
-            <div className="admin-modal-body">
-              <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.86rem', marginBottom: '0.75rem' }}>
+            <CardContent className="p-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
                 请将包含 <code>title</code> 与 <code>questions</code> 数组的合法题库 JSON 粘贴到下方：
               </p>
 
               {importError && (
-                <div className="admin-alert admin-alert-error" style={{ marginBottom: '0.75rem' }}>
-                  <AlertTriangle size={15} />
+                <div className="flex items-center gap-2 p-2.5 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-xs">
+                  <AlertTriangle className="size-3.5 shrink-0" />
                   <span>{importError}</span>
                 </div>
               )}
 
-              <textarea
-                className="admin-import-textarea"
-                rows={12}
+              <Textarea
+                className="w-full bg-background p-3 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                rows={10}
                 value={importJsonText}
                 onChange={(e) => setImportJsonText(e.target.value)}
                 placeholder={`{\n  "title": "新测试题库",\n  "subtitle": "副标题",\n  "category": "direct",\n  "questions": [\n    {\n      "id": "q1",\n      "title": "问题文本",\n      "type": "single_choice",\n      "options": [\n        { "id": "opt1", "text": "选项A", "scores": { "dominance": 10 } }\n      ]\n    }\n  ]\n}`}
               />
-            </div>
 
-            <div className="admin-modal-footer">
-              <button className="admin-button admin-button-quiet" onClick={() => setImportModalOpen(false)}>
-                取消
-              </button>
-              <button
-                className="admin-button admin-button-primary"
-                onClick={handleExecuteImport}
-                disabled={saving || !importJsonText.trim()}
-              >
-                {saving ? <Loader2 className="admin-spin" size={14} /> : <Upload size={14} />}
-                <span>确认导入</span>
-              </button>
-            </div>
-          </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setImportModalOpen(false)}>
+                  取消
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleExecuteImport}
+                  disabled={saving || !importJsonText.trim()}
+                  className="gap-1.5"
+                >
+                  {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+                  <span>确认导入</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 

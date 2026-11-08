@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
-import { Modal, Stack, Group, Text, Button, Textarea, TextInput, Box } from '@mantine/core';
-import { ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { ArrowRight, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { DictBadge } from './DictBadge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './dialog';
+import { Button } from './button';
+import { Input } from './input';
 
 export interface StateTransitionModalProps {
   opened: boolean;
@@ -42,122 +51,99 @@ export const StateTransitionModal: React.FC<StateTransitionModalProps> = ({
       setAdminNotes('');
       setRemark('');
       onClose();
-    } catch (err: any) {
-      setError(err?.message || '状态流转失败');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '状态流转失败');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title={
-        <Group gap="xs">
-          <ShieldCheck size={18} color="#ff70a6" />
-          <Text fw={700} size="sm" c="#fff">
-            {title}
-          </Text>
-        </Group>
-      }
-      centered
-      radius="md"
-      overlayProps={{ backgroundOpacity: 0.75, blur: 5 }}
-      styles={{
-        content: {
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.95) 0%, rgba(16, 8, 22, 0.98) 100%)',
-          border: '1px solid rgba(255, 112, 166, 0.25)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.85)',
-          color: '#fff',
-        },
-        header: {
-          background: 'transparent',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        },
-      }}
-    >
-      <Stack gap="md" mt="xs">
-        {targetName && (
-          <Text size="xs" c="dimmed">
-            目标对象：<Text span fw={600} c="#fff">{targetName}</Text>
-          </Text>
-        )}
+    <Dialog open={opened} onOpenChange={(open) => !open && !loading && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="gap-1.5">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="size-5 text-primary" />
+            <DialogTitle className="text-base font-semibold">{title}</DialogTitle>
+          </div>
+          {targetName && (
+            <DialogDescription className="text-xs text-muted-foreground">
+              目标对象：<span className="font-semibold text-foreground">{targetName}</span>
+            </DialogDescription>
+          )}
+        </DialogHeader>
 
-        {/* 状态流转指示卡 */}
-        <Box
-          p="sm"
-          style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            borderRadius: 10,
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-          }}
-        >
-          <Group justify="center" align="center" gap="md">
-            <div>
-              <Text size="xs" c="dimmed" mb={4} ta="center">
-                当前状态
-              </Text>
+        <div className="flex flex-col gap-4 py-2">
+          {/* 状态流转指示卡 */}
+          <div className="flex items-center justify-center gap-4 p-3 rounded-lg border border-border/80 bg-muted/40">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[11px] text-muted-foreground">当前状态</span>
               <DictBadge dictCode={dictCode} value={fromValue} size="md" />
             </div>
 
-            <Group gap={4} c="#ff70a6">
-              <ArrowRight size={18} />
-              <Text size="xs" fw={700}>
-                {actionName}
-              </Text>
-            </Group>
+            <div className="flex items-center gap-1 text-primary">
+              <ArrowRight className="size-4" />
+              <span className="text-xs font-bold">{actionName}</span>
+            </div>
 
-            <div>
-              <Text size="xs" c="dimmed" mb={4} ta="center">
-                目标状态
-              </Text>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[11px] text-muted-foreground">目标状态</span>
               <DictBadge dictCode={dictCode} value={toValue} size="md" />
             </div>
-          </Group>
-        </Box>
+          </div>
 
-        {error && (
-          <Group gap="xs" c="#f07178">
-            <AlertCircle size={14} />
-            <Text size="xs">{error}</Text>
-          </Group>
-        )}
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 p-2.5 rounded-md">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-        <Textarea
-          label="管理员审核批注 (admin_notes)"
-          description="记录本次人工审核原因、风控结论或整改意见（仅管理后台内部可见）"
-          placeholder="例如：自白真实深刻，符合社区自白规范，予以通过。"
-          minRows={3}
-          value={adminNotes}
-          onChange={(e) => setAdminNotes(e.target.value)}
-          size="xs"
-        />
+          {/* 批注 textarea */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">
+              管理员审核批注 (admin_notes)
+            </label>
+            <span className="text-[11px] text-muted-foreground">
+              记录本次人工审核原因、风控结论或整改意见（仅后台内部可见）
+            </span>
+            <textarea
+              placeholder="例如：自白真实深刻，符合社区自白规范，予以通过。"
+              rows={3}
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              className="flex min-h-[75px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
+          </div>
 
-        <TextInput
-          label="业务备注 (remark)"
-          description="系统或对外业务说明（可选）"
-          placeholder="例如：人工初审"
-          value={remark}
-          onChange={(e) => setRemark(e.target.value)}
-          size="xs"
-        />
+          {/* 业务备注 input */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">
+              业务备注 (remark)
+            </label>
+            <span className="text-[11px] text-muted-foreground">
+              系统或对外业务说明（可选）
+            </span>
+            <Input
+              placeholder="例如：人工初审"
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
 
-        <Group justify="flex-end" gap="sm" mt="sm">
-          <Button variant="default" size="xs" onClick={onClose} disabled={loading}>
+        <DialogFooter className="gap-2 sm:gap-0 pt-2">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>
             取消
           </Button>
-          <Button
-            size="xs"
-            color="pink"
-            onClick={handleConfirm}
-            loading={loading}
-          >
-            确认执行流转
+          <Button size="sm" onClick={handleConfirm} disabled={loading} className="gap-1.5">
+            {loading && <Loader2 className="size-3.5 animate-spin" />}
+            <span>确认执行流转</span>
           </Button>
-        </Group>
-      </Stack>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
-
+export default StateTransitionModal;

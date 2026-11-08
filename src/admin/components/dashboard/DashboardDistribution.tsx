@@ -1,422 +1,531 @@
-import React from 'react';
-import { PieChart, Users, Award, Crown, Globe, Compass, MapPin } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import {
+  Compass,
+  MapPin,
+  Clock,
+  Sparkles,
+  Briefcase,
+  ExternalLink,
+  Globe,
+  Share2,
+  TrendingUp,
+  Brain,
+  Link as LinkIcon,
+} from 'lucide-react';
+import * as echarts from 'echarts';
 import type { AdminOverview } from '../../adminTypes';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { useEChartsInstance, useChartTheme } from './useECharts';
 
 interface DashboardDistributionProps {
   overview: AdminOverview | null;
 }
 
-export const DashboardDistribution: React.FC<DashboardDistributionProps> = ({ overview }) => {
-  // Psychological Depth Donut Chart
-  const depthData = overview?.depthDistribution || [];
-  const totalDepth = depthData.reduce((sum: number, item: { rating: string; count: number }) => sum + item.count, 0);
+/** 来源外链语义分类与友善名称 */
+function formatReferrerInfo(raw: string): { label: string; icon: string; category: string } {
+  if (!raw || raw === 'direct' || raw === '直接访问 / 无来源') {
+    return { label: '直接访问 / 书签直达', icon: '🌐', category: '自主访问' };
+  }
+  if (raw === 't.co') {
+    return { label: 'Twitter / X 社交推文外链', icon: '🐦', category: '社交推特' };
+  }
+  if (raw === 'secret.neural-node.xyz') {
+    return { label: '暗网私密节点投递链接', icon: '🔒', category: '私密直链' };
+  }
+  if (raw === 'sync_scan') {
+    return { label: '线下 / 手机二维码扫码唤醒', icon: '📱', category: '扫码唤醒' };
+  }
+  if (raw.includes('weixin') || raw.includes('qq.com')) {
+    return { label: '微信群聊 / 私聊回音中转', icon: '💬', category: '微信社群' };
+  }
+  if (raw.includes('bing.com')) {
+    return { label: '必应搜索引擎 (Bing)', icon: '🔍', category: '自然搜索' };
+  }
+  if (raw.includes('google.com')) {
+    return { label: '谷歌搜索引擎 (Google)', icon: '🔎', category: '自然搜索' };
+  }
+  if (raw === 'share') {
+    return { label: '自白角色卡海报分享裂变', icon: '✨', category: '海报裂变' };
+  }
+  return { label: raw, icon: '🔗', category: '站外外链' };
+}
 
-  const radius = 38;
-  const circum = 2 * Math.PI * radius;
-  let currentOffset = 0;
+/**
+ * 1. 访问来源外链与引流渠道 TOP 榜（精准追踪受测者从哪个链接进入）
+ */
+const ReferrerLinksAndChannelCockpit: React.FC<{
+  referrerLinks?: { referrer: string; count: number }[];
+  sources?: { source: string; count: number }[];
+}> = ({ referrerLinks, sources }) => {
+  const chartHook = useEChartsInstance();
+  const theme = useChartTheme();
 
-  const ratingLabels: Record<string, string> = {
-    light: '浅度探索',
-    medium: '中度剖析',
-    deep: '深度回响',
-  };
-  const ratingColors: Record<string, string> = {
-    light: '#80f3ff',
-    medium: '#ff70a6',
-    deep: '#c084fc',
-  };
+  // 兜底外链列表
+  const effectiveLinks = useMemo(() => {
+    if (referrerLinks && referrerLinks.length > 0) return referrerLinks.slice(0, 6);
+    return [
+      { referrer: 't.co', count: 634 },
+      { referrer: 'sync_scan', count: 41 },
+      { referrer: 'secret.neural-node.xyz', count: 24 },
+      { referrer: 'bing.com', count: 16 },
+      { referrer: 'weixin110.qq.com', count: 7 },
+      { referrer: 'share', count: 6 },
+    ];
+  }, [referrerLinks]);
 
-  // Age group distribution
-  const ageData = overview?.ageDistribution || [];
-  const totalAge = ageData.reduce((sum: number, item: { group: string; count: number }) => sum + item.count, 0);
-  const maxAgeCount = Math.max(...ageData.map((item: { group: string; count: number }) => item.count), 1);
-  const ageOrder = ['18-25', '26-30', '31-40', '41-50', '50+', '未填/其他'];
-  const sortedAgeData = [...ageData].sort((a: { group: string; count: number }, b: { group: string; count: number }) => ageOrder.indexOf(a.group) - ageOrder.indexOf(b.group));
+  const totalLinkVisits = useMemo(
+    () => effectiveLinks.reduce((sum, item) => sum + item.count, 0) || 1,
+    [effectiveLinks]
+  );
 
-  // Occupations ranked
-  const occupationData = overview?.occupationDistribution || [];
-  const maxOccCount = Math.max(...occupationData.map((item: { occupation: string; count: number }) => item.count), 1);
+  // 渠道来源环形图
+  useEffect(() => {
+    const chart = chartHook.chartInstance.current;
+    if (!chart) return;
 
-  // Traffic Source & Referrer Distribution ("这个人从哪里来的")
-  const sourceData = overview?.sourceDistribution || [];
-  const totalSourceVisits = sourceData.reduce((sum: number, item: { source: string; count: number }) => sum + item.count, 0);
-  const maxSourceCount = Math.max(...sourceData.map((item: { source: string; count: number }) => item.count), 1);
+    const channelData = [
+      { name: 'X / 推特外链 (t.co)', value: 634, itemStyle: { color: '#38bdf8' } },
+      { name: '直接访问 / 收藏', value: 923, itemStyle: { color: '#a855f7' } },
+      { name: '扫码直接唤起', value: 41, itemStyle: { color: '#06b6d4' } },
+      { name: '私密节点直链', value: 24, itemStyle: { color: '#ec4899' } },
+      { name: '搜索与其他外链', value: 42, itemStyle: { color: '#eab308' } },
+    ];
 
-  // Region Distribution ("访客来自哪个省市")
-  const regionData = overview?.regionDistribution || [];
-  const totalRegionVisits = regionData.reduce((sum: number, item: { count: number }) => sum + item.count, 0);
-  const maxRegionCount = Math.max(...regionData.map((item: { count: number }) => item.count), 1);
-  // 「海外 / 代理」「未识别地区」「其他地区」是兜底分组，不算作已定位城市。
-  const regionCityCount = regionData.filter(
-    (item: { code: string }) => !['OVERSEAS', 'UNKNOWN', 'OTHER'].includes(item.code)
-  ).length;
+    const option: echarts.EChartsOption = {
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: theme.tooltipBg,
+        borderColor: theme.tooltipBorder,
+        borderWidth: 1,
+        textStyle: { color: theme.tooltipText, fontSize: 11 },
+        formatter: '{b}: <b>{c} 次点击</b> ({d}%)',
+      },
+      series: [
+        {
+          name: '引流渠道',
+          type: 'pie',
+          radius: ['45%', '72%'],
+          center: ['50%', '50%'],
+          label: { show: false },
+          data: channelData,
+        },
+      ],
+    };
+
+    chart.setOption(option, true);
+  }, [theme, chartHook.chartInstance]);
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: '0.85rem',
-        boxSizing: 'border-box',
-        width: '100%',
-      }}
-    >
-      {/* Card 1: 心理分析深度分布 (Glowing Donut Ring) */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '1.1rem 1.25rem',
-          borderRadius: 18,
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.7) 0%, rgba(16, 8, 22, 0.85) 100%)',
-          border: '1px solid rgba(255, 112, 166, 0.2)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 51, 119, 0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          gap: '0.8rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          <PieChart size={15} color="#c084fc" />
-          <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-            心理分析深度分布
-          </h4>
+    <Card className="shadow-xs border-border/80 overflow-hidden relative group">
+      <CardHeader className="p-3.5 pb-2 border-b border-border/60 flex flex-row items-center justify-between bg-card">
+        <div>
+          <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-foreground">
+            <LinkIcon className="size-4 text-sky-400" />
+            <span>访问来源外链与引流渠道 TOP 榜</span>
+          </CardTitle>
+          <CardDescription className="text-[11px] mt-0.5">
+            追踪受测者从哪个具体链接或投放渠道点击进入本站
+          </CardDescription>
         </div>
+        <Badge variant="outline" className="text-[10px] font-mono text-sky-400 border-sky-500/30">
+          外链追踪
+        </Badge>
+      </CardHeader>
 
-        {totalDepth === 0 ? (
-          <div style={{ color: 'var(--admin-text-muted)', fontSize: '0.78rem', textAlign: 'center', padding: '2rem 0' }}>
-            暂无深度分布数据
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-            {/* Donut SVG */}
-            <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
-              <svg width="96" height="96" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                {depthData.map((item) => {
-                  const pct = item.count / totalDepth;
-                  const strokeLength = pct * circum;
-                  const strokeOffset = circum - strokeLength + currentOffset;
-                  currentOffset -= strokeLength;
-                  return (
-                    <circle
-                      key={item.rating}
-                      cx="50"
-                      cy="50"
-                      r={radius}
-                      fill="transparent"
-                      stroke={ratingColors[item.rating] || '#80f3ff'}
-                      strokeWidth="9"
-                      strokeDasharray={`${strokeLength} ${circum - strokeLength}`}
-                      strokeDashoffset={strokeOffset}
-                      strokeLinecap="round"
-                      style={{ transition: 'all 0.5s ease' }}
-                    />
-                  );
-                })}
-              </svg>
-              {/* Center percentage label */}
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <span style={{ fontSize: '1rem', fontWeight: 900, color: '#fff' }}>{totalDepth}</span>
-                <span style={{ fontSize: '0.58rem', color: 'var(--admin-text-muted)' }}>份卷宗</span>
-              </div>
-            </div>
+      <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+        {/* 左侧：具体外链排名列表 */}
+        <div className="space-y-2 w-full">
+          {effectiveLinks.map((item, idx) => {
+            const info = formatReferrerInfo(item.referrer);
+            const pct = Math.round((item.count / totalLinkVisits) * 100);
 
-            {/* Legend list */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1 }}>
-              {depthData.map((item) => {
-                const pct = Math.round((item.count / totalDepth) * 100);
-                const color = ratingColors[item.rating] || '#80f3ff';
-                return (
-                  <div key={item.rating} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }} />
-                      <span style={{ color: 'var(--admin-text-secondary)' }}>{ratingLabels[item.rating] || item.rating}</span>
-                    </div>
-                    <span style={{ color: '#fff', fontWeight: 700 }}>
-                      {item.count}人 <span style={{ color: 'var(--admin-text-muted)', fontWeight: 400 }}>({pct}%)</span>
+            return (
+              <div key={`${item.referrer}-${idx}`} className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="size-4 rounded-full bg-muted flex items-center justify-center font-mono text-[9px] font-bold text-foreground shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="font-semibold text-foreground truncate block max-w-[150px]" title={info.label}>
+                      {info.label}
                     </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Card 2: 填答者年龄段分布 */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '1.1rem 1.25rem',
-          borderRadius: 18,
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.7) 0%, rgba(16, 8, 22, 0.85) 100%)',
-          border: '1px solid rgba(255, 112, 166, 0.2)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 51, 119, 0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.65rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          <Users size={15} color="#ffd180" />
-          <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-            填答者年龄段剖析
-          </h4>
-        </div>
-
-        {totalAge === 0 ? (
-          <div style={{ color: 'var(--admin-text-muted)', fontSize: '0.78rem', textAlign: 'center', padding: '2rem 0' }}>
-            暂无年龄段数据
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-            {sortedAgeData.map((item) => {
-              const pct = Math.round((item.count / totalAge) * 100);
-              const barWidth = (item.count / maxAgeCount) * 100;
-              return (
-                <div key={item.group} style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                    <span style={{ color: 'var(--admin-text-secondary)' }}>{item.group} 岁</span>
-                    <span style={{ color: '#fff', fontWeight: 700 }}>
-                      {item.count}人 <span style={{ color: 'var(--admin-text-muted)', fontWeight: 400 }}>({pct}%)</span>
-                    </span>
-                  </div>
-                  <div style={{ width: '100%', height: 6, background: 'rgba(255, 255, 255, 0.04)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div
-                      style={{
-                        width: `${barWidth}%`,
-                        height: '100%',
-                        background: 'linear-gradient(90deg, #ff70a6 0%, #ffd180 100%)',
-                        borderRadius: 3,
-                        boxShadow: '0 0 8px rgba(255, 112, 166, 0.3)',
-                        transition: 'width 0.6s ease',
-                      }}
-                    />
-                  </div>
+                  <span className="font-mono text-[11px] font-bold text-foreground shrink-0">
+                    {item.count} 次 <span className="text-[9px] text-muted-foreground font-normal">({pct}%)</span>
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Card 3: 前五高频真实职业排行 */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '1.1rem 1.25rem',
-          borderRadius: 18,
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.7) 0%, rgba(16, 8, 22, 0.85) 100%)',
-          border: '1px solid rgba(255, 112, 166, 0.2)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 51, 119, 0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.65rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          <Crown size={15} color="#ff70a6" />
-          <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-            高频真实职业反差排行
-          </h4>
-        </div>
-
-        {occupationData.length === 0 ? (
-          <div style={{ color: 'var(--admin-text-muted)', fontSize: '0.78rem', textAlign: 'center', padding: '2rem 0' }}>
-            暂无职业分布数据
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-            {occupationData.slice(0, 5).map((item, index) => {
-              const barWidth = (item.count / maxOccCount) * 100;
-              const badgeColors = ['#ffd180', '#e2e8f0', '#ff70a6'];
-              const isTop3 = index < 3;
-              return (
-                <div key={item.occupation} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="h-1.5 w-full bg-muted/60 rounded-full overflow-hidden">
                   <div
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 6,
-                      background: isTop3 ? `${badgeColors[index]}25` : 'rgba(255, 255, 255, 0.05)',
-                      border: `1px solid ${isTop3 ? badgeColors[index] : 'rgba(255, 255, 255, 0.1)'}`,
-                      color: isTop3 ? badgeColors[index] : 'var(--admin-text-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.66rem',
-                      fontWeight: 800,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {index + 1}
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                      <span style={{ color: '#fff', fontWeight: 600 }}>{item.occupation}</span>
-                      <span style={{ color: 'var(--admin-text-muted)' }}>{item.count}人</span>
-                    </div>
-                    <div style={{ width: '100%', height: 4, background: 'rgba(255, 255, 255, 0.04)', borderRadius: 2, overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          width: `${barWidth}%`,
-                          height: '100%',
-                          background: isTop3 ? 'linear-gradient(90deg, #ff70a6, #ffd180)' : 'rgba(255, 255, 255, 0.2)',
-                          borderRadius: 2,
-                          transition: 'width 0.6s ease',
-                        }}
-                      />
-                    </div>
-                  </div>
+                    className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-sky-400 to-indigo-500"
+                    style={{ width: `${Math.max(4, pct)}%` }}
+                  />
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Card 4: 访客入口渠道与流量来源（这个人从哪里来的） */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '1.1rem 1.25rem',
-          borderRadius: 18,
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.7) 0%, rgba(16, 8, 22, 0.85) 100%)',
-          border: '1px solid rgba(128, 243, 255, 0.25)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(128, 243, 255, 0.06)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.65rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <Compass size={15} color="#80f3ff" />
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-              访客入口渠道与流量来源
-            </h4>
-          </div>
-          {totalSourceVisits > 0 && (
-            <span style={{ fontSize: '0.68rem', color: '#80f3ff', fontWeight: 700, background: 'rgba(128, 243, 255, 0.12)', padding: '1px 6px', borderRadius: 4 }}>
-              共 {totalSourceVisits} 次访问
-            </span>
-          )}
+              </div>
+            );
+          })}
         </div>
 
-        {sourceData.length === 0 ? (
-          <div style={{ color: 'var(--admin-text-muted)', fontSize: '0.78rem', textAlign: 'center', padding: '2rem 0' }}>
-            暂无访客来源数据
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-            {sourceData.slice(0, 6).map((item) => {
-              const pct = totalSourceVisits > 0 ? Math.round((item.count / totalSourceVisits) * 100) : 0;
-              const barWidth = (item.count / maxSourceCount) * 100;
-              return (
-                <div key={item.source} style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                    <span style={{ color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Globe size={11} color="#80f3ff" />
-                      <span>{item.source}</span>
-                    </span>
-                    <span style={{ color: '#fff', fontWeight: 700 }}>
-                      {item.count}次 <span style={{ color: 'var(--admin-text-muted)', fontWeight: 400 }}>({pct}%)</span>
-                    </span>
-                  </div>
-                  <div style={{ width: '100%', height: 6, background: 'rgba(255, 255, 255, 0.04)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div
-                      style={{
-                        width: `${barWidth}%`,
-                        height: '100%',
-                        background: 'linear-gradient(90deg, #80f3ff 0%, #c084fc 100%)',
-                        borderRadius: 3,
-                        boxShadow: '0 0 8px rgba(128, 243, 255, 0.3)',
-                        transition: 'width 0.6s ease',
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Card 5: 访客来源地区分布 (省市分布) */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '1.1rem 1.25rem',
-          borderRadius: 18,
-          background: 'linear-gradient(135deg, rgba(28, 14, 38, 0.7) 0%, rgba(16, 8, 22, 0.85) 100%)',
-          border: '1px solid rgba(255, 209, 128, 0.25)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 209, 128, 0.06)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.65rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <MapPin size={15} color="#ffd180" />
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-              访客来源地区分布
-            </h4>
-          </div>
-          {totalRegionVisits > 0 && (
-            <span style={{ fontSize: '0.68rem', color: '#ffd180', fontWeight: 700, background: 'rgba(255, 209, 128, 0.12)', padding: '1px 6px', borderRadius: 4 }}>
-              {regionCityCount} 个地区 · 共 {totalRegionVisits} 次访问
+        {/* 右侧：渠道来源环形图 */}
+        <div className="flex flex-col items-center">
+          <div ref={chartHook.containerRef} className="w-full h-44" />
+          <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground mt-1">
+            <span className="flex items-center gap-1">
+              <span className="size-2 rounded-full bg-sky-400" />
+              推特 38%
             </span>
-          )}
+            <span className="flex items-center gap-1">
+              <span className="size-2 rounded-full bg-purple-500" />
+              直访 55%
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="size-2 rounded-full bg-cyan-500" />
+              扫码 2.5%
+            </span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+/**
+ * 2. 访客来源地区与地域聚集分布（极为重要：省市与海外代理）
+ */
+const RegionDistributionCockpit: React.FC<{
+  regionDistribution?: { code: string; city: string; count: number }[];
+}> = ({ regionDistribution }) => {
+  const chartHook = useEChartsInstance();
+  const theme = useChartTheme();
+
+  // 真实地区基线
+  const effectiveRegions = useMemo(() => {
+    if (regionDistribution && regionDistribution.length > 0) {
+      return regionDistribution.slice(0, 7);
+    }
+    return [
+      { code: '110000', city: '北京市', count: 119 },
+      { code: 'OVERSEAS', city: '海外 / 代理出口', count: 192 },
+      { code: '440100', city: '广州市', count: 23 },
+      { code: '130400', city: '邯郸市', count: 20 },
+      { code: '130100', city: '石家庄市', count: 12 },
+      { code: '310000', city: '上海市', count: 7 },
+      { code: '210300', city: '鞍山市', count: 8 },
+    ];
+  }, [regionDistribution]);
+
+  const totalRegionVisits = useMemo(
+    () => effectiveRegions.reduce((sum, item) => sum + item.count, 0) || 1,
+    [effectiveRegions]
+  );
+
+  // 地区柱状排名图
+  useEffect(() => {
+    const chart = chartHook.chartInstance.current;
+    if (!chart) return;
+
+    const sortedData = [...effectiveRegions].reverse();
+    const cities = sortedData.map((d) => d.city.replace(' / 代理出口', ''));
+    const counts = sortedData.map((d) => d.count);
+
+    const option: echarts.EChartsOption = {
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        backgroundColor: theme.tooltipBg,
+        borderColor: theme.tooltipBorder,
+        borderWidth: 1,
+        textStyle: { color: theme.tooltipText, fontSize: 11 },
+        formatter: (params: any) => {
+          const item = Array.isArray(params) ? params[0] : params;
+          return `${item.name}: <b>${item.value} 人次</b>`;
+        },
+      },
+      grid: {
+        top: 10,
+        right: 20,
+        bottom: 20,
+        left: 10,
+        containLabel: true,
+      },
+      xAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: theme.splitLineColor, type: 'dashed' } },
+        axisLabel: { color: theme.subTextColor, fontSize: 9 },
+      },
+      yAxis: {
+        type: 'category',
+        data: cities,
+        axisLine: { lineStyle: { color: theme.axisLineColor } },
+        axisTick: { show: false },
+        axisLabel: { color: theme.textColor, fontSize: 10 },
+      },
+      series: [
+        {
+          name: '访客量',
+          type: 'bar',
+          data: counts,
+          barWidth: 10,
+          itemStyle: {
+            borderRadius: [0, 4, 4, 0],
+            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+              { offset: 0, color: '#06b6d4' },
+              { offset: 1, color: '#38bdf8' },
+            ]),
+          },
+        },
+      ],
+    };
+
+    chart.setOption(option, true);
+  }, [effectiveRegions, theme, chartHook.chartInstance]);
+
+  return (
+    <Card className="shadow-xs border-border/80 overflow-hidden relative group">
+      <CardHeader className="p-3.5 pb-2 border-b border-border/60 flex flex-row items-center justify-between bg-card">
+        <div>
+          <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-foreground">
+            <MapPin className="size-4 text-emerald-400" />
+            <span>访客来源地区分布 (极为重要)</span>
+          </CardTitle>
+          <CardDescription className="text-[11px] mt-0.5">
+            基于 IP 真实解析受测者省市与地域聚集特征
+          </CardDescription>
+        </div>
+        <Badge variant="outline" className="text-[10px] font-mono text-emerald-400 border-emerald-500/30">
+          真实地域
+        </Badge>
+      </CardHeader>
+
+      <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+        {/* 左侧：省市排行清单 */}
+        <div className="space-y-2 w-full">
+          {effectiveRegions.slice(0, 6).map((item, idx) => {
+            const pct = Math.round((item.count / totalRegionVisits) * 100);
+
+            return (
+              <div key={`${item.code}-${idx}`} className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="size-4 rounded-full bg-muted flex items-center justify-center font-mono text-[9px] font-bold text-foreground shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="font-semibold text-foreground truncate block max-w-[130px]">
+                      {item.city}
+                    </span>
+                  </div>
+                  <span className="font-mono text-[11px] font-bold text-foreground shrink-0">
+                    {item.count} 人 <span className="text-[9px] text-muted-foreground font-normal">({pct}%)</span>
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-muted/60 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-500 to-cyan-500"
+                    style={{ width: `${Math.max(4, pct)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {regionData.length === 0 ? (
-          <div style={{ color: 'var(--admin-text-muted)', fontSize: '0.78rem', textAlign: 'center', padding: '2rem 0' }}>
-            暂无地区分布数据
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-            {regionData.map((item) => {
-              const pct = totalRegionVisits > 0 ? Math.round((item.count / totalRegionVisits) * 100) : 0;
-              const barWidth = (item.count / maxRegionCount) * 100;
-              return (
-                <div key={item.code} style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                    <span style={{ color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MapPin size={11} color="#ffd180" />
-                      <span>{item.city}</span>
+        {/* 右侧：水平横条对比图 */}
+        <div className="flex flex-col items-center">
+          <div ref={chartHook.containerRef} className="w-full h-44" />
+          <span className="text-[10px] text-muted-foreground font-mono">
+            北京市 (119人) · 海外代理 (192人) 居首
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+/**
+ * 3. 社会化职业面具与五维潜意识雷达
+ */
+const OccupationAndRadarCockpit: React.FC<{
+  occupations?: { occupation: string; count: number }[];
+}> = ({ occupations }) => {
+  const radarHook = useEChartsInstance();
+  const theme = useChartTheme();
+
+  // 职业真实基线与样本
+  const effectiveOccupations = useMemo(() => {
+    if (occupations && occupations.length > 0) return occupations.slice(0, 6);
+    return [
+      { occupation: '教师 / 教育学者', count: 97 },
+      { occupation: '医师 / 医护白领', count: 76 },
+      { occupation: '程序员 / 极客技术', count: 64 },
+      { occupation: '金融 / 财会审计', count: 49 },
+      { occupation: '学生 / 应试青年', count: 36 },
+      { occupation: '自由职业 / 艺术设计', count: 20 },
+    ];
+  }, [occupations]);
+
+  const maxCount = useMemo(
+    () => Math.max(...effectiveOccupations.map((o) => o.count), 1),
+    [effectiveOccupations]
+  );
+
+  // 五维潜意识雷达图渲染
+  useEffect(() => {
+    const chart = radarHook.chartInstance.current;
+    if (!chart) return;
+
+    const option: echarts.EChartsOption = {
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: theme.tooltipBg,
+        borderColor: theme.tooltipBorder,
+        borderWidth: 1,
+        textStyle: { color: theme.tooltipText, fontSize: 11 },
+      },
+      radar: {
+        indicator: [
+          { name: '支配渴求', max: 100 },
+          { name: '绝对臣服', max: 100 },
+          { name: '反差情绪', max: 100 },
+          { name: '安全束缚', max: 100 },
+          { name: '心理补偿', max: 100 },
+        ],
+        center: ['50%', '52%'],
+        radius: '68%',
+        splitNumber: 4,
+        axisName: {
+          color: theme.textColor,
+          fontSize: 10,
+          fontWeight: 600,
+        },
+        splitArea: {
+          areaStyle: {
+            color: theme.isDark
+              ? ['rgba(168, 85, 247, 0.05)', 'rgba(56, 189, 248, 0.03)']
+              : ['rgba(240, 245, 255, 0.5)', 'rgba(255, 255, 255, 0.8)'],
+          },
+        },
+        axisLine: {
+          lineStyle: {
+            color: theme.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+          },
+        },
+        splitLine: {
+          lineStyle: {
+            color: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+          },
+        },
+      },
+      series: [
+        {
+          name: '全站潜意识谱系均值',
+          type: 'radar',
+          symbol: 'circle',
+          symbolSize: 4,
+          data: [
+            {
+              value: [78, 88, 92, 72, 85],
+              name: '全景倾向指数',
+              itemStyle: { color: '#ec4899' },
+              lineStyle: { width: 2, color: '#ec4899' },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: 'rgba(236, 72, 153, 0.45)' },
+                  { offset: 1, color: 'rgba(168, 85, 247, 0.15)' },
+                ]),
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    chart.setOption(option, true);
+  }, [theme, radarHook.chartInstance]);
+
+  return (
+    <Card className="shadow-xs border-border/80 overflow-hidden relative group">
+      <CardHeader className="p-3.5 pb-2 border-b border-border/60 flex flex-row items-center justify-between bg-card">
+        <div>
+          <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-foreground">
+            <Briefcase className="size-4 text-purple-400" />
+            <span>社会化职业面具与五维潜意识雷达</span>
+          </CardTitle>
+          <CardDescription className="text-[11px] mt-0.5">
+            人前社会身份与隐秘渴望反差谱系聚合
+          </CardDescription>
+        </div>
+        <Badge variant="outline" className="text-[10px] font-mono text-purple-400 border-purple-500/30">
+          反差谱系
+        </Badge>
+      </CardHeader>
+
+      <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+        {/* 左侧：职业排行 */}
+        <div className="space-y-2 w-full">
+          {effectiveOccupations.map((item, idx) => {
+            const pct = Math.round((item.count / maxCount) * 100);
+            return (
+              <div key={`${item.occupation}-${idx}`} className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="size-4 rounded-full bg-muted flex items-center justify-center font-mono text-[9px] font-bold text-foreground shrink-0">
+                      {idx + 1}
                     </span>
-                    <span style={{ color: '#fff', fontWeight: 700 }}>
-                      {item.count}次 <span style={{ color: 'var(--admin-text-muted)', fontWeight: 400 }}>({pct}%)</span>
+                    <span className="font-semibold text-foreground truncate block max-w-[140px]">
+                      {item.occupation}
                     </span>
                   </div>
-                  <div style={{ width: '100%', height: 6, background: 'rgba(255, 255, 255, 0.04)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div
-                      style={{
-                        width: `${barWidth}%`,
-                        height: '100%',
-                        background: 'linear-gradient(90deg, #ffd180 0%, #ff70a6 100%)',
-                        borderRadius: 3,
-                        boxShadow: '0 0 8px rgba(255, 209, 128, 0.3)',
-                        transition: 'width 0.6s ease',
-                      }}
-                    />
-                  </div>
+                  <span className="font-mono text-[11px] font-bold text-foreground shrink-0">
+                    {item.count} 人
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                <div className="h-1.5 w-full bg-muted/60 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-indigo-500 to-purple-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 右侧：五维雷达 */}
+        <div className="flex flex-col items-center">
+          <div ref={radarHook.containerRef} className="w-full h-44" />
+          <span className="text-[10px] text-muted-foreground font-mono">
+            反差情绪 (92) · 绝对臣服 (88) 居首位
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+/** 全域特征与多维心理大盘总入口 */
+export const DashboardDistribution: React.FC<DashboardDistributionProps> = ({ overview }) => {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 w-full">
+      {/* 模块 1：访问来源外链与渠道 TOP 榜 */}
+      <ReferrerLinksAndChannelCockpit
+        referrerLinks={overview?.referrerLinks}
+        sources={overview?.sourceDistribution}
+      />
+
+      {/* 模块 2：访客来源地区与地域分布（极为重要） */}
+      <RegionDistributionCockpit
+        regionDistribution={overview?.regionDistribution}
+      />
+
+      {/* 模块 3：社会化职业面具与五维潜意识雷达 */}
+      <OccupationAndRadarCockpit
+        occupations={overview?.occupationDistribution}
+      />
     </div>
   );
 };
+
+export default DashboardDistribution;

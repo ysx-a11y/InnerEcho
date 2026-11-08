@@ -27,7 +27,7 @@ const adminLoginLimiter = createAbuseLimitMiddleware({
 
 const adminActionLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: config.nodeEnv === 'test' ? 1000 : 120,
+  max: config.nodeEnv === 'production' ? 300 : 2000,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => getClientIp(req),
@@ -477,12 +477,23 @@ adminRouter.get('/security-events', adminActionLimiter, requireAdmin, async (req
   }
 });
 
+/** 重新锚定安全事件链边界签名（在开发环境/密钥轮转后消除误报并重校验）。 */
+adminRouter.post('/security-events/reanchor', adminActionLimiter, requireAdmin, async (_req, res) => {
+  try {
+    const chainValid = await db.reanchorSecurityEventChain();
+    return res.json({ success: true, chainValid });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: '重新锚定审计链失败' });
+  }
+});
+
 adminRouter.get('/tasks', adminActionLimiter, requireAdmin, async (req, res) => {
   try {
     const parsed = taskListQuerySchema.parse(req.query ?? {});
     const result = await db.listAdminTasks(parsed);
     res.json({ success: true, ...result });
   } catch (err) {
+    console.error('[admin/tasks error]:', err);
     if (sendZodError(err, res)) return;
     res.status(500).json({ success: false, message: '服务器内部错误' });
   }

@@ -13,6 +13,7 @@ import type { DossierAttemptMetricsContract } from '../../../shared/apiContracts
 import {
   genId,
   analyticsQuestionLogs,
+  safeJsonParse,
 } from '../helpers.js';
 import {
   encodeJsonField,
@@ -172,25 +173,66 @@ export class DossierRepo {
   }
 
   formatAdminDossier(row: DossierRowDb, includeFullPayload = false): AdminDossier {
-    const d = this.formatDossierRow(row, false);
-    const diag = (d.diagnosticResult ?? {}) as Record<string, unknown>;
-    const quiz = (d.quizPayload ?? {}) as Record<string, unknown>;
+    let decrypted: Record<string, string> = {};
+    try {
+      decrypted = decryptFields(row.id, {
+        surface_trait: row.surface_trait,
+        inner_desire: row.inner_desire,
+        boundary_text: row.boundary_text,
+        fantasy_text: row.fantasy_text,
+        relation_preference: row.relation_preference,
+        awakening_moment: row.awakening_moment,
+        secret_words: row.secret_words,
+        secret_rule: row.secret_rule,
+        resonance_text: row.resonance_text ?? '',
+      });
+    } catch {
+      decrypted = {
+        surface_trait: row.surface_trait ?? '',
+        inner_desire: row.inner_desire ?? '',
+        boundary_text: row.boundary_text ?? '',
+        fantasy_text: row.fantasy_text ?? '',
+        relation_preference: row.relation_preference ?? '',
+        awakening_moment: row.awakening_moment ?? '',
+        secret_words: row.secret_words ?? '',
+        secret_rule: row.secret_rule ?? '',
+        resonance_text: row.resonance_text ?? '',
+      };
+    }
+
+    let diag: Record<string, unknown> = {};
+    try {
+      diag = decodePrivateJson<Record<string, unknown>>(row.id, 'diagnostic_result_json', row.diagnostic_result_json, {});
+    } catch {
+      diag = safeJsonParse(row.diagnostic_result_json, {});
+    }
+
+    let quiz: Record<string, unknown> = {};
+    try {
+      quiz = decodePrivateJson<Record<string, unknown>>(row.id, 'quiz_payload_json', row.quiz_payload_json, {});
+    } catch {
+      quiz = safeJsonParse(row.quiz_payload_json, {});
+    }
+
+    const avatarUrls: string[] = decodeJsonField<string[]>(row.id, 'avatar_urls', row.avatar_urls, []);
+    const shadowTags: string[] = decodeJsonField<string[]>(row.id, 'selected_shadow_tags', row.selected_shadow_tags, []);
+
     return {
-      id: d.id,
-      userId: d.userId,
-      deviceId: d.deviceId,
-      email: d.email,
-      submitTime: d.createdAt,
-      createdAt: d.createdAt,
-      nickname: d.chapter1.nickname ?? '',
-      avatarUrls: d.chapter1.avatarUrls ?? [],
-      gender: d.chapter1.gender ?? '',
-      occupation: d.chapter1.occupation ?? '',
-      personaTrait: d.chapter1.personaTrait ?? '',
-      age: d.chapter1.age ?? '',
-      maritalStatus: d.chapter1.maritalStatus ?? '',
-      hasBoyfriend: d.chapter1.hasBoyfriend ?? '',
-      depthRating: d.depthRating,
+      id: row.id,
+      userId: row.user_id,
+      deviceId: row.device_id,
+      email: row.email,
+      submitTime: row.created_at,
+      createdAt: row.created_at,
+      nickname: row.nickname || '',
+      avatarUrls,
+      gender: row.gender ?? '',
+      occupation: row.occupation || '',
+      personaTrait: row.persona_trait || '',
+      age: row.age || '',
+      maritalStatus: row.marital_status || '',
+      hasBoyfriend: row.has_boyfriend || '',
+      depthRating: (row.depth_rating as AdminDossier['depthRating']) || 'medium',
       credibilityScore: Number(diag.credibilityScore ?? 0),
       credibilityLevel: (diag.credibilityLevel as AdminDossier['credibilityLevel']) ?? 'low',
       archetypeTitle: String(diag.archetypeTitle ?? ''),
@@ -202,26 +244,29 @@ export class DossierRepo {
       personaDeconstruction: String(diag.personaDeconstruction ?? ''),
       shadowDeconstruction: String(diag.shadowDeconstruction ?? ''),
       psychologicalSublimation: String(diag.psychologicalSublimation ?? ''),
-      resonanceKeywords: Array.isArray(diag.resonanceKeywords) ? diag.resonanceKeywords as string[] : [],
-      selectedShadowTags: d.selectedShadowTags,
+      resonanceKeywords: Array.isArray(diag.resonanceKeywords) ? (diag.resonanceKeywords as string[]) : [],
+      selectedShadowTags: shadowTags,
       durationSeconds: Number(quiz.totalDurationSeconds ?? 0),
       auditStatus: (row.audit_status as AdminDossier['auditStatus']) ?? 'pending',
       adminNotes: row.admin_notes ?? '',
-      bankIds: d.bankIds ?? '',
-      resonanceLevel: d.resonanceLevel ?? null,
-      resonanceText: d.resonanceText ?? null,
-      resonanceAt: d.resonanceAt ?? null,
-      q_occupation: d.chapter1.occupation ?? '',
-      q_surfaceTrait: d.chapter1.surfaceTrait ?? '',
-      q_innerDesire: d.chapter1.innerDesire ?? '',
-      q_boundaryText: d.chapter2.boundaryText ?? '',
-      q_relationPreference: d.chapter2.relationPreference ?? '',
-      q_awakeningMoment: d.chapter2.awakeningMoment ?? '',
-      q_secretWords: d.chapter3.secretWords ?? '',
-      q_secretRule: d.chapter3.secretRule ?? '',
-      telemetry: d.telemetry,
+      bankIds: row.bank_ids ?? '',
+      resonanceLevel: (row.resonance_level as AdminDossier['resonanceLevel']) ?? null,
+      resonanceText: decrypted.resonance_text || null,
+      resonanceAt: row.resonance_at ?? null,
+      q_occupation: row.occupation || '',
+      q_surfaceTrait: decrypted.surface_trait || '',
+      q_innerDesire: decrypted.inner_desire || '',
+      q_boundaryText: decrypted.boundary_text || '',
+      q_relationPreference: decrypted.relation_preference || '',
+      q_awakeningMoment: decrypted.awakening_moment || '',
+      q_secretWords: decrypted.secret_words || '',
+      q_secretRule: decrypted.secret_rule || '',
+      telemetry: null as any,
       ...(includeFullPayload
-        ? { diagnosticResult: d.diagnosticResult, quizPayload: d.quizPayload }
+        ? {
+            diagnosticResult: diag as unknown as LlmAnalysisJson,
+            quizPayload: quiz as unknown as AdminDossier['quizPayload'],
+          }
         : {}),
     };
   }

@@ -39,15 +39,26 @@ export class TaskRepo {
     const rows = this.db
       .prepare('SELECT * FROM user_tasks WHERE user_id = ? ORDER BY accepted_at DESC')
       .all(userId) as UserTaskRow[];
-    return rows.map((row) => ({
-      ...row,
-      text_content: row.text_content === null
-        ? null
-        : decryptField(row.text_content, `${row.id}:text_content`),
-      attachments_json: row.attachments_json === null
-        ? null
-        : decryptField(row.attachments_json, `${row.id}:attachments_json`),
-    }));
+    return rows.map((row) => {
+      let text_content: string | null = null;
+      let attachments_json: string | null = null;
+      try {
+        text_content = row.text_content === null
+          ? null
+          : decryptField(row.text_content, `${row.id}:text_content`);
+        attachments_json = row.attachments_json === null
+          ? null
+          : decryptField(row.attachments_json, `${row.id}:attachments_json`);
+      } catch {
+        text_content = row.text_content ? '[密文保护(未配置FIELD_ENC_KEY)]' : null;
+        attachments_json = null;
+      }
+      return {
+        ...row,
+        text_content,
+        attachments_json,
+      };
+    });
   }
 
   async getUserActiveTask(userId: string, taskId: string): Promise<UserTaskRow | null> {
@@ -233,12 +244,19 @@ export class TaskRepo {
     }
 
     const decryptedItems: AdminTaskSummary[] = rows.map((row) => {
-      const textContent = row.text_content === null
-        ? null
-        : decryptField(row.text_content, `${row.id}:text_content`);
-      const attachmentsJson = row.attachments_json === null
-        ? null
-        : decryptField(row.attachments_json, `${row.id}:attachments_json`);
+      let textContent: string | null = null;
+      let attachmentsJson: string | null = null;
+      try {
+        textContent = row.text_content === null
+          ? null
+          : decryptField(row.text_content, `${row.id}:text_content`);
+        attachmentsJson = row.attachments_json === null
+          ? null
+          : decryptField(row.attachments_json, `${row.id}:attachments_json`);
+      } catch {
+        textContent = row.text_content ? '[密文保护(未配置FIELD_ENC_KEY)]' : null;
+        attachmentsJson = null;
+      }
 
       let title = '未知任务';
       let description = '';
