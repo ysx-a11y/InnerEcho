@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z, ZodError } from 'zod';
@@ -42,26 +43,27 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
     return;
   }
   const expected = config.adminToken;
-  if (token.length !== expected.length || !timingSafeEqual(token, expected)) {
+  if (!safeCompareTokens(token, expected)) {
     res.status(403).json({ success: false, message: 'invalid admin token' });
     return;
   }
   next();
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
+function safeCompareTokens(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
 }
 
 /** 口令校验探针：仅验证 x-admin-token 是否有效，供管理端登录页使用。 */
 adminRouter.post('/verify', adminLoginLimiter, requireAdmin, (_req, res) => {
   res.json({ success: true, message: 'admin token valid' });
 });
+
+// 全局强制兜底拦截：所有后续 /api/admin/* 业务路由均必须具备有效管理员口令（Fail-Closed 防御深度）
+adminRouter.use(requireAdmin);
 
 // 动态数据字典与有限状态机
 adminRouter.use('/dict', adminActionLimiter, requireAdmin, adminDictRouter);

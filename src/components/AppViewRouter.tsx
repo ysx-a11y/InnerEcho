@@ -42,6 +42,7 @@ interface AppViewRouterProps {
   completedBankIds: string[];
   completedCounts: Record<string, number>;
   completionStatus: 'syncing' | 'ready' | 'stale' | 'error';
+  sealedPersonaCount?: number;
   reportLoading: boolean;
   diagnosticResult: FullDossierResult | null;
   submissionSaved: boolean;
@@ -94,6 +95,7 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
   completedBankIds,
   completedCounts,
   completionStatus,
+  sealedPersonaCount = 0,
   reportLoading,
   diagnosticResult,
   submissionSaved,
@@ -162,6 +164,7 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
         completedBankIds={completedBankIds}
         user={user}
         basicInfo={dossierData.chapter1}
+        sealedPersonaCount={sealedPersonaCount}
         onLoginSuccess={onLoginSuccess}
         onRestoreDossier={onRestoreDossier}
         onContinue={onContinue}
@@ -290,6 +293,7 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
         onSessionExpired={onSessionExpired}
         onViewDossier={onOpenDossier}
         onLoginClick={onLoginClick}
+        onStartQuiz={onStart}
       />
     )}
 

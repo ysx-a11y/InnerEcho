@@ -27,12 +27,12 @@ export interface JwtPayload {
 }
 
 export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresInSeconds });
+  return jwt.sign(payload, config.jwtSecret, { algorithm: 'HS256', expiresIn: config.jwtExpiresInSeconds });
 }
 
 export function verifyToken(token: string): JwtPayload | null {
   try {
-    return jwt.verify(token, config.jwtSecret) as JwtPayload;
+    return jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as JwtPayload;
   } catch {
     return null;
   }

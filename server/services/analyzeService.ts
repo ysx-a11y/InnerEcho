@@ -7,6 +7,7 @@ import { evaluateInputCredibility, generateFallbackAnalysis } from '../utils/cre
 import { callLlm } from '../utils/llm.js';
 import { detectDegenerateAnalysis } from '../utils/llmDegenerate.js';
 import { sanitizePayloadForLog } from '../utils/security.js';
+import { sanitizeAnalysisForUser } from './dossierPayload.js';
 import type {
   AnalyzeDossierResponse,
   LlmProviderConfig,
@@ -77,11 +78,10 @@ export async function analyzeDossier(
     const saved = await saveDossierResult(userId, deviceId, dossierData, fallback, 'saveDossier-fallback');
     return {
       success: true,
-      data: fallback,
+      data: sanitizeAnalysisForUser(fallback) as LlmAnalysisJson,
       saved: true,
       dossierId: saved.id,
       isFallback: true,
-      credibilityLevel: credibility.level,
     };
   }
 
@@ -117,7 +117,7 @@ export async function analyzeDossier(
     const saved = await saveDossierResult(userId, deviceId, dossierData, fallback, 'saveDossier-llm-failed');
     return {
       success: true,
-      data: fallback,
+      data: sanitizeAnalysisForUser(fallback) as LlmAnalysisJson,
       saved: true,
       dossierId: saved.id,
       isFallback: true,
@@ -140,7 +140,7 @@ export async function analyzeDossier(
       : undefined,
   };
   const saved = await saveDossierResult(userId, deviceId, dossierDataToSave, finalAnalysis, 'saveDossier-success');
-  return { success: true, data: finalAnalysis, saved: true, dossierId: saved.id };
+  return { success: true, data: sanitizeAnalysisForUser(finalAnalysis) as LlmAnalysisJson, saved: true, dossierId: saved.id };
 }
 
 /**

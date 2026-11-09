@@ -2,11 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   User, Briefcase, Heart, Sparkles, Edit3, ChevronLeft, ChevronRight,
   KeyRound, LogOut, Trash2, Mail, Image as ImageIcon, ChevronRight as Chevron,
-  FileText, Clock, Calendar, Shield, Loader2, LogIn,
+  FileText, Clock, Calendar, Shield, Loader2, LogIn, Layers,
 } from 'lucide-react';
 import { ChapterOneData } from '../data/chapterStructure';
 import { apiGet } from '../utils/api';
 import type { DossierSummaryContract } from '../../shared/apiContracts';
+import { PersonalCardDeck } from './personal/PersonalCardDeck';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'refreshing' | 'error';
 
@@ -20,6 +21,7 @@ interface PersonalViewProps {
   onViewDossier?: (dossier: DossierSummaryContract) => void;
   onSessionExpired: () => void;
   onLoginClick?: () => void;
+  onStartQuiz?: () => void;
 }
 
 interface UserStatsPayload {
@@ -53,6 +55,7 @@ export const PersonalView: React.FC<PersonalViewProps> = ({
   onViewDossier,
   onSessionExpired,
   onLoginClick,
+  onStartQuiz,
 }) => {
   const [photoIndex, setPhotoIndex] = React.useState(0);
   const photos = data.avatarUrls ?? (data.avatarUrl ? [data.avatarUrl] : []);
@@ -64,6 +67,7 @@ export const PersonalView: React.FC<PersonalViewProps> = ({
   const [dossiers, setDossiers] = useState<DossierSummaryContract[]>([]);
   const [dossiersStatus, setDossiersStatus] = useState<LoadStatus>('idle');
   const [dossiersError, setDossiersError] = useState<string | null>(null);
+  const [dossierViewMode, setDossierViewMode] = useState<'deck' | 'list'>('list');
 
   const statsAbortControllerRef = React.useRef<AbortController | null>(null);
   const dossiersAbortControllerRef = React.useRef<AbortController | null>(null);
@@ -371,10 +375,101 @@ export const PersonalView: React.FC<PersonalViewProps> = ({
         )}
       </SectionCard>
 
-      {/* ============ 历史自白卷宗 ============ */}
+      {/* ============ 历史自白卷宗与人格卡槽 (双管制) ============ */}
       {user && (
         <>
-          <SectionLabel>已生成的自白卷宗</SectionLabel>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '0.65rem',
+              padding: '0 0.2rem',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff' }}>
+                已封印人格卡
+              </span>
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '0.15rem 0.55rem',
+                  borderRadius: 12,
+                  background: 'rgba(255, 51, 119, 0.16)',
+                  border: '1px solid rgba(255, 112, 166, 0.38)',
+                  color: '#ff70a6',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                {dossiers.length} 张
+              </span>
+            </div>
+
+            {/* 双管制切换胶囊按键 */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: 20,
+                padding: 2,
+                boxSizing: 'border-box',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setDossierViewMode('deck')}
+                style={{
+                  background: dossierViewMode === 'deck' ? 'linear-gradient(135deg, #ff3377, #ff70a6)' : 'transparent',
+                  color: dossierViewMode === 'deck' ? '#fff' : 'var(--text-muted)',
+                  border: 'none',
+                  borderRadius: 16,
+                  padding: '0.22rem 0.65rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  transition: 'all 0.2s ease',
+                  boxShadow: dossierViewMode === 'deck' ? '0 0 10px rgba(255, 51, 119, 0.4)' : 'none',
+                }}
+              >
+                <Layers size={12} />
+                <span>卡牌槽</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDossierViewMode('list')}
+                style={{
+                  background: dossierViewMode === 'list' ? 'linear-gradient(135deg, #ff3377, #ff70a6)' : 'transparent',
+                  color: dossierViewMode === 'list' ? '#fff' : 'var(--text-muted)',
+                  border: 'none',
+                  borderRadius: 16,
+                  padding: '0.22rem 0.65rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  transition: 'all 0.2s ease',
+                  boxShadow: dossierViewMode === 'list' ? '0 0 10px rgba(255, 51, 119, 0.4)' : 'none',
+                }}
+              >
+                <FileText size={12} />
+                <span>清单</span>
+              </button>
+            </div>
+          </div>
+
           {dossiersStatus === 'error' && dossiers.length > 0 && (
             <div style={{
               padding: '0.5rem 0.85rem',
@@ -405,13 +500,16 @@ export const PersonalView: React.FC<PersonalViewProps> = ({
               </button>
             </div>
           )}
-          <SectionCard>
-            {dossiersStatus === 'loading' && dossiers.length === 0 ? (
+
+          {dossiersStatus === 'loading' && dossiers.length === 0 ? (
+            <SectionCard>
               <div style={{ padding: '0.65rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center' }}>
                 <Loader2 size={16} className="animate-spin" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '0.4rem', color: '#ff70a6' }} />
                 <span>加载中...</span>
               </div>
-            ) : dossiersStatus === 'error' && dossiers.length === 0 ? (
+            </SectionCard>
+          ) : dossiersStatus === 'error' && dossiers.length === 0 ? (
+            <SectionCard>
               <div style={{ padding: '1rem 0.5rem', textAlign: 'center' }}>
                 <div style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: '0.6rem' }}>
                   {dossiersError || '加载历史自白卷宗失败'}
@@ -424,29 +522,39 @@ export const PersonalView: React.FC<PersonalViewProps> = ({
                   点击重试
                 </button>
               </div>
-            ) : dossiers.length === 0 ? (
-              <div style={{ padding: '0.85rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', fontStyle: 'italic' }}>
-                暂无历史自白卷宗记录
-              </div>
-            ) : (
-              dossiers.map((dos) => {
-                const title = dos.chapter1?.nickname
-                  ? `${dos.chapter1.nickname}的自白卷宗`
-                  : '自白卷宗';
-                const date = formatTime(dos.createdAt);
-                return (
-                  <SettingsRow
-                    key={dos.id}
-                    icon={<FileText size={16} color="#ff70a6" />}
-                    iconBg="rgba(255, 112, 166, 0.12)"
-                    label={title}
-                    subtitle={`生成于 ${date}`}
-                    onClick={() => onViewDossier?.(dos)}
-                  />
-                );
-              })
-            )}
-          </SectionCard>
+            </SectionCard>
+          ) : dossierViewMode === 'deck' ? (
+            <PersonalCardDeck
+              dossiers={dossiers}
+              onViewDossier={onViewDossier}
+              onStartQuiz={onStartQuiz}
+            />
+          ) : (
+            <SectionCard>
+              {dossiers.length === 0 ? (
+                <div style={{ padding: '0.85rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', fontStyle: 'italic' }}>
+                  暂无历史自白卷宗记录
+                </div>
+              ) : (
+                dossiers.map((dos) => {
+                  const title = dos.chapter1?.nickname
+                    ? `${dos.chapter1.nickname}的自白卷宗`
+                    : '自白卷宗';
+                  const date = formatTime(dos.createdAt);
+                  return (
+                    <SettingsRow
+                      key={dos.id}
+                      icon={<FileText size={16} color="#ff70a6" />}
+                      iconBg="rgba(255, 112, 166, 0.12)"
+                      label={title}
+                      subtitle={`生成于 ${date}`}
+                      onClick={() => onViewDossier?.(dos)}
+                    />
+                  );
+                })
+              )}
+            </SectionCard>
+          )}
         </>
       )}
 

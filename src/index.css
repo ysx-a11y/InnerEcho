@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --bg-primary: #120716;
   --bg-secondary: #1c0a24;
@@ -559,73 +561,53 @@ body {
   transform: translateY(-1px);
 }
 
-.choice-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 105, 180, 0.12);
-  border-radius: 14px;
-  padding: 1.1rem 1.4rem;
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
+/* Active Spotlight, Likert Ripple & Subconscious Flow Cursor */
+@keyframes quizSpotlightPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 112, 166, 0.2), inset 0 0 12px rgba(255, 51, 119, 0.04);
+    border-color: rgba(255, 112, 166, 0.65);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(255, 112, 166, 0.38), inset 0 0 20px rgba(255, 51, 119, 0.08);
+    border-color: rgba(255, 112, 166, 0.9);
+  }
 }
 
-.choice-card:hover {
-  background: rgba(255, 51, 119, 0.1);
-  border-color: rgba(255, 112, 166, 0.5);
-  transform: translateX(4px);
-  box-shadow: 0 4px 22px rgba(255, 51, 119, 0.2);
+.quiz-card-spotlight {
+  border: 1px solid rgba(255, 112, 166, 0.75) !important;
+  background: rgba(255, 51, 119, 0.045) !important;
+  animation: quizSpotlightPulse 3.2s infinite ease-in-out;
 }
 
-.choice-card.selected {
-  background: linear-gradient(90deg, rgba(170, 38, 218, 0.25) 0%, rgba(255, 51, 119, 0.3) 100%);
-  border-color: #ff3377;
-  box-shadow: 0 0 20px rgba(255, 51, 119, 0.35);
+@keyframes likertRipple {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 112, 166, 0.65), 0 0 14px rgba(255, 112, 166, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(255, 112, 166, 0), 0 0 20px rgba(255, 112, 166, 0.85);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 112, 166, 0), 0 0 14px rgba(255, 112, 166, 0.65);
+  }
 }
 
-/* Badge styling */
-.badge {
-  background: rgba(255, 51, 119, 0.12);
-  border: 1px solid rgba(255, 112, 166, 0.3);
-  padding: 0.3rem 0.85rem;
-  border-radius: 20px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #ff70a6;
-  white-space: nowrap;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
+.likert-node-selected {
+  animation: likertRipple 2.2s infinite ease-out;
 }
 
-/* Premium Icon Aesthetic Enhancements */
-.icon-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  flex-shrink: 0;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
+@keyframes flowCursorPulse {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+    box-shadow: 0 0 8px #ff70a6, 0 0 16px rgba(225, 0, 255, 0.85);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.3);
+    box-shadow: 0 0 14px #ff70a6, 0 0 24px rgba(225, 0, 255, 1);
+  }
 }
 
-.icon-badge:hover {
-  background: rgba(255, 51, 119, 0.12);
-  border-color: rgba(255, 112, 166, 0.4);
-  transform: translateY(-1px);
+.flow-cursor-sparkle {
+  animation: flowCursorPulse 2s infinite ease-in-out;
 }
 
 /* Neon Glow Filters */

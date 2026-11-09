@@ -12,6 +12,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      '@': resolve(import.meta.dirname, 'src'),
       '@admin': resolve(import.meta.dirname, 'src/admin'),
     },
   },

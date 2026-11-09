@@ -72,7 +72,8 @@ export interface FullDossierData {
 /** Output JSON schema returned by LLM (unified across static & dynamic paths). */
 export interface LlmAnalysisJson {
   credibilityScore: number;
-  credibilityLevel: 'high' | 'medium' | 'low';
+  credibilityLevel?: 'high' | 'medium' | 'low';
+  credibilityReasons?: string[];
   archetypeTitle: string;
   archetypeSubtitle?: string;
   disparityScore?: number;
@@ -184,7 +185,8 @@ export interface AdminDossier {
   hasBoyfriend: string;
   depthRating: 'light' | 'medium' | 'deep';
   credibilityScore: number;
-  credibilityLevel: 'high' | 'medium' | 'low';
+  credibilityLevel?: 'high' | 'medium' | 'low';
+  credibilityReasons?: string[];
   archetypeTitle: string;
   archetypeSubtitle?: string;
   dominanceIndex: number;

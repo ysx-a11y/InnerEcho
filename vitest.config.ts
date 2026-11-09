@@ -9,6 +9,7 @@ import { QuietReporter } from './scripts/vitest-quiet-reporter.mjs';
 export default defineConfig({
   resolve: {
     alias: {
+      '@': resolve(import.meta.dirname, 'src'),
       '@admin': resolve(import.meta.dirname, 'src/admin'),
     },
   },

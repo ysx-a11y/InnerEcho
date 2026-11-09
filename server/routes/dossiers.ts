@@ -6,7 +6,7 @@ import { asyncHandler } from '../http/asyncHandler.js';
 import { config } from '../config.js';
 import { getClientIp } from '../utils/clientIp.js';
 import { reanalyzeDossierData } from '../services/analyzeService.js';
-import { dossierRowToFullDossierData } from '../services/dossierPayload.js';
+import { dossierRowToFullDossierData, sanitizeAnalysisForUser } from '../services/dossierPayload.js';
 import type { ReanalyzeDossierResponse } from '../../shared/apiContracts.js';
 import type { LlmAnalysisJson } from '../types.js';
 
@@ -59,6 +59,9 @@ dossiersRouter.get('/dossiers/:id', requireAuth, asyncHandler(async (req: Authed
   const dossier = await db.getDossierByIdForUser(id, req.userId!);
   if (!dossier) {
     return res.status(404).json({ success: false, message: '卷宗不存在' });
+  }
+  if (dossier.diagnosticResult && typeof dossier.diagnosticResult === 'object') {
+    dossier.diagnosticResult = sanitizeAnalysisForUser(dossier.diagnosticResult as Record<string, unknown>) as LlmAnalysisJson;
   }
   return res.json({ success: true, dossier });
 }));
@@ -132,6 +135,9 @@ dossiersRouter.post('/dossiers/:id/reanalyze', reanalyzeLimiter, asyncHandler(as
     return res.status(404).json({ success: false, message: '卷宗未找到或无权操作' });
   }
 
-  const ok: ReanalyzeDossierResponse<LlmAnalysisJson> = { success: true, data: result.data };
+  const ok: ReanalyzeDossierResponse<LlmAnalysisJson> = {
+    success: true,
+    data: sanitizeAnalysisForUser(result.data as Record<string, unknown>) as LlmAnalysisJson,
+  };
   return res.json(ok);
 }));

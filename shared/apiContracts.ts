@@ -163,7 +163,6 @@ export interface AnalyzeDossierResponse<TResult = unknown> {
   isFallback?: boolean;
   /** LLM 调用失败或返回明显异常结果（如四维全 0），前端可据此提供一次手动重试。 */
   llmFailed?: boolean;
-  credibilityLevel?: 'high' | 'medium' | 'low';
   error?: string;
   message?: string;
   /** 仅当入参校验失败（HTTP 400）时返回，用于把字段级原因透传给用户。 */

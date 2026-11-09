@@ -25,3 +25,23 @@ export function dossierRowToFullDossierData(row: DossierRow): FullDossierData {
     totalDurationSeconds: Number(quiz.totalDurationSeconds ?? 0),
   };
 }
+
+/**
+ * 剥离内部可信度与防刷判定字段（credibilityScore、credibilityLevel、credibilityReasons）。
+ * 
+ * 仅用于向普通用户/来访者输出诊断海报与卷宗数据时过滤；
+ * 数据库内部持久化与管理端审计接口仍保留完整字段。
+ */
+export function sanitizeAnalysisForUser<T extends Record<string, unknown>>(
+  analysis: T
+): Omit<T, 'credibilityScore' | 'credibilityLevel' | 'credibilityReasons'> {
+  if (!analysis || typeof analysis !== 'object') return analysis;
+  const {
+    credibilityScore: _score,
+    credibilityLevel: _level,
+    credibilityReasons: _reasons,
+    ...clean
+  } = analysis;
+  return clean as Omit<T, 'credibilityScore' | 'credibilityLevel' | 'credibilityReasons'>;
+}
+

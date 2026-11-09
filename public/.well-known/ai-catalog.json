@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ards-project/ard-spec/main/spec/schemas/ai-catalog.schema.json",
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "镜界自白 (InnerEcho)",
+    "identifier": "https://secret.neural-node.xyz",
+    "documentationUrl": "https://secret.neural-node.xyz/"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:innerecho:personality-quiz",
+      "displayName": "反差人格与潜意识自白卷宗测试",
+      "type": "text/html",
+      "url": "https://secret.neural-node.xyz/",
+      "description": "基于多维心理学模型的反差人格、支配臣服倾向与潜意识隐秘渴望深度测评与诊断卷宗生成工具。",
+      "representativeQueries": [
+        "反差人格测试",
+        "BDSM 倾向测试",
+        "潜意识自白",
+        "心理健康与人格测量"
+      ]
+    }
+  ]
+}

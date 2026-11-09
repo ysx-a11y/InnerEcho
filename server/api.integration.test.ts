@@ -289,6 +289,10 @@ describe('critical API flows', () => {
       .expect(200);
     expect(full.body.success).toBe(true);
     expect(full.body.dossier?.diagnosticResult).toBeTruthy();
+    expect(JSON.stringify(saved.body)).not.toContain('credibilityScore');
+    expect(JSON.stringify(saved.body)).not.toContain('credibilityLevel');
+    expect(JSON.stringify(full.body)).not.toContain('credibilityScore');
+    expect(JSON.stringify(full.body)).not.toContain('credibilityLevel');
   });
 
   it('persists and restores full basic info for a logged-in user', async () => {
@@ -923,6 +927,8 @@ describe('critical API flows', () => {
       .expect(200);
     expect(ok.body).toMatchObject({ success: true });
     expect(ok.body.data.archetypeTitle).toBe('重试成功');
+    expect(JSON.stringify(ok.body)).not.toContain('credibilityScore');
+    expect(JSON.stringify(ok.body)).not.toContain('credibilityLevel');
 
     const persisted = await db.getDossierRowById(saved.id);
     expect(persisted?.diagnosticResult?.archetypeTitle).toBe('重试成功');

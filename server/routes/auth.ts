@@ -8,6 +8,8 @@ import {
   hashPassword,
   verifyPassword,
   signToken,
+  verifyToken,
+  isTokenStillValid,
   COOKIE_NAME,
   COOKIE_OPTIONS,
   COOKIE_CLEAR_OPTIONS,
@@ -157,24 +159,49 @@ authRouter.post('/basic-info', requireAuth, async (req: AuthedRequest, res) => {
   }
 });
 
-authRouter.get('/me', requireAuth, async (req: AuthedRequest, res) => {
+async function handleGetMe(req: AuthedRequest, res: Response): Promise<void> {
   try {
     const userId = req.userId!;
     const user = await db.findUserById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: '用户不存在' });
+      res.status(404).json({ success: false, message: '用户不存在' });
+      return;
     }
     const latestDossier = await db.getLatestDossierSummaryByUserId(userId);
     const basicInfo = await db.getUserBasicInfo(userId);
-    return res.json({
+    res.json({
       success: true,
       user: { id: user.id, email: user.email, generation: user.generation },
       latestDossier,
       basicInfo,
     });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: '服务器内部错误' });
+  } catch {
+    res.status(500).json({ success: false, message: '服务器内部错误' });
   }
+}
+
+authRouter.get('/me', async (req: AuthedRequest, res: Response) => {
+  const isProbe = req.query.probe === '1' || req.query.probe === 'true';
+  if (!isProbe) {
+    return requireAuth(req, res, () => handleGetMe(req, res));
+  }
+  const token = req.cookies?.[COOKIE_NAME] as string | undefined;
+  if (!token) {
+    return res.json({ success: false, authenticated: false, user: null });
+  }
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    res.clearCookie(COOKIE_NAME, COOKIE_CLEAR_OPTIONS);
+    return res.json({ success: false, authenticated: false, user: null });
+  }
+  const user = await db.findUserById(decoded.userId);
+  if (!user || !isTokenStillValid(decoded, user.tokenInvalidatedAt)) {
+    res.clearCookie(COOKIE_NAME, COOKIE_CLEAR_OPTIONS);
+    return res.json({ success: false, authenticated: false, user: null });
+  }
+  req.userId = decoded.userId;
+  req.userEmail = decoded.email;
+  return handleGetMe(req, res);
 });
 
 /** 修改密码：验证旧密码 → 写入新密码哈希 → 刷新 tokenInvalidatedAt 使其他设备 token 失效 → 重发 cookie。 */

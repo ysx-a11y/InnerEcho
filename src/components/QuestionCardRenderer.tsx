@@ -148,8 +148,9 @@ export const QuestionCardRenderer: React.FC<QuestionCardRendererProps> = ({
                           cursor: 'pointer',
                         }}
                       >
-                        {/* 26x26 节点 (完美居中挂在贯穿线正中央) */}
+                        {/* 26x26 节点 (完美居中挂在贯穿线正中央，选中态具有极光涟漪光环) */}
                         <div
+                          className={isSelected ? 'likert-node-selected' : ''}
                           style={{
                             width: isSelected ? 22 : 14,
                             height: isSelected ? 22 : 14,
@@ -157,15 +158,15 @@ export const QuestionCardRenderer: React.FC<QuestionCardRendererProps> = ({
                             background: isSelected
                               ? 'linear-gradient(135deg, #ff3377 0%, #ff70a6 100%)'
                               : 'rgba(255, 255, 255, 0.05)',
-                            border: isSelected ? '1.5px solid #ffffff' : 'none',
+                            border: isSelected ? '1.5px solid #ffffff' : '1px solid rgba(255, 255, 255, 0.12)',
                             boxShadow: isSelected
-                              ? '0 0 16px rgba(255, 112, 166, 0.65)'
+                              ? '0 0 18px rgba(255, 112, 166, 0.75)'
                               : 'none',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             color: '#fff',
-                            transition: 'all 0.5s cubic-bezier(0.25, 1, 0.5, 1)',
+                            transition: 'all 0.4s cubic-bezier(0.25, 1, 0.5, 1)',
                             flexShrink: 0,
                           }}
                         >

@@ -79,7 +79,8 @@ describe('analyzeDossier', () => {
     expect(result.success).toBe(true);
     expect(result.saved).toBe(true);
     expect(result.dossierId).toBe('unused');
-    expect(result.data.credibilityLevel).toBe('high');
+    expect(result.data.credibilityLevel).toBeUndefined();
+    expect(result.data.credibilityScore).toBeUndefined();
     expect(saveSpy).toHaveBeenCalledOnce();
     expect(saveSpy).toHaveBeenCalledWith(
       null,
@@ -193,8 +194,11 @@ describe('analyzeDossier', () => {
 
     expect(llmSpy).not.toHaveBeenCalled();
     expect(saveSpy).toHaveBeenCalledOnce();
-    expect(result.data.credibilityLevel).toBe('low');
-    expect(result.data.credibilityScore).toBe(40);
+    const savedAnalysis = saveSpy.mock.calls[0]?.[3] as LlmAnalysisJson;
+    expect(savedAnalysis.credibilityLevel).toBe('low');
+    expect(savedAnalysis.credibilityScore).toBe(40);
+    expect(result.data.credibilityLevel).toBeUndefined();
+    expect(result.data.credibilityScore).toBeUndefined();
   });
 
   it('LLM 失败时落库兜底并标记 llmFailed，供前端手动重试', async () => {
@@ -240,5 +244,28 @@ describe('analyzeDossier', () => {
     expect(saveSpy).toHaveBeenCalledOnce();
     expect(result.isFallback).toBe(true);
     expect(result.llmFailed).toBeFalsy();
+  });
+
+  it('向普通用户返回的分析结果绝对不包含内部可信度字段', async () => {
+    vi.spyOn(llmModule, 'callLlm').mockResolvedValue({
+      ok: true,
+      data: fakeLlmResponse,
+    });
+    vi.spyOn(db, 'saveDossier').mockResolvedValue({
+      id: 'dossier-privacy-test',
+      createdAt: new Date().toISOString(),
+    });
+
+    const result = await analyzeDossier({
+      dossierData: credibleDossier,
+      userId: 'user-test',
+      deviceId: 'device-test',
+      ipAddress: '127.0.0.1',
+    });
+
+    const rawJson = JSON.stringify(result);
+    expect(rawJson).not.toContain('credibilityScore');
+    expect(rawJson).not.toContain('credibilityLevel');
+    expect(rawJson).not.toContain('credibilityReasons');
   });
 });

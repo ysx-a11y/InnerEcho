@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "@context": "https://agenticresourcediscovery.org/context/v1",
+      "identifier": "urn:air:neural-node.xyz:innerecho:personality-quiz",
+      "displayName": "反差人格与潜意识自白卷宗测试",
+      "type": "text/html",
+      "url": "https://secret.neural-node.xyz/",
+      "representativeQueries": [
+        "反差人格测试",
+        "BDSM 倾向测试",
+        "潜意识自白",
+        "心理健康与人格测量"
+      ]
+    }
+  ]
+}
+
