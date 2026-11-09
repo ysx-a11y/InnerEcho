@@ -78,6 +78,17 @@ export interface SecurityEventListResult {
   chainValid: boolean;
 }
 
+/** 链边界快照：供重新锚定等运维操作在前后留痕，不包含事件正文。 */
+export interface SecurityEventChainSnapshot {
+  eventCount: number;
+  firstSequence: number | null;
+  lastSequence: number | null;
+  firstPreviousHash: string;
+  lastEventHash: string;
+  boundaryStateHash: string | null;
+  chainValid: boolean;
+}
+
 interface SecurityEventChainState {
   id: 1;
   first_sequence: number | null;
@@ -369,6 +380,21 @@ export class SecurityRepo {
       && state.last_sequence === rows[rows.length - 1].sequence
       && state.last_event_hash === rows[rows.length - 1].event_hash
       && state.event_count === rows.length;
+  }
+
+  getSecurityEventChainSnapshot(): SecurityEventChainSnapshot {
+    const boundary = this.summarizeSecurityEventChainBoundary();
+    const state = this.db.prepare('SELECT * FROM security_event_chain_state WHERE id = 1')
+      .get() as SecurityEventChainState | undefined;
+    return {
+      eventCount: boundary.event_count,
+      firstSequence: boundary.first_sequence,
+      lastSequence: boundary.last_sequence,
+      firstPreviousHash: boundary.first_previous_hash,
+      lastEventHash: boundary.last_event_hash,
+      boundaryStateHash: state?.state_hash ?? null,
+      chainValid: this.verifySecurityEventChain(),
+    };
   }
 
   clearSecurityEvents(): void {

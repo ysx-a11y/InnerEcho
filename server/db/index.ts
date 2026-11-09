@@ -47,6 +47,7 @@ import {
   type SecurityEventRow,
   type SecurityEventListParams,
   type SecurityEventListResult,
+  type SecurityEventChainSnapshot,
 } from './repositories/securityRepo.js';
 import {
   AbuseRepo,
@@ -60,6 +61,7 @@ export type {
   SecurityEventRow,
   SecurityEventListParams,
   SecurityEventListResult,
+  SecurityEventChainSnapshot,
 } from './repositories/securityRepo.js';
 export type { ConsumeAbuseQuotaInput, AbuseQuotaResult } from './repositories/abuseRepo.js';
 
@@ -164,6 +166,10 @@ export class DatabaseFacade {
 
   async verifySecurityEventChain(): Promise<boolean> {
     return this.security.verifySecurityEventChain();
+  }
+
+  async getSecurityEventChainSnapshot(): Promise<SecurityEventChainSnapshot> {
+    return this.security.getSecurityEventChainSnapshot();
   }
 
   async reanchorSecurityEventChain(): Promise<boolean> {

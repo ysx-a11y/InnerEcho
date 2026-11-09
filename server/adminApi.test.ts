@@ -167,6 +167,51 @@ describe('admin API (real DB)', () => {
     }
   });
 
+  it('reanchors the security event chain and records a traceable audit trail', async () => {
+    await db.clearSecurityEvents();
+    await db.recordSecurityEvent({
+      eventType: 'admin_sensitive_read',
+      severity: 'info',
+      requestId: 'pre-reanchor-event',
+      ipAddress: '198.51.100.130',
+      userAgent: 'reanchor-audit-test',
+      method: 'GET',
+      route: '/users',
+      statusCode: 200,
+      targetType: 'users',
+      metadata: { count: 1 },
+    });
+    const before = await db.getSecurityEventChainSnapshot();
+    expect(before.chainValid).toBe(true);
+
+    const response = await request(app)
+      .post('/api/admin/security-events/reanchor')
+      .set('x-admin-token', ADMIN_TOKEN)
+      .expect(200);
+    expect(response.body).toMatchObject({ success: true, chainValid: true });
+    expect(response.body.audit.before.lastEventHash).toBe(before.lastEventHash);
+    expect(response.body.audit.after.eventCount).toBeGreaterThanOrEqual(before.eventCount);
+    expect(typeof response.body.audit.requestId).toBe('string');
+    expect(response.body.audit.durationMs).toBeGreaterThanOrEqual(0);
+    expect(
+      response.body.audit.auditFile === null || typeof response.body.audit.auditFile === 'string'
+    ).toBe(true);
+
+    const listed = await db.listSecurityEvents({ eventType: 'security_chain_reanchor', limit: 5, offset: 0 });
+    expect(listed.total).toBe(1);
+    expect(listed.chainValid).toBe(true);
+    const metadata = JSON.parse(listed.items[0].metadata_json);
+    expect(metadata).toMatchObject({
+      result: 'success',
+      beforeEventCount: before.eventCount,
+      beforeLastEventHash: before.lastEventHash,
+      beforeChainValid: true,
+      afterChainValid: true,
+    });
+
+    await request(app).post('/api/admin/security-events/reanchor').expect(401);
+  });
+
   it('returns a real overview with seeded dossier', async () => {
     const saved = await db.saveDossier(null, 'dev_admin_test', buildDossier('概览测试员'), buildDiagnostic());
     expect(saved.id).toBeTruthy();

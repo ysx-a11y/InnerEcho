@@ -98,6 +98,34 @@ describe('SecurityRepo security events', () => {
     expect(await facade.verifySecurityEventChain()).toBe(false);
   });
 
+  it('snapshots the chain boundary and reflects tampering and reanchor states', async () => {
+    const { raw, facade } = createFacade();
+    await facade.recordSecurityEvent(eventInput(1));
+    await facade.recordSecurityEvent(eventInput(2));
+
+    const healthy = await facade.getSecurityEventChainSnapshot();
+    expect(healthy).toMatchObject({
+      eventCount: 2,
+      firstSequence: 1,
+      lastSequence: 2,
+      chainValid: true,
+    });
+    expect(healthy.lastEventHash).toHaveLength(64);
+    expect(healthy.boundaryStateHash).not.toBeNull();
+
+    raw.prepare("UPDATE security_events SET route = '/tampered' WHERE sequence = 2").run();
+    const tampered = await facade.getSecurityEventChainSnapshot();
+    expect(tampered.chainValid).toBe(false);
+    expect(tampered.eventCount).toBe(2);
+
+    // 重新锚定会按当前行内容重算整条链：修复校验的同时留下新的链边界。
+    expect(await facade.reanchorSecurityEventChain()).toBe(true);
+    const after = await facade.getSecurityEventChainSnapshot();
+    expect(after.chainValid).toBe(true);
+    expect(after.lastEventHash).not.toBe(healthy.lastEventHash);
+    expect(after.boundaryStateHash).not.toBe(healthy.boundaryStateHash);
+  });
+
   it('serializes rapid appends and reports SQLite write failures', async () => {
     const { raw, facade } = createFacade();
     await Promise.all(Array.from({ length: 25 }, (_, index) => (

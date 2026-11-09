@@ -74,3 +74,6 @@ scripts/sync-innerecho-backup.ps1
 # 本地 AI Agent Skills（不入 Git）
 .agents/skills/
 skills-lock.json
+
+# 运维审计留痕（reanchor 等，本地/服务端运行时生成）
+server/data/audit/

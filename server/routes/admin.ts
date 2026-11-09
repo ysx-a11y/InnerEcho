@@ -1,10 +1,12 @@
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z, ZodError } from 'zod';
 import { config } from '../config.js';
 import { db } from '../db.js';
 import { getClientIp } from '../utils/clientIp.js';
+import { logger } from '../logger.js';
+import { appendSecurityReanchorAudit } from '../utils/auditTrail.js';
 import { createAbuseLimitMiddleware } from '../utils/abuseLimiter.js';
 import { adminSecurityAuditMiddleware } from '../utils/securityAudit.js';
 import { reanalyzeDossierData } from '../services/analyzeService.js';
@@ -495,12 +497,101 @@ adminRouter.get('/security-events', adminActionLimiter, requireAdmin, async (req
   }
 });
 
-/** 重新锚定安全事件链边界签名（在开发环境/密钥轮转后消除误报并重校验）。 */
-adminRouter.post('/security-events/reanchor', adminActionLimiter, requireAdmin, async (_req, res) => {
+/**
+ * 重新锚定安全事件链边界签名（运维操作，不可逆）。
+ * 不做二次确认，但完整留痕：操作前后的链边界快照会写入链内审计事件、
+ * append-only 审计文件（server/data/audit/security-reanchor.jsonl）与结构化日志，
+ * 事后可回溯是谁在何时、从哪个 IP、把哪条链从什么状态重锚定成了什么状态。
+ */
+adminRouter.post('/security-events/reanchor', adminActionLimiter, requireAdmin, async (req, res) => {
+  const startedAtMs = Date.now();
   try {
+    const before = await db.getSecurityEventChainSnapshot();
     const chainValid = await db.reanchorSecurityEventChain();
-    return res.json({ success: true, chainValid });
+    const reanchored = await db.getSecurityEventChainSnapshot();
+    const requestId = randomUUID();
+    const ipAddress = getClientIp(req);
+    const userAgent = String(req.headers['user-agent'] ?? '').slice(0, 300);
+    const durationMs = Math.max(0, Date.now() - startedAtMs);
+
+    let auditEventId: string | null = null;
+    try {
+      const auditEvent = await db.recordSecurityEvent({
+        eventType: 'security_chain_reanchor',
+        severity: chainValid ? 'warning' : 'critical',
+        requestId,
+        ipAddress,
+        userAgent,
+        method: 'POST',
+        route: '/security-events/reanchor',
+        statusCode: 200,
+        targetType: 'security_events',
+        metadata: {
+          result: chainValid ? 'success' : 'verification_failed',
+          beforeEventCount: before.eventCount,
+          beforeLastEventHash: before.lastEventHash,
+          beforeBoundaryStateHash: before.boundaryStateHash,
+          beforeChainValid: before.chainValid,
+          afterEventCount: reanchored.eventCount,
+          afterLastEventHash: reanchored.lastEventHash,
+          afterChainValid: reanchored.chainValid,
+          durationMs,
+        },
+      });
+      auditEventId = auditEvent.id;
+    } catch (auditError) {
+      logger.error(
+        { err: auditError instanceof Error ? auditError.message : String(auditError), requestId },
+        'security reanchor audit event write failed'
+      );
+    }
+
+    const finalSnapshot = await db.getSecurityEventChainSnapshot();
+    const auditFile = await appendSecurityReanchorAudit({
+      requestId,
+      ipAddress,
+      userAgent,
+      result: chainValid ? 'success' : 'verification_failed',
+      durationMs,
+      before,
+      after: reanchored,
+      auditEventId,
+      finalEventCount: finalSnapshot.eventCount,
+    });
+
+    logger.warn(
+      {
+        requestId,
+        ipAddress,
+        userAgent,
+        result: chainValid ? 'success' : 'verification_failed',
+        before,
+        after: reanchored,
+        auditEventId,
+        auditFile,
+        durationMs,
+      },
+      'security event chain reanchored'
+    );
+
+    return res.json({
+      success: true,
+      chainValid: finalSnapshot.chainValid,
+      audit: {
+        requestId,
+        auditEventId,
+        auditFile,
+        before,
+        after: reanchored,
+        final: finalSnapshot,
+        durationMs,
+      },
+    });
   } catch (err) {
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err) },
+      'security event chain reanchor failed'
+    );
     return res.status(500).json({ success: false, message: '重新锚定审计链失败' });
   }
 });
