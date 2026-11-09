@@ -171,6 +171,10 @@ function staticSetHeaders(response: express.Response, filePath: string): void {
     response.setHeader('Cache-Control', 'no-cache');
   } else if (filePath.endsWith('.txt')) {
     response.setHeader('Cache-Control', 'no-cache');
+  } else if (filePath.endsWith('.json') || filePath.endsWith('.webmanifest')) {
+    // 发现类 JSON（/.well-known/ai-catalog.json、ard.json、site.webmanifest 等）需要及时更新，
+    // 不能沿用静态资源的一年强缓存。
+    response.setHeader('Cache-Control', 'no-cache');
   } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
     response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   }

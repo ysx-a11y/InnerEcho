@@ -59,7 +59,8 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, onExit }) => {
     )
   );
 
-  const [username] = useState('匿名倾诉者');
+  // 长图/海报上的「代号」必须来自用户本人在第一章填写的昵称，不得硬编码。
+  const username = ((chapter1.nickname || '') as string).trim() || '匿名倾诉者';
   const [isExportingFull, setIsExportingFull] = useState(false);
   const [isExporting3DCard, setIsExporting3DCard] = useState(false);
   const [isExportingDualCard, setIsExportingDualCard] = useState(false);

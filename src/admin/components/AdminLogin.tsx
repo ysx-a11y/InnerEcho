@@ -71,7 +71,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
             <Command className="size-4" />
           </div>
-          <span>深层回响 InnerEcho · 生产管控平台</span>
+          <span>镜界自白 InnerEcho · 生产管控平台</span>
         </div>
 
         {/* 底部经典引言卡片 */}
@@ -81,7 +81,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
               “深层的欲望从不喧哗，它只在暗夜回响。管控真实的表里，是触碰灵魂最深处秩序的起点。”
             </p>
             <footer className="text-xs text-zinc-500 tracking-wider">
-              —— 《深层回响 · 系统管理控制台》
+              —— 《镜界自白 · 系统管理控制台》
             </footer>
           </blockquote>
         </div>
@@ -95,7 +95,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
             <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
               <ShieldCheck className="size-5" />
             </div>
-            <span className="font-bold text-base text-foreground">深层回响 InnerEcho</span>
+            <span className="font-bold text-base text-foreground">镜界自白 InnerEcho</span>
           </div>
 
           {/* 表单标题 */}

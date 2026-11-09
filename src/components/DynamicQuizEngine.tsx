@@ -72,13 +72,16 @@ export const DynamicQuizEngine: React.FC<DynamicQuizEngineProps> = ({
       (selectedOptionsMap[qId] || []).join(','),
       optionIds.join(',')
     );
+    // 重答旧题不算一次新作答：只有首次作答（此前未答）才自动滚动，
+    // 否则用户回头修改已答题目时会被拽离当前正在看的题。
+    const targetQ = allQuestions.find((qq) => qq.id === qId);
+    const wasAnswered = targetQ ? isQuestionAnswered(targetQ) : false;
     setSelectedOptionsMap((prev) => ({ ...prev, [qId]: optionIds }));
     questionTelemetry.recordOptionSelect(qId, optionIds);
     questionTelemetry.finishQuestion(qId);
 
-    // 智能自动平滑下滑：当单选题选中选项时，留 220ms 视觉确认微光后自动滑动定位
-    const targetQ = allQuestions.find((qq) => qq.id === qId);
-    if (targetQ?.type === 'single_choice' && optionIds.length > 0) {
+    // 智能自动平滑下滑：当单选题首次选中选项时，留 220ms 视觉确认微光后自动滑动定位
+    if (!wasAnswered && targetQ?.type === 'single_choice' && optionIds.length > 0) {
       if (scrollTimeoutRef.current) {
         window.clearTimeout(scrollTimeoutRef.current);
       }

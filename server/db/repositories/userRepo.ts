@@ -103,53 +103,62 @@ export class UserRepo {
       throw new Error('该账号已注册，请直接登录');
     }
     const targetEmail = email.trim().toLowerCase();
-    const existingLineage = this.db
-      .prepare('SELECT id, is_blocked, total_generations FROM account_lineages WHERE root_key = ?')
-      .get(targetEmail) as { id: string; is_blocked: number; total_generations: number } | undefined;
-
-    if (existingLineage && existingLineage.is_blocked === 1) {
-      throw new Error('该账号已被风控封禁，无法注册');
-    }
-
-    const generation = (await this.countUsersByEmail(email)) + 1;
     const now = new Date().toISOString();
     const user: AuthUser & { createdAt: string } = {
       id: genId('usr'),
       email: targetEmail,
-      generation,
+      generation: 1,
       createdAt: now,
     };
 
-    let lineageId = existingLineage?.id;
-    if (!lineageId) {
-      lineageId = genId('lin');
-      this.db
-        .prepare(`
-          INSERT INTO account_lineages (
-            id, root_key, first_registered_at, last_active_at, total_generations,
-            current_user_id, risk_level, is_blocked, admin_notes, remark, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, 1, ?, 'normal', 0, NULL, '用户注册初始血缘', ?, ?)
-        `)
-        .run(lineageId, targetEmail, now, now, user.id, now, now);
-    } else {
-      this.db
-        .prepare(`
-          UPDATE account_lineages
-          SET total_generations = total_generations + 1,
-              current_user_id = ?,
-              last_active_at = ?,
-              updated_at = ?
-          WHERE id = ?
-        `)
-        .run(user.id, now, now, lineageId);
-    }
-
+    // 血缘代数递增与用户写入必须放在同一事务：任何一步失败都不能留下
+    // 「血缘 +1 但没有对应用户」或「用户存在但血缘未记录」的半成品数据。
     try {
-      this.db
-        .prepare(
-          'INSERT INTO users (id, email, password_hash, created_at, token_invalidated_at, deleted_at, generation, lineage_id, account_status, remark) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)'
-        )
-        .run(user.id, user.email, passwordHash, user.createdAt, generation, lineageId, 'active', '正常注册');
+      this.db.transaction(() => {
+        const existingLineage = this.db
+          .prepare('SELECT id, is_blocked, total_generations FROM account_lineages WHERE root_key = ?')
+          .get(targetEmail) as { id: string; is_blocked: number; total_generations: number } | undefined;
+
+        if (existingLineage && existingLineage.is_blocked === 1) {
+          throw new Error('该账号已被风控封禁，无法注册');
+        }
+
+        const countRow = this.db
+          .prepare('SELECT COUNT(*) as c FROM users WHERE LOWER(email) = ?')
+          .get(targetEmail) as { c: number } | undefined;
+        const generation = (countRow?.c ?? 0) + 1;
+        user.generation = generation;
+
+        let lineageId = existingLineage?.id;
+        if (!lineageId) {
+          lineageId = genId('lin');
+          this.db
+            .prepare(`
+              INSERT INTO account_lineages (
+                id, root_key, first_registered_at, last_active_at, total_generations,
+                current_user_id, risk_level, is_blocked, admin_notes, remark, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, 1, ?, 'normal', 0, NULL, '用户注册初始血缘', ?, ?)
+            `)
+            .run(lineageId, targetEmail, now, now, user.id, now, now);
+        } else {
+          this.db
+            .prepare(`
+              UPDATE account_lineages
+              SET total_generations = total_generations + 1,
+                  current_user_id = ?,
+                  last_active_at = ?,
+                  updated_at = ?
+              WHERE id = ?
+            `)
+            .run(user.id, now, now, lineageId);
+        }
+
+        this.db
+          .prepare(
+            'INSERT INTO users (id, email, password_hash, created_at, token_invalidated_at, deleted_at, generation, lineage_id, account_status, remark) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)'
+          )
+          .run(user.id, user.email, passwordHash, user.createdAt, generation, lineageId, 'active', '正常注册');
+      })();
     } catch (err) {
       // better-sqlite3 抛的是扩展错误码（SQLITE_CONSTRAINT_UNIQUE / SQLITE_CONSTRAINT_PRIMARYKEY），
       // 需用前缀匹配才能兼容并发注册同邮箱时的唯一索引兜底，保证返回 409 而非 500。

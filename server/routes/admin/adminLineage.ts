@@ -31,7 +31,9 @@ adminLineageRouter.get('/:lineageId', (req: Request, res: Response) => {
 
 /** 按邮箱查询血缘 */
 adminLineageRouter.get('/by-email/:email', (req: Request, res: Response) => {
-  const email = Array.isArray(req.params.email) ? req.params.email[0] : req.params.email;
+  const rawEmail = Array.isArray(req.params.email) ? req.params.email[0] : req.params.email;
+  // root_key 统一存 LOWER(email)，按邮箱查询必须做同样的归一化，否则混合大小写会 404。
+  const email = rawEmail.trim().toLowerCase();
   const lineage = db.users.getAccountLineageByRootKey(email);
   if (!lineage) {
     res.status(404).json({ success: false, message: '该邮箱暂无血缘记录' });

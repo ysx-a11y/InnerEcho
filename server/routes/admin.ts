@@ -118,8 +118,10 @@ const promptTemplatePatchSchema = z.object({
   description: z.string().trim().max(300).optional(),
   content: z.string().trim().min(100, '提示词至少需要 100 个字符').max(30_000).optional(),
   categories: z.array(z.string()).optional(),
+  /** 正文变更会落成不可变版本，此处填写本次版本摘要（可选）。 */
+  changeSummary: z.string().trim().max(200).optional(),
 }).strict().refine(
-  (value) => Object.keys(value).length > 0,
+  (value) => Object.keys(value).some((key) => key !== 'changeSummary'),
   { message: '至少提供一个要更新的字段' }
 );
 
@@ -231,6 +233,17 @@ adminRouter.patch('/prompt-templates/:id', adminActionLimiter, requireAdmin, asy
     const existing = await db.getPromptTemplateById(id);
     if (!existing) return res.status(404).json({ success: false, message: '提示词模板不存在' });
 
+    const { content, changeSummary, ...metadata } = parsed;
+
+    // 正文变更必须落成不可变版本：只更新 content 会让 active_version_id 指向旧快照，
+    // 导致版本列表/回滚/审计链与实际内容不一致。
+    if (content !== undefined) {
+      await db.prompts.createPromptVersion(id, {
+        systemPrompt: content,
+        changeSummary: changeSummary || '通过管理后台编辑提示词',
+      });
+    }
+
     // 生效中的模板不允许直接占用其他生效模板已覆盖的分类，避免静默重叠
     if (existing.isActive && parsed.categories !== undefined) {
       if (parsed.categories.length === 0) {
@@ -248,7 +261,10 @@ adminRouter.patch('/prompt-templates/:id', adminActionLimiter, requireAdmin, asy
       }
     }
 
-    const template = await db.updatePromptTemplate(id, parsed);
+    const template =
+      Object.keys(metadata).length > 0
+        ? await db.updatePromptTemplate(id, metadata)
+        : await db.getPromptTemplateById(id);
     if (!template) return res.status(404).json({ success: false, message: '提示词模板不存在' });
     return res.json({ success: true, template });
   } catch (err) {
@@ -731,7 +747,9 @@ adminRouter.post('/mailbox/:id/reply', adminActionLimiter, requireAdmin, async (
 adminRouter.post('/mailbox/:id/read', adminActionLimiter, requireAdmin, async (req, res) => {
   try {
     const id = String(req.params.id);
-    const isRead = req.body?.isRead !== undefined ? Boolean(req.body.isRead) : true;
+    const rawIsRead = req.body?.isRead;
+    // 严格布尔：JSON 里的字符串 "false" 不能被 Boolean() 转成 true。
+    const isRead = rawIsRead === undefined ? true : rawIsRead === true || rawIsRead === 'true';
     const success = db.mailbox.markAdminRead(id, isRead);
     if (!success) {
       return res.status(404).json({ success: false, message: '密信不存在或已被删除' });
@@ -826,18 +844,21 @@ adminRouter.put('/interrogation/config', adminActionLimiter, requireAdmin, async
     }
     const config = db.interrogation.updateConfig(parsed.data);
 
-    // 双向同步：将审讯室配置同步至 AI 智能体中台当前生效的提示词模板
-    if (parsed.data.interrogatorPrompt !== undefined) {
-      const active = await db.prompts.getActivePromptTemplate('all', 'agent_interrogator');
-      if (active) {
-        await db.prompts.updatePromptTemplate(active.id, { content: parsed.data.interrogatorPrompt });
-      }
-    }
-    if (parsed.data.summaryPrompt !== undefined) {
-      const active = await db.prompts.getActivePromptTemplate('all', 'agent_interrogation_recorder');
-      if (active) {
-        await db.prompts.updatePromptTemplate(active.id, { content: parsed.data.summaryPrompt });
-      }
+    // 双向同步：将审讯室配置同步至 AI 智能体中台当前生效的提示词模板。
+    // 正文变更必须落成不可变版本；传空串表示恢复默认，只改配置，避免清空模板正文。
+    const promptSyncs = [
+      { key: 'interrogatorPrompt', agentId: 'agent_interrogator' },
+      { key: 'summaryPrompt', agentId: 'agent_interrogation_recorder' },
+    ] as const;
+    for (const { key, agentId } of promptSyncs) {
+      const value = parsed.data[key];
+      if (typeof value !== 'string' || value.trim() === '') continue;
+      const active = await db.prompts.getActivePromptTemplate('all', agentId);
+      if (!active) continue;
+      await db.prompts.createPromptVersion(active.id, {
+        systemPrompt: value.trim(),
+        changeSummary: '通过审讯室配置同步提示词',
+      });
     }
 
     return res.json({ success: true, config });

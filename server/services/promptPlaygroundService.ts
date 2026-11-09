@@ -80,8 +80,10 @@ export async function runPromptPlayground(
   }
 
   const model = (request.modelOverride || targetAgent?.defaultModel || config.llmModel || 'gemini-1.5-pro').trim();
-  const _temperature = request.temperatureOverride ?? targetAgent?.temperature ?? 0.7;
-  void _temperature;
+  const temperature =
+    typeof request.temperatureOverride === 'number'
+      ? Math.min(2, Math.max(0, request.temperatureOverride))
+      : targetAgent?.temperature ?? 0.7;
 
   // 5. 调用大模型（若无 API Key 或在测试环境下提供确定性模拟响应）
   let rawResponse = '';
@@ -118,6 +120,7 @@ export async function runPromptPlayground(
     const llmRes = await callLlm({
       model,
       apiKey,
+      temperature,
       messages: [
         { role: 'system', content: renderedSystemPrompt },
         { role: 'user', content: renderedUserPrompt },

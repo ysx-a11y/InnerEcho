@@ -110,6 +110,25 @@ export function seedBuiltinPromptTemplate(database: Database.Database): void {
       now
     );
 
+  // 内置模板同样要有一条不可变版本快照：AI 智能体中台的版本列表、一键回滚与
+  // 审计链都依赖 prompt_versions；缺了它，首次升版会从 v1 开始而丢失“初始内容”。
+  const existingVersion = database
+    .prepare('SELECT id FROM prompt_versions WHERE template_id = ? LIMIT 1')
+    .get(BUILTIN_PROMPT_TEMPLATE_ID) as { id: string } | undefined;
+  if (!existingVersion) {
+    const versionId = genId('prv');
+    database
+      .prepare(`
+        INSERT INTO prompt_versions
+          (id, template_id, version_num, system_prompt, user_prompt_template, model_params, change_summary, created_by, remark, admin_notes, created_at)
+        VALUES (?, ?, 1, ?, '', '{}', '内置模板初始版本', 'system', '安装初始化快照', '由 seedBuiltinPromptTemplate 生成', ?)
+      `)
+      .run(versionId, BUILTIN_PROMPT_TEMPLATE_ID, BUILTIN_PROMPT_TEMPLATE, now);
+    database
+      .prepare('UPDATE prompt_templates SET active_version_id = ?, updated_at = ? WHERE id = ? AND active_version_id IS NULL')
+      .run(versionId, now, BUILTIN_PROMPT_TEMPLATE_ID);
+  }
+
   const activeRow = database
     .prepare('SELECT id FROM prompt_templates WHERE is_active = 1 LIMIT 1')
     .get();
@@ -389,13 +408,17 @@ export class PromptRepo {
     patch: {
       name?: string;
       description?: string;
-      content?: string;
       agentId?: string;
       categories?: string[];
       remark?: string;
       adminNotes?: string;
     }
   ): Promise<PromptTemplate | null> {
+    // 提示词正文只能通过 createPromptVersion 写入不可变版本：直接 UPDATE content
+    // 会让 active_version_id 仍指向旧快照，版本列表、回滚与审计链全部失真。
+    if (patch && Object.prototype.hasOwnProperty.call(patch, 'content')) {
+      throw new Error('提示词正文必须通过 createPromptVersion 创建不可变版本后写入');
+    }
     const sets: string[] = [];
     const params: unknown[] = [];
     if (patch.name !== undefined) {
@@ -405,10 +428,6 @@ export class PromptRepo {
     if (patch.description !== undefined) {
       sets.push('description = ?');
       params.push(patch.description.trim());
-    }
-    if (patch.content !== undefined) {
-      sets.push('content = ?');
-      params.push(patch.content);
     }
     if (patch.agentId !== undefined) {
       sets.push('agent_id = ?');

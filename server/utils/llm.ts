@@ -14,6 +14,8 @@ export interface LlmCallInput {
   baseUrl?: string;
   apiKey?: string;
   model?: string;
+  /** 采样温度；未传时沿用历史默认值 0.75。会被钳制到 0-2。 */
+  temperature?: number;
   messages: LlmMessage[];
 }
 
@@ -34,6 +36,10 @@ export async function callLlm(input: LlmCallInput): Promise<LlmCallResult> {
   const baseUrl = (input.baseUrl || config.llmBaseUrl).replace(/\/+$/, '');
   const apiKey = (input.apiKey || config.llmApiKey).trim();
   const model = (input.model || config.llmModel).trim();
+  const temperature =
+    typeof input.temperature === 'number' && Number.isFinite(input.temperature)
+      ? Math.min(2, Math.max(0, input.temperature))
+      : 0.75;
 
   if (!apiKey) {
     return { ok: false, errorMessage: 'Missing LLM_API_KEY', durationMs: 0 };
@@ -71,7 +77,7 @@ export async function callLlm(input: LlmCallInput): Promise<LlmCallResult> {
           // Output mode guarantees syntactically valid JSON; the prompt above
           // already includes the word "JSON" and a complete output example.
           ...(useJsonMode ? { response_format: { type: 'json_object' } } : {}),
-          temperature: 0.75,
+          temperature,
           max_tokens: 10000,
         }),
         signal: controller.signal,

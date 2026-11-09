@@ -137,7 +137,9 @@ export const PromptWorkbench: React.FC = () => {
         name: name.trim(),
         description: description.trim(),
         content,
-        agentId: 'agent_dossier_analyst',
+        // 保留模板自身的绑定智能体：列表混合了卷宗/审讯室等多个 agent 的模板，
+        // 硬编码 analyst 会把编辑中的审讯室模板静默改绑，破坏审讯提示词同步。
+        agentId: selected?.agentId,
         categories,
       });
       if (res.success) {
@@ -181,7 +183,8 @@ export const PromptWorkbench: React.FC = () => {
         name: `${selected.name} (副本)`,
         description: selected.description,
         content,
-        agentId: 'agent_dossier_analyst',
+        // 副本必须继承原模板的智能体绑定，否则复制审讯室模板会被改绑成卷宗解构模板。
+        agentId: selected.agentId,
         categories: selected.categories,
         changeSummary: `复制自 ${selected.name}`,
       });

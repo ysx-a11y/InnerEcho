@@ -162,7 +162,7 @@ export const ResultExportLayers: React.FC<ResultExportLayersProps> = ({
               “{chapter1.innerDesire || '留白防线'}”
             </p>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.5rem', display: 'block' }}>
-              代号：{username} · 职业：{chapter1.occupation}
+              代号：{username} · 职业：{chapter1.occupation || '未登记'}
             </span>
           </div>
 

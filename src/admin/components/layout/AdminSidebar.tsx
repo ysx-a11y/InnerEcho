@@ -159,7 +159,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               </div>
               <div className="grid flex-1 text-start text-sm leading-tight">
                 <span className="truncate font-semibold tracking-tight">
-                  深层回响 InnerEcho
+                  镜界自白 InnerEcho
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
                   Console · 生产管控平台

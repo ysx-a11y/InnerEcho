@@ -246,7 +246,7 @@ export const DossierList: React.FC<DossierListProps> = ({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `深层回响_测评卷宗库_${new Date()
+      link.download = `镜界自白_测评卷宗库_${new Date()
         .toISOString()
         .slice(0, 10)}.csv`;
       document.body.appendChild(link);

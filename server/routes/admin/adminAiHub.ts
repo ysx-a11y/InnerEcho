@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { db } from '../../db.js';
 import { asyncHandler } from '../../http/asyncHandler.js';
+import { logger } from '../../logger.js';
 import { runPromptPlayground } from '../../services/promptPlaygroundService.js';
 import type {
   PlaygroundRunRequest,
@@ -46,6 +47,8 @@ adminAiHubRouter.patch('/agents/:id', asyncHandler(async (req: Request, res: Res
   if (!parsed.success) {
     return res.status(400).json({ success: false, message: parsed.error.issues[0]?.message ?? '参数校验失败' });
   }
+  const existing = await db.aiAgent.getAgentById(id);
+  if (!existing) return res.status(404).json({ success: false, message: '智能体未找到' });
   const updated = await db.aiAgent.updateAgent(id, parsed.data);
   return res.json({ success: true, agent: updated });
 }));
@@ -90,6 +93,7 @@ const updateTemplateSchema = z.object({
   content: z.string().trim().optional(),
   agentId: z.string().trim().optional(),
   categories: z.array(z.string()).optional(),
+  changeSummary: z.string().trim().max(200).optional(),
   remark: z.string().optional(),
   adminNotes: z.string().optional(),
 });
@@ -100,7 +104,23 @@ adminAiHubRouter.patch('/templates/:id', asyncHandler(async (req: Request, res: 
   if (!parsed.success) {
     return res.status(400).json({ success: false, message: parsed.error.issues[0]?.message ?? '参数不合法' });
   }
-  const updated = await db.prompts.updatePromptTemplate(id, parsed.data);
+  const existing = await db.prompts.getPromptTemplateById(id);
+  if (!existing) return res.status(404).json({ success: false, message: '模版不存在' });
+
+  const { content, changeSummary, ...metadata } = parsed.data;
+
+  // 正文变更必须落成不可变版本，避免 active_version_id 仍指向旧快照。
+  if (typeof content === 'string' && content.trim().length > 0 && content !== existing.content) {
+    await db.prompts.createPromptVersion(id, {
+      systemPrompt: content,
+      changeSummary: (changeSummary && changeSummary.trim()) || '通过 AI 智能体中台编辑提示词',
+    });
+  }
+
+  const updated =
+    Object.keys(metadata).length > 0
+      ? await db.prompts.updatePromptTemplate(id, metadata)
+      : await db.prompts.getPromptTemplateById(id);
   if (!updated) return res.status(404).json({ success: false, message: '模版不存在' });
 
   // 若修改的是当前生效中的审讯室提示词，自动同步至审讯室配置
@@ -161,7 +181,13 @@ adminAiHubRouter.post('/templates/:id/rollback', asyncHandler(async (req: Reques
     });
     return res.json({ success: true, template: updated, message: '版本回滚成功' });
   } catch (err: unknown) {
-    return res.status(400).json({ success: false, message: err instanceof Error ? err.message : '回滚失败' });
+    // 只回传可判定的业务错误，其余错误仅记录在服务端日志，避免把内部异常细节抛给客户端。
+    logger.warn({ err, templateId, targetVersionId: parsed.data.targetVersionId }, 'prompt version rollback failed');
+    const message =
+      err instanceof Error && /does not exist|not found/i.test(err.message)
+        ? '目标版本不存在或不属于该模板'
+        : '版本回滚失败，请查看服务端日志';
+    return res.status(400).json({ success: false, message });
   }
 }));
 
@@ -223,7 +249,7 @@ const playgroundSchema = z.object({
   draftSystemPrompt: z.string().optional(),
   draftUserTemplate: z.string().optional(),
   modelOverride: z.string().optional(),
-  temperatureOverride: z.number().optional(),
+  temperatureOverride: z.number().min(0).max(2).optional(),
   mockSource: z.enum(['real_dossier', 'preset_mock']).default('preset_mock'),
   dossierId: z.string().optional(),
   customVariables: z.record(z.string(), z.string()).optional(),

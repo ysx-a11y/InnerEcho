@@ -741,7 +741,7 @@ export class DatabaseFacade {
 
   async updatePromptTemplate(
     id: string,
-    patch: { name?: string; description?: string; content?: string; categories?: string[] }
+    patch: { name?: string; description?: string; categories?: string[] }
   ): Promise<PromptTemplate | null> {
     return this.prompts.updatePromptTemplate(id, patch);
   }
