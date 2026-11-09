@@ -42,7 +42,6 @@ export const BackgroundStars: React.FC = () => {
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -50,7 +49,7 @@ export const BackgroundStars: React.FC = () => {
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
     let dpr = Math.min(window.devicePixelRatio || 1, 2.5);
     let width = window.innerWidth;
     let height = window.innerHeight;
@@ -68,74 +67,107 @@ export const BackgroundStars: React.FC = () => {
 
     updateCanvasSize();
 
-    const handleResize = () => {
-      updateCanvasSize();
-    };
-
-    window.addEventListener('resize', handleResize, { passive: true });
-
     // 浪漫深邃的三色星云呼吸光场（魅惑玫红 + 电光紫罗兰 + 暖粉香槟）
+    // 保持深邃暗夜基调，移动端仅微调边缘锚点与约 15% 呼吸光感，绝不刺眼过曝
+    const isNarrowScreen = width <= 640;
     const nebulae: NebulaOrb[] = [
       {
-        anchorX: 0.24,
-        anchorY: 0.16,
-        radiusRatio: 0.58,
-        maxRadiusPx: 580,
+        anchorX: isNarrowScreen ? 0.18 : 0.24,
+        anchorY: isNarrowScreen ? 0.14 : 0.16,
+        radiusRatio: isNarrowScreen ? 0.6 : 0.54,
+        maxRadiusPx: 560,
         rgb: '255, 51, 119', // 顶部偏左：绯红玫瑰主光场
-        baseAlpha: 0.28,
-        alphaVariation: 0.06,
-        periodMs: 9500,
+        baseAlpha: isNarrowScreen ? 0.19 : 0.16,
+        alphaVariation: 0.038,
+        periodMs: 10500,
         phaseOffset: 0.3,
+        driftPx: 24,
+      },
+      {
+        anchorX: isNarrowScreen ? 0.84 : 0.78,
+        anchorY: 0.5,
+        radiusRatio: isNarrowScreen ? 0.62 : 0.56,
+        maxRadiusPx: 580,
+        rgb: '210, 30, 255', // 中右：魅惑紫罗兰星云
+        baseAlpha: isNarrowScreen ? 0.155 : 0.125,
+        alphaVariation: 0.032,
+        periodMs: 13200,
+        phaseOffset: 2.4,
         driftPx: 26,
       },
       {
-        anchorX: 0.82,
-        anchorY: 0.48,
-        radiusRatio: 0.62,
-        maxRadiusPx: 620,
-        rgb: '210, 30, 255', // 中右：魅惑紫罗兰星云
-        baseAlpha: 0.24,
-        alphaVariation: 0.05,
-        periodMs: 12000,
-        phaseOffset: 2.4,
-        driftPx: 28,
-      },
-      {
-        anchorX: 0.32,
-        anchorY: 0.86,
-        radiusRatio: 0.52,
-        maxRadiusPx: 520,
+        anchorX: isNarrowScreen ? 0.26 : 0.35,
+        anchorY: 0.88,
+        radiusRatio: isNarrowScreen ? 0.54 : 0.48,
+        maxRadiusPx: 500,
         rgb: '255, 112, 166', // 底部：暖粉香槟柔光
-        baseAlpha: 0.2,
-        alphaVariation: 0.045,
-        periodMs: 11000,
+        baseAlpha: isNarrowScreen ? 0.13 : 0.1,
+        alphaVariation: 0.028,
+        periodMs: 11800,
         phaseOffset: 4.2,
-        driftPx: 22,
+        driftPx: 20,
       },
     ];
 
     // 远/中/近三层晶莹星尘与柔焦散景光斑
-    const totalCount = Math.min(96, Math.max(52, Math.floor((width * height) / 9500)));
-    const nearCount = Math.min(6, Math.max(4, Math.floor(totalCount * 0.08)));
-    const midCount = Math.floor(totalCount * 0.38);
-    const farCount = Math.max(22, totalCount - nearCount - midCount);
+    const totalCount = Math.min(96, Math.max(56, Math.floor((width * height) / 9000)));
+    const nearCount = Math.min(8, Math.max(5, Math.floor(totalCount * 0.09)));
+    const midCount = Math.floor(totalCount * 0.4);
+    const farCount = Math.max(24, totalCount - nearCount - midCount);
 
     const farColors = ['#ff9ec4', '#dfb8cf', '#d8b4fe', '#ffffff'];
     const midColors = ['#ff3377', '#ff70a6', '#e100ff', '#ffd180', '#ffffff'];
     const nearColors = ['255, 80, 145', '225, 40, 255', '255, 160, 200', '192, 132, 252'];
 
+    /**
+     * 初始坐标生成：首帧即让粒子均匀分布在屏幕四周（上/下/左/右边缘环带）与全局空间，
+     * 避免打开页面时大部分粒子被中间卡片遮挡、需要等待从边缘缓慢飘入。
+     */
+    const pickInitialPoint = (index: number, count: number): { x: number; y: number } => {
+      // 约 65% 粒子直接布置在四周可见环带（上、下、左、右四侧），其余 35% 铺满全局
+      if (index < count * 0.65) {
+        const side = index % 4;
+        if (side === 0) {
+          // 顶部环带
+          return { x: Math.random() * width, y: Math.random() * (height * 0.22) };
+        }
+        if (side === 1) {
+          // 底部环带
+          return { x: Math.random() * width, y: height * (0.78 + Math.random() * 0.22) };
+        }
+        if (side === 2) {
+          // 左侧环带
+          return { x: Math.random() * (width * 0.22), y: Math.random() * height };
+        }
+        // 右侧环带
+        return { x: width * (0.78 + Math.random() * 0.22), y: Math.random() * height };
+      }
+      return { x: Math.random() * width, y: Math.random() * height };
+    };
+
+    const pickVelocity = (minSpeed: number, maxSpeed: number, upwardBias: number) => {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = minSpeed + Math.random() * (maxSpeed - minSpeed);
+      return {
+        speedX: Math.cos(angle) * speed,
+        speedY: Math.sin(angle) * speed - upwardBias,
+      };
+    };
+
     const particles: StarParticle[] = [];
 
     for (let i = 0; i < farCount; i++) {
+      const pos = pickInitialPoint(i, farCount);
+      const vel = pickVelocity(0.16, 0.32, 0.04);
       particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
+        x: pos.x,
+        y: pos.y,
         radius: Math.random() * 0.8 + 0.6,
-        baseAlpha: Math.random() * 0.35 + 0.25,
+        baseAlpha: Math.random() * 0.35 + 0.28,
         alphaAmplitude: Math.random() * 0.16 + 0.06,
-        speedX: (Math.random() - 0.5) * 0.06,
-        speedY: (Math.random() - 0.5) * 0.06 - 0.015,
-        breathPeriodMs: 7500 + Math.random() * 5000,
+        speedX: vel.speedX,
+        speedY: vel.speedY,
+        breathPeriodMs: 5500 + Math.random() * 4000,
         phaseOffset: Math.random() * Math.PI * 2,
         color: farColors[Math.floor(Math.random() * farColors.length)],
         tier: 'far',
@@ -143,15 +175,17 @@ export const BackgroundStars: React.FC = () => {
     }
 
     for (let i = 0; i < midCount; i++) {
+      const pos = pickInitialPoint(i, midCount);
+      const vel = pickVelocity(0.28, 0.54, 0.06);
       particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
+        x: pos.x,
+        y: pos.y,
         radius: Math.random() * 1.3 + 1.1,
-        baseAlpha: Math.random() * 0.4 + 0.45,
+        baseAlpha: Math.random() * 0.4 + 0.46,
         alphaAmplitude: Math.random() * 0.25 + 0.12,
-        speedX: (Math.random() - 0.5) * 0.15,
-        speedY: (Math.random() - 0.5) * 0.15 - 0.02,
-        breathPeriodMs: 6500 + Math.random() * 5500,
+        speedX: vel.speedX,
+        speedY: vel.speedY,
+        breathPeriodMs: 4800 + Math.random() * 4200,
         phaseOffset: Math.random() * Math.PI * 2,
         color: midColors[Math.floor(Math.random() * midColors.length)],
         tier: 'mid',
@@ -159,15 +193,17 @@ export const BackgroundStars: React.FC = () => {
     }
 
     for (let i = 0; i < nearCount; i++) {
+      const pos = pickInitialPoint(i, nearCount);
+      const vel = pickVelocity(0.34, 0.64, 0.08);
       particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
+        x: pos.x,
+        y: pos.y,
         radius: Math.random() * 18 + 14,
         baseAlpha: Math.random() * 0.08 + 0.06,
         alphaAmplitude: Math.random() * 0.035 + 0.018,
-        speedX: (Math.random() - 0.5) * 0.2,
-        speedY: (Math.random() - 0.5) * 0.2 - 0.03,
-        breathPeriodMs: 8500 + Math.random() * 4500,
+        speedX: vel.speedX,
+        speedY: vel.speedY,
+        breathPeriodMs: 6500 + Math.random() * 3500,
         phaseOffset: Math.random() * Math.PI * 2,
         color: nearColors[i % nearColors.length],
         tier: 'near',
@@ -194,8 +230,7 @@ export const BackgroundStars: React.FC = () => {
 
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
         grad.addColorStop(0, `rgba(${orb.rgb}, ${currentAlpha.toFixed(3)})`);
-        grad.addColorStop(0.35, `rgba(${orb.rgb}, ${(currentAlpha * 0.62).toFixed(3)})`);
-        grad.addColorStop(0.7, `rgba(${orb.rgb}, ${(currentAlpha * 0.22).toFixed(3)})`);
+        grad.addColorStop(0.5, `rgba(${orb.rgb}, ${(currentAlpha * 0.44).toFixed(3)})`);
         grad.addColorStop(1, 'rgba(18, 7, 22, 0)');
 
         ctx.fillStyle = grad;
@@ -243,14 +278,34 @@ export const BackgroundStars: React.FC = () => {
         }
       }
 
-      animationFrameId = requestAnimationFrame(render);
+      if (!prefersReducedMotion) {
+        animationFrameId = requestAnimationFrame(render);
+      }
     };
 
-    animationFrameId = requestAnimationFrame(render);
+    const handleResize = () => {
+      const prevWidth = width || 1;
+      const prevHeight = height || 1;
+      updateCanvasSize();
+      const scaleX = width / prevWidth;
+      const scaleY = height / prevHeight;
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].x *= scaleX;
+        particles[i].y *= scaleY;
+      }
+      if (prefersReducedMotion) {
+        render(performance.now());
+      }
+    };
+
+    window.addEventListener('resize', handleResize, { passive: true });
+    render(performance.now());
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
     };
   }, []);
 
@@ -273,21 +328,19 @@ export const BackgroundStars: React.FC = () => {
       aria-hidden="true"
     >
       {/* 
-        高奢硬件合成层 CSS 径向流光（深邃暗夜紫粉底色兜底）：
-        1. 纯 GPU 渲染，0 垂直占位，绝不下推任何页面元素；
-        2. 确保在真机/OLED/节能模式下永远拥有充满魅力的紫红呼吸光晕，告别死黑。
+        克制幽暗的底层环境微光兜底（仅提供极低饱和度的暗夜冷暖层次，不与 Canvas 星云叠加过曝）
       */}
       <div
         style={{
           position: 'absolute',
-          top: '-15%',
-          left: '-10%',
-          width: '85vw',
-          maxWidth: '650px',
-          height: '55vh',
-          maxHeight: '520px',
+          top: '-12%',
+          left: '-12%',
+          width: 'max(82vw, 360px)',
+          maxWidth: '620px',
+          height: '48vh',
+          maxHeight: '480px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255, 51, 119, 0.26) 0%, rgba(210, 30, 255, 0.12) 45%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(255, 51, 119, 0.14) 0%, rgba(210, 30, 255, 0.06) 48%, transparent 70%)',
           filter: 'blur(60px)',
           WebkitFilter: 'blur(60px)',
           transform: 'translateZ(0)',
@@ -297,14 +350,14 @@ export const BackgroundStars: React.FC = () => {
       <div
         style={{
           position: 'absolute',
-          top: '32%',
+          top: '34%',
           right: '-15%',
-          width: '80vw',
-          maxWidth: '580px',
-          height: '50vh',
-          maxHeight: '480px',
+          width: 'max(80vw, 340px)',
+          maxWidth: '560px',
+          height: '46vh',
+          maxHeight: '450px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(170, 38, 218, 0.22) 0%, rgba(255, 112, 166, 0.1) 45%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(170, 38, 218, 0.12) 0%, rgba(255, 112, 166, 0.05) 48%, transparent 70%)',
           filter: 'blur(65px)',
           WebkitFilter: 'blur(65px)',
           transform: 'translateZ(0)',
@@ -315,13 +368,13 @@ export const BackgroundStars: React.FC = () => {
         style={{
           position: 'absolute',
           bottom: '-10%',
-          left: '12%',
-          width: '80vw',
-          maxWidth: '600px',
-          height: '45vh',
-          maxHeight: '450px',
+          left: '10%',
+          width: 'max(80vw, 340px)',
+          maxWidth: '580px',
+          height: '42vh',
+          maxHeight: '420px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255, 112, 166, 0.18) 0%, rgba(138, 43, 226, 0.08) 50%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(255, 112, 166, 0.1) 0%, rgba(138, 43, 226, 0.04) 50%, transparent 70%)',
           filter: 'blur(60px)',
           WebkitFilter: 'blur(60px)',
           transform: 'translateZ(0)',

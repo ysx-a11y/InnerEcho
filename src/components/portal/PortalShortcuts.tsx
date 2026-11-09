@@ -15,24 +15,71 @@ export const PortalShortcuts: React.FC<PortalShortcutsProps> = ({
   return (
     <>
       {/* 第三层：并列双入口（流光香槟金任务 + 幻彩紫晶角色卡） */}
-      <div className="w-full grid grid-cols-2 gap-2.5 mb-3 box-border">
+      <div
+        style={{
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '0.68rem',
+          marginBottom: '0.75rem',
+          boxSizing: 'border-box',
+        }}
+      >
         {/* 试炼任务 */}
         <button
           type="button"
           onClick={onOpenTasks}
-          className="glass-card portal-base-card p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer border border-[rgba(255,209,128,0.32)] bg-gradient-to-br from-[rgba(255,209,128,0.11)] to-[rgba(18,6,24,0.72)] box-border text-center min-h-[102px] relative overflow-hidden transition-all hover:border-[rgba(255,209,128,0.5)]"
+          className="glass-card portal-base-card"
+          style={{
+            padding: '0.88rem 0.75rem 0.82rem',
+            borderRadius: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.36rem',
+            cursor: 'pointer',
+            border: '1px solid rgba(255, 209, 128, 0.32)',
+            background: 'linear-gradient(145deg, rgba(255, 209, 128, 0.11) 0%, rgba(18, 6, 24, 0.72) 100%)',
+            boxSizing: 'border-box',
+            textAlign: 'center',
+            minHeight: 102,
+            fontFamily: 'inherit',
+          }}
         >
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute -top-6 -right-6 size-20 rounded-full bg-[radial-gradient(circle,rgba(255,209,128,0.18)_0%,transparent_70%)]"
+            style={{
+              position: 'absolute',
+              top: -24,
+              right: -24,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(255, 209, 128, 0.18) 0%, transparent 70%)',
+              pointerEvents: 'none',
+            }}
           />
-          <span className="size-9 rounded-full bg-[rgba(255,209,128,0.15)] border border-[rgba(255,209,128,0.42)] shadow-[0_0_14px_rgba(255,209,128,0.2),inset_0_1px_0_rgba(255,255,255,0.25)] flex items-center justify-center shrink-0">
+          <span
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'rgba(255, 209, 128, 0.15)',
+              border: '1px solid rgba(255, 209, 128, 0.42)',
+              boxShadow: '0 0 14px rgba(255, 209, 128, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
             <Crown size={18} stroke="url(#gold-orange-gradient)" className="icon-glow-gold" />
           </span>
-          <span className="text-xs font-extrabold text-[#ffd180] leading-tight">
+          <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#ffd180', lineHeight: 1.2 }}>
             试炼任务
           </span>
-          <span className="text-[11px] text-[var(--text-secondary)] opacity-80 leading-tight">
+          <span style={{ fontSize: '0.67rem', color: 'var(--text-secondary)', opacity: 0.8, lineHeight: 1.2 }}>
             接取暗面悬赏与挑战
           </span>
         </button>
@@ -41,19 +88,57 @@ export const PortalShortcuts: React.FC<PortalShortcutsProps> = ({
         <button
           type="button"
           onClick={onOpenCards}
-          className="glass-card portal-base-card p-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer border border-[rgba(192,132,252,0.34)] bg-gradient-to-br from-[rgba(192,132,252,0.12)] to-[rgba(18,6,24,0.72)] box-border text-center min-h-[102px] relative overflow-hidden transition-all hover:border-[rgba(192,132,252,0.5)]"
+          className="glass-card portal-base-card"
+          style={{
+            padding: '0.88rem 0.75rem 0.82rem',
+            borderRadius: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.36rem',
+            cursor: 'pointer',
+            border: '1px solid rgba(192, 132, 252, 0.34)',
+            background: 'linear-gradient(145deg, rgba(192, 132, 252, 0.12) 0%, rgba(18, 6, 24, 0.72) 100%)',
+            boxSizing: 'border-box',
+            textAlign: 'center',
+            minHeight: 102,
+            fontFamily: 'inherit',
+          }}
         >
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute -top-6 -right-6 size-20 rounded-full bg-[radial-gradient(circle,rgba(192,132,252,0.2)_0%,transparent_70%)]"
+            style={{
+              position: 'absolute',
+              top: -24,
+              right: -24,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(192, 132, 252, 0.2) 0%, transparent 70%)',
+              pointerEvents: 'none',
+            }}
           />
-          <span className="size-9 rounded-full bg-[rgba(192,132,252,0.16)] border border-[rgba(192,132,252,0.44)] shadow-[0_0_14px_rgba(192,132,252,0.22),inset_0_1px_0_rgba(255,255,255,0.25)] flex items-center justify-center shrink-0">
+          <span
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'rgba(192, 132, 252, 0.16)',
+              border: '1px solid rgba(192, 132, 252, 0.44)',
+              boxShadow: '0 0 14px rgba(192, 132, 252, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
             <Layers size={18} color="#c084fc" className="icon-glow-violet" />
           </span>
-          <span className="text-xs font-extrabold text-[#c084fc] leading-tight">
+          <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#c084fc', lineHeight: 1.2 }}>
             自制角色卡
           </span>
-          <span className="text-[11px] text-[var(--text-secondary)] opacity-80 leading-tight">
+          <span style={{ fontSize: '0.67rem', color: 'var(--text-secondary)', opacity: 0.8, lineHeight: 1.2 }}>
             生成专属自白卡片
           </span>
         </button>
@@ -63,23 +148,51 @@ export const PortalShortcuts: React.FC<PortalShortcutsProps> = ({
       <button
         type="button"
         onClick={onOpenAstrolabe}
-        className="glass-card portal-base-card w-full py-2.5 px-3.5 rounded-2xl flex items-center justify-between gap-2.5 cursor-pointer border border-[rgba(128,243,255,0.26)] bg-gradient-to-r from-[rgba(128,243,255,0.08)] to-[rgba(18,6,24,0.65)] box-border text-left transition-all hover:border-[rgba(128,243,255,0.45)]"
+        className="glass-card portal-base-card"
+        style={{
+          width: '100%',
+          padding: '0.68rem 0.95rem',
+          borderRadius: 15,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.6rem',
+          cursor: 'pointer',
+          border: '1px solid rgba(128, 243, 255, 0.26)',
+          background: 'linear-gradient(135deg, rgba(128, 243, 255, 0.08) 0%, rgba(18, 6, 24, 0.65) 100%)',
+          boxSizing: 'border-box',
+          textAlign: 'left',
+          fontFamily: 'inherit',
+        }}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="size-7 rounded-full bg-[rgba(128,243,255,0.14)] border border-[rgba(128,243,255,0.36)] shadow-[0_0_10px_rgba(128,243,255,0.18)] flex items-center justify-center shrink-0">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.58rem', minWidth: 0 }}>
+          <span
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              background: 'rgba(128, 243, 255, 0.14)',
+              border: '1px solid rgba(128, 243, 255, 0.36)',
+              boxShadow: '0 0 10px rgba(128, 243, 255, 0.18)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
             <Activity size={14} color="#80f3ff" />
           </span>
-          <div className="min-w-0 flex items-center gap-2">
-            <span className="text-xs font-bold text-[#80f3ff]">
+          <div style={{ minWidth: 0 }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#80f3ff' }}>
               潜意识星盘
             </span>
-            <span className="text-[11px] text-[var(--text-secondary)] opacity-80 truncate">
+            <span style={{ fontSize: '0.69rem', color: 'var(--text-secondary)', opacity: 0.78, marginLeft: '0.45rem' }}>
               群体四维心流数据分布
             </span>
           </div>
         </div>
 
-        <ChevronRight size={14} color="#80f3ff" className="shrink-0" />
+        <ChevronRight size={14} color="#80f3ff" style={{ flexShrink: 0 }} />
       </button>
     </>
   );

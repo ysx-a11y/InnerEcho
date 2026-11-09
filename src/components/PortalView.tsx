@@ -125,7 +125,26 @@ export const PortalView: React.FC<PortalViewProps> = ({
   };
 
   return (
-    <div className="min-h-[calc(100dvh-120px)] flex flex-col items-center justify-start px-4 pt-3 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] text-center relative z-[1] w-full max-w-[min(520px,100%)] mx-auto box-border [word-break:break-word] [overflow-wrap:break-word] animate-fade-in portal-container">
+    <div
+      style={{
+        minHeight: 'calc(100dvh - 120px)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        padding: '0.75rem 1rem calc(4.5rem + env(safe-area-inset-bottom, 0px))',
+        textAlign: 'center',
+        position: 'relative',
+        zIndex: 1,
+        width: '100%',
+        maxWidth: 'min(520px, 100%)',
+        margin: '0 auto',
+        boxSizing: 'border-box',
+        overflowWrap: 'break-word',
+        wordBreak: 'break-word',
+      }}
+      className="animate-fade-in portal-container"
+    >
       {/* 顶部极简问候与登录态微标 */}
       <PortalHeaderBar
         user={user}
@@ -182,7 +201,15 @@ export const PortalView: React.FC<PortalViewProps> = ({
 
       {/* 暗室信箱常驻微光悬浮胶囊 */}
       {typeof document !== 'undefined' && createPortal(
-        <div className="fixed right-[max(14px,calc(50vw-230px+12px))] bottom-[calc(76px+env(safe-area-inset-bottom,0px))] z-[60] pointer-events-auto">
+        <div
+          style={{
+            position: 'fixed',
+            right: 'max(14px, calc(50vw - 230px + 12px))',
+            bottom: 'calc(76px + env(safe-area-inset-bottom, 0px))',
+            zIndex: 60,
+            pointerEvents: 'auto',
+          }}
+        >
           <button
             type="button"
             onClick={() => setMailboxOpen(true)}
@@ -190,10 +217,22 @@ export const PortalView: React.FC<PortalViewProps> = ({
             title="投递回响或建言（1v1 私密）"
           >
             <Mail size={13} color="#ff70a6" />
-            <span className="tracking-wide text-[#ffb3d1]">暗室信箱</span>
+            <span style={{ letterSpacing: '0.02em', color: '#ffb3d1' }}>暗室信箱</span>
           </button>
           {hasUnreadMail && (
-            <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-[#ff70a6] shadow-[0_0_8px_#ff70a6] pointer-events-none" />
+            <span
+              style={{
+                position: 'absolute',
+                top: -2,
+                right: -2,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#ff70a6',
+                boxShadow: '0 0 8px #ff70a6',
+                pointerEvents: 'none',
+              }}
+            />
           )}
         </div>,
         document.body

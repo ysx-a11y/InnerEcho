@@ -28,8 +28,16 @@ export const PortalUserCard: React.FC<PortalUserCardProps> = ({
     <button
       type="button"
       onClick={onGoToBasicInfo}
-      className="glass-card portal-base-card w-full p-3.5 sm:px-4 sm:py-3.5 rounded-2xl flex items-center justify-between gap-3 cursor-pointer mb-3.5 box-border text-left relative overflow-hidden transition-all"
+      className="glass-card portal-base-card"
       style={{
+        width: '100%',
+        padding: '0.8rem 1rem',
+        borderRadius: 18,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '0.75rem',
+        cursor: 'pointer',
         border: isRegistered
           ? (hasMissingDetails ? '1px solid rgba(52, 211, 153, 0.38)' : '1px solid rgba(192, 132, 252, 0.4)')
           : '1px solid rgba(255, 112, 166, 0.34)',
@@ -38,24 +46,40 @@ export const PortalUserCard: React.FC<PortalUserCardProps> = ({
               ? 'linear-gradient(135deg, rgba(52, 211, 153, 0.11) 0%, rgba(18, 6, 24, 0.78) 100%)'
               : 'linear-gradient(135deg, rgba(192, 132, 252, 0.13) 0%, rgba(255, 51, 119, 0.06) 50%, rgba(18, 6, 24, 0.8) 100%)')
           : 'linear-gradient(135deg, rgba(255, 51, 119, 0.12) 0%, rgba(18, 6, 24, 0.76) 100%)',
+        marginBottom: '0.85rem',
+        boxSizing: 'border-box',
+        textAlign: 'left',
+        fontFamily: 'inherit',
       }}
     >
       {/* 右上角环境微光斑 */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -top-7 -right-5 size-28 rounded-full"
         style={{
+          position: 'absolute',
+          top: -28,
+          right: -20,
+          width: 110,
+          height: 110,
+          borderRadius: '50%',
           background: `radial-gradient(circle, ${accentColor}28 0%, transparent 70%)`,
+          pointerEvents: 'none',
         }}
       />
 
-      <div className="flex items-center gap-3 min-w-0 relative">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0, position: 'relative' }}>
         <span
-          className="size-9 rounded-full flex items-center justify-center shrink-0"
           style={{
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
             background: isRegistered
               ? (hasMissingDetails ? 'rgba(52, 211, 153, 0.16)' : 'rgba(192, 132, 252, 0.18)')
               : 'rgba(255, 112, 166, 0.18)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
             border: `1px solid ${accentColor}66`,
             boxShadow: `0 0 14px ${accentColor}30, inset 0 1px 0 rgba(255, 255, 255, 0.25)`,
           }}
@@ -66,11 +90,31 @@ export const PortalUserCard: React.FC<PortalUserCardProps> = ({
             <Sparkles size={17} stroke="url(#rose-magenta-gradient)" />
           )}
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-extrabold text-white leading-snug truncate">
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: '0.9rem',
+              fontWeight: 800,
+              color: '#fff',
+              lineHeight: 1.25,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {isRegistered ? `代号：${nickname} · 假面档案` : '身份与表里假面登记'}
           </div>
-          <div className="text-xs text-[var(--text-secondary)] leading-snug mt-1 truncate">
+          <div
+            style={{
+              fontSize: '0.71rem',
+              color: isRegistered ? 'rgba(255,255,255,0.74)' : 'var(--text-secondary)',
+              lineHeight: 1.25,
+              marginTop: 3,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {isRegistered
               ? (hasMissingDetails
                   ? `已建档 · 建议补全职业与渴望设定${sealedPersonaCount > 0 ? ` · 已封印人格卡 ${sealedPersonaCount} 张` : ''}`
@@ -83,18 +127,24 @@ export const PortalUserCard: React.FC<PortalUserCardProps> = ({
       </div>
 
       <div
-        className="flex items-center gap-1 px-2.5 py-1 rounded-full shrink-0 relative"
         style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.2rem',
           color: accentColor,
           background: `${accentColor}18`,
           border: `1px solid ${accentColor}45`,
           boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+          padding: '0.26rem 0.58rem 0.26rem 0.68rem',
+          borderRadius: 999,
+          flexShrink: 0,
+          position: 'relative',
         }}
       >
-        <span className="text-xs font-bold whitespace-nowrap">
+        <span style={{ fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
           {isRegistered ? (hasMissingDetails ? '补全资料' : '修改资料') : '去登记'}
         </span>
-        <ChevronRight size={13} />
+        <ChevronRight size={14} />
       </div>
     </button>
   );

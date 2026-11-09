@@ -35,7 +35,7 @@ export const FEATURED_BANKS: FeaturedBankItem[] = [
     subtitle: '餐桌布下的试探、地下车库密令到婚床沦陷与终极物化',
     time: '约 12 分钟',
     gradient:
-      'linear-gradient(135deg, rgba(255, 51, 119, 0.16) 0%, rgba(170, 38, 218, 0.08) 48%, rgba(18, 6, 24, 0.86) 100%)',
+      'linear-gradient(135deg, rgba(255, 51, 119, 0.16) 0%, rgba(170, 38, 218, 0.08) 48%, rgba(18, 6, 24, 0.84) 100%)',
     borderColor: 'rgba(255, 92, 158, 0.42)',
     cornerOrbColor: 'rgba(255, 51, 119, 0.24)',
   },
@@ -49,7 +49,7 @@ export const FEATURED_BANKS: FeaturedBankItem[] = [
     subtitle: '听不进半句情话，却在被撕碎体面、剥夺意志的快感里彻底清醒',
     time: '约 10 分钟',
     gradient:
-      'linear-gradient(135deg, rgba(192, 132, 252, 0.15) 0%, rgba(236, 72, 153, 0.07) 48%, rgba(18, 6, 26, 0.86) 100%)',
+      'linear-gradient(135deg, rgba(192, 132, 252, 0.15) 0%, rgba(236, 72, 153, 0.07) 48%, rgba(18, 6, 26, 0.84) 100%)',
     borderColor: 'rgba(216, 115, 255, 0.36)',
     cornerOrbColor: 'rgba(192, 38, 211, 0.22)',
     btnBackground:
@@ -67,7 +67,7 @@ export const FEATURED_BANKS: FeaturedBankItem[] = [
     subtitle: '当众失禁、众目睽睽下的检阅、把柄公开与终极羞耻抵抗力评估',
     time: '约 8 分钟',
     gradient:
-      'linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(159, 18, 57, 0.09) 48%, rgba(20, 6, 22, 0.86) 100%)',
+      'linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(159, 18, 57, 0.09) 48%, rgba(20, 6, 22, 0.84) 100%)',
     borderColor: 'rgba(251, 113, 133, 0.38)',
     cornerOrbColor: 'rgba(244, 63, 94, 0.22)',
     btnBackground:

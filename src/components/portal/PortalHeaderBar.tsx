@@ -25,10 +25,20 @@ export const PortalHeaderBar: React.FC<PortalHeaderBarProps> = ({
   onOpenAuth,
 }) => {
   return (
-    <div className="w-full flex justify-between items-center mb-3 px-1 box-border">
-      <div className="flex items-center gap-1.5">
+    <div
+      style={{
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '0.75rem',
+        padding: '0 0.25rem',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
         <Sparkles size={14} stroke="url(#rose-magenta-gradient)" className="animate-icon-pulse" />
-        <span className="text-xs font-semibold text-[#ff70a6] tracking-wider">
+        <span style={{ fontSize: '0.78rem', color: '#ff70a6', fontWeight: 600, letterSpacing: '0.05em' }}>
           深层回响 · 极密卷宗
         </span>
       </div>
@@ -37,33 +47,89 @@ export const PortalHeaderBar: React.FC<PortalHeaderBarProps> = ({
         <button
           type="button"
           onClick={onOpenPersonal || onContinue || onOpenBanks}
-          className="bg-[rgba(255,112,166,0.1)] border border-[rgba(255,112,166,0.26)] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] rounded-full px-2.5 py-1 text-[var(--text-secondary)] text-xs cursor-pointer flex items-center gap-1.5 transition-colors hover:border-[#ff70a6]"
-          style={{ minHeight: 28, boxSizing: 'border-box' }}
+          style={{
+            background: 'rgba(255, 112, 166, 0.1)',
+            border: '1px solid rgba(255, 112, 166, 0.26)',
+            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.14)',
+            borderRadius: 14,
+            padding: '0.24rem 0.62rem',
+            minHeight: 28,
+            boxSizing: 'border-box',
+            color: 'var(--text-secondary)',
+            fontSize: '0.72rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.32rem',
+          }}
           title={`前往个人中心 (${user.email})`}
           aria-label={`前往个人中心 (${user.email})`}
         >
-          <span className="size-1.5 rounded-full bg-[#34d399] shadow-[0_0_6px_#34d399] shrink-0" />
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#34d399',
+              boxShadow: '0 0 6px #34d399',
+              flexShrink: 0,
+            }}
+          />
           <User size={12} />
-          <span className="max-w-[105px] truncate whitespace-nowrap">
+          <span style={{ maxWidth: 105, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {formatAccountBadge(user.email)}
           </span>
         </button>
       ) : (
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <span
-            className="bg-[rgba(52,211,153,0.1)] border border-[rgba(52,211,153,0.3)] rounded-full px-2.5 py-1 text-[#34d399] text-[11px] font-semibold flex items-center gap-1.5"
-            style={{ minHeight: 28, boxSizing: 'border-box' }}
+            style={{
+              background: 'rgba(52, 211, 153, 0.1)',
+              border: '1px solid rgba(52, 211, 153, 0.3)',
+              borderRadius: 14,
+              padding: '0.22rem 0.55rem',
+              minHeight: 28,
+              boxSizing: 'border-box',
+              color: '#34d399',
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+            }}
             title="已启用本地设备加密沙盒，无需注册直接测验"
           >
-            <span className="size-1.5 rounded-full bg-[#34d399] shadow-[0_0_6px_#34d399]" />
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: '#34d399',
+                boxShadow: '0 0 6px #34d399',
+              }}
+            />
             <span>匿名加密沙盒</span>
           </span>
 
           <button
             type="button"
             onClick={onOpenAuth}
-            className="bg-transparent border border-[rgba(255,112,166,0.25)] rounded-full px-2.5 py-1 text-[var(--text-muted)] text-[11px] cursor-pointer flex items-center gap-1 transition-colors hover:text-white hover:border-[#ff70a6]"
-            style={{ minHeight: 28, minWidth: 64, boxSizing: 'border-box' }}
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(255, 112, 166, 0.25)',
+              borderRadius: 14,
+              padding: '0.22rem 0.55rem',
+              minHeight: 28,
+              minWidth: 64,
+              boxSizing: 'border-box',
+              color: 'var(--text-muted)',
+              fontSize: '0.7rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              transition: 'background 0.2s',
+            }}
             title="选填：云端备份或同步到其他设备"
             aria-label="选填：云端备份或同步到其他设备"
           >

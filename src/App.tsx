@@ -823,7 +823,7 @@ export const App: React.FC = () => {
       />
 
       {/* Chapter & Dynamic Quiz Views */}
-      <main style={{ flex: 1, paddingBottom: (showBottomNav && activeTab) ? 72 : 0 }}>
+      <main style={{ flex: 1, position: 'relative', zIndex: 1, paddingBottom: (showBottomNav && activeTab) ? 72 : 0 }}>
         <ErrorBoundary
           key={viewState}
           resetKey={viewState}
