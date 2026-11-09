@@ -26,7 +26,7 @@ export const ResultActionHeader: React.FC<ResultActionHeaderProps> = ({
           <Sparkles size={13} strokeWidth={1.5} stroke={accentColor} className="animate-icon-pulse" />
         </span>
         <span className="text-sm font-bold text-[var(--text-secondary)] whitespace-nowrap">
-          深层回响 · 深度自白诊断卷宗
+          镜界自白 · 深度自白诊断卷宗
         </span>
       </div>
 

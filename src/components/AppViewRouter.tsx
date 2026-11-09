@@ -9,6 +9,7 @@ import type { DynamicQuizPayload, QuestionBankDefinition } from '../types/quizEn
 import type { FullDossierResult } from '../utils/calculator';
 import { WelcomeView } from './WelcomeView';
 import { LlmRetryNotice } from './LlmRetryNotice';
+import { BasicInfoGate } from './BasicInfoGate';
 
 const ResultView = React.lazy(() => import('./ResultView').then((module) => ({ default: module.ResultView })));
 const BankSelectorView = React.lazy(() => import('./BankSelectorView').then((module) => ({ default: module.BankSelectorView })));
@@ -43,6 +44,8 @@ interface AppViewRouterProps {
   completedCounts: Record<string, number>;
   completionStatus: 'syncing' | 'ready' | 'stale' | 'error';
   sealedPersonaCount?: number;
+  /** 是否已完成第一章基础信息登记（未完成时门禁拦截回响池/大盘/任务中心）。 */
+  hasBasicInfo: boolean;
   reportLoading: boolean;
   diagnosticResult: FullDossierResult | null;
   submissionSaved: boolean;
@@ -96,6 +99,7 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
   completedCounts,
   completionStatus,
   sealedPersonaCount = 0,
+  hasBasicInfo,
   reportLoading,
   diagnosticResult,
   submissionSaved,
@@ -297,11 +301,17 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
       />
     )}
 
-    {viewState === 'tasks_view' && (
+    {viewState === 'tasks_view' && (hasBasicInfo ? (
       <TasksView user={user} onLoginClick={onLoginClick} onSessionExpired={onSessionExpired} />
-    )}
+    ) : (
+      <BasicInfoGate
+        title="先完成基础信息填写"
+        description="填写昵称与基础资料后，才能进入任务接取中心。"
+        onFill={onGoToBasicInfo}
+      />
+    ))}
 
-    {viewState === 'data_view' && (
+    {viewState === 'data_view' && (hasBasicInfo ? (
       <DataView
         diagnosticResult={diagnosticResult}
         user={user}
@@ -310,7 +320,13 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
         initialMainTab={dataInitialTab}
         onBack={() => navigateTo('portal')}
       />
-    )}
+    ) : (
+      <BasicInfoGate
+        title="先完成基础信息填写"
+        description="填写昵称与基础资料后，才能查看深夜回响池与潜意识大盘。"
+        onFill={onGoToBasicInfo}
+      />
+    ))}
 
     {viewState === 'cards' && (
       <CardWorkshopView

@@ -76,7 +76,7 @@ export const CardWorkshopView: React.FC<CardWorkshopViewProps> = ({
     isFlipped: false,
     contentMode: 'dimensions',
     stampType: 'ink-circle',
-    stampTextTop: '深层回响 · 实体角色卡',
+    stampTextTop: '镜界自白 · 实体角色卡',
     stampTextBottom: 'SUB-CONSCIOUS ARCHIVE',
     stampTextCenter: defaultStampWord,
     stampColor: '#8a1515',
@@ -168,7 +168,7 @@ export const CardWorkshopView: React.FC<CardWorkshopViewProps> = ({
 
       const cleanOcc = (cardConfig.occupation || '角色').replace(/[\\/:*?"<>|]/g, '_');
       const cleanTitle = (cardConfig.title || '自白卡').replace(/[\\/:*?"<>|]/g, '_');
-      const filename = `深层回响_3D角色卡_${cleanOcc}_${cleanTitle}.png`;
+      const filename = `镜界自白_3D角色卡_${cleanOcc}_${cleanTitle}.png`;
 
       triggerDownload(dataUrl, filename);
       setPreviewModal({ url: dataUrl, title: filename });
@@ -216,7 +216,7 @@ export const CardWorkshopView: React.FC<CardWorkshopViewProps> = ({
       if (!dataUrl) throw new Error('壁纸渲染结果为空');
 
       const cleanOcc = (chapter1.occupation || '角色').replace(/[\\/:*?"<>|]/g, '_');
-      const filename = `深层回响_自白壁纸_${cleanOcc}.png`;
+      const filename = `镜界自白_自白壁纸_${cleanOcc}.png`;
 
       triggerDownload(dataUrl, filename);
       setPreviewModal({ url: dataUrl, title: filename });
@@ -343,7 +343,7 @@ export const CardWorkshopView: React.FC<CardWorkshopViewProps> = ({
         >
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '0.7rem', color: '#ff70a6', letterSpacing: '0.15em', fontWeight: 800 }}>
-              【深层回响 · 3D 绝密实体卡】
+              【镜界自白 · 3D 绝密实体卡】
             </span>
             <h1 style={{ fontSize: '2.2rem', color: '#fff', margin: '0.8rem 0 0.3rem 0', fontWeight: 900 }}>
               {cardConfig.title || '暗光解构者'}

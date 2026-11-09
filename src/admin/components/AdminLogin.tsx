@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, ShieldCheck, Lock, Loader2, Command } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Checkbox } from './ui/checkbox';
-import { DEFAULT_ADMIN_TOKEN_TTL_DAYS, setAdminToken } from '../adminToken';
+import { setAdminToken } from '../adminToken';
 
 interface AdminLoginProps {
   onLoginSuccess: (token: string) => void;
@@ -16,7 +15,6 @@ interface AdminLoginProps {
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState(false);
   const [errorMsg, setErrorMsg] = useState('口令错误，请重新输入');
   const [loading, setLoading] = useState(false);
@@ -48,7 +46,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
         setError(true);
         return;
       }
-      setAdminToken(token, rememberMe ? DEFAULT_ADMIN_TOKEN_TTL_DAYS : 0);
+      setAdminToken(token);
       onLoginSuccess(token);
     } catch {
       setError(true);
@@ -121,7 +119,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                 id="admin-username"
                 name="adminUsername"
                 type="text"
-                autoComplete="section-admin username"
+                autoComplete="username"
                 value="innerecho-admin"
                 readOnly
                 className="bg-muted/50 cursor-not-allowed font-mono text-xs h-9"
@@ -140,7 +138,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                 <Input
                   id="admin-security-token"
                   name="adminSecurityToken"
-                  autoComplete="section-admin current-password"
+                  autoComplete="current-password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="请输入管理口令..."
                   value={password}
@@ -167,19 +165,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
               )}
             </div>
 
-            <div className="flex items-center justify-between pt-0.5">
-              <label
-                htmlFor="admin-remember-me"
-                className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none"
-              >
-                <Checkbox
-                  id="admin-remember-me"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
-                />
-                <span>在此浏览器记住登录状态（{DEFAULT_ADMIN_TOKEN_TTL_DAYS} 天免输口令）</span>
-              </label>
-            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              登录状态仅保留在当前标签页会话中，不落盘长期保存；本页使用标准账号/口令表单，
+              浏览器密码管理器可安全保存并在下次自动填充。
+            </p>
 
             <Button type="submit" disabled={loading} className="w-full h-9 font-medium text-xs">
               {loading ? (

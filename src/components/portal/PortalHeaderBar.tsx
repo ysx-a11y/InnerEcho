@@ -39,7 +39,7 @@ export const PortalHeaderBar: React.FC<PortalHeaderBarProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
         <Sparkles size={14} stroke="url(#rose-magenta-gradient)" className="animate-icon-pulse" />
         <span style={{ fontSize: '0.78rem', color: '#ff70a6', fontWeight: 600, letterSpacing: '0.05em' }}>
-          深层回响 · 极密卷宗
+          镜界自白 · 极密卷宗
         </span>
       </div>
 

@@ -40,6 +40,7 @@ function createProps(
     completedBankIds: [],
     completedCounts: {},
     completionStatus: 'syncing',
+    hasBasicInfo: true,
     reportLoading: false,
     diagnosticResult: null,
     submissionSaved: false,
@@ -86,11 +87,14 @@ describe('AppViewRouter session restoration', () => {
     expect(await screen.findByText('任务页面已渲染')).not.toBeNull();
   });
 
-  it('renders tasks and data views for guests without basic info', async () => {
+  it('gates tasks and data views until basic info is registered', async () => {
     const { rerender } = render(
-      <AppViewRouter {...createProps({ dossierData: noBasicInfoDossier, user: null })} />,
+      <AppViewRouter
+        {...createProps({ dossierData: noBasicInfoDossier, user: null, hasBasicInfo: false })}
+      />,
     );
-    expect(await screen.findByText('任务页面已渲染')).not.toBeNull();
+    expect(await screen.findByText('填写昵称与基础资料后，才能进入任务接取中心。')).not.toBeNull();
+    expect(screen.queryByText('任务页面已渲染')).toBeNull();
 
     rerender(
       <AppViewRouter
@@ -98,6 +102,31 @@ describe('AppViewRouter session restoration', () => {
           viewState: 'data_view',
           dossierData: noBasicInfoDossier,
           user: null,
+          hasBasicInfo: false,
+        })}
+      />,
+    );
+    expect(
+      await screen.findByText('填写昵称与基础资料后，才能查看深夜回响池与潜意识大盘。'),
+    ).not.toBeNull();
+    expect(screen.queryByText('回响池与大盘已渲染')).toBeNull();
+  });
+
+  it('renders tasks and data views once basic info exists', async () => {
+    const { rerender } = render(
+      <AppViewRouter
+        {...createProps({ dossierData: emptyDossier, user: null, hasBasicInfo: true })}
+      />,
+    );
+    expect(await screen.findByText('任务页面已渲染')).not.toBeNull();
+
+    rerender(
+      <AppViewRouter
+        {...createProps({
+          viewState: 'data_view',
+          dossierData: emptyDossier,
+          user: null,
+          hasBasicInfo: true,
         })}
       />,
     );

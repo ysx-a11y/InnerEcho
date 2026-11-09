@@ -70,7 +70,7 @@ export const ResultExportLayers: React.FC<ResultExportLayersProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: theme.accentColor, letterSpacing: '0.15em', fontWeight: 800 }}>
-              【深层回响 · 潜意识深度解构报告】
+              【镜界自白 · 潜意识深度解构报告】
             </span>
             <h1 style={{ fontSize: '2.4rem', color: '#fff', margin: '0.6rem 0 0.2rem 0', fontWeight: 900 }}>
               {archetypeTitle}
@@ -131,7 +131,7 @@ export const ResultExportLayers: React.FC<ResultExportLayersProps> = ({
         >
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '0.7rem', color: theme.accentColor, letterSpacing: '0.15em', fontWeight: 800 }}>
-              【深层回响 · 绝密卷宗】
+              【镜界自白 · 绝密卷宗】
             </span>
             <h1 style={{ fontSize: '2.2rem', color: '#fff', margin: '0.8rem 0 0.3rem 0', fontWeight: 900 }}>
               {archetypeTitle}

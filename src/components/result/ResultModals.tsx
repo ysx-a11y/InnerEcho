@@ -63,7 +63,7 @@ export const ResultModals: React.FC<ResultModalsProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles size={14} stroke={accentColor} />
                 <span className="font-bold text-sm text-white">
-                  深层回响 · 卷宗报告
+                  镜界自白 · 卷宗报告
                 </span>
               </div>
 
@@ -93,7 +93,7 @@ export const ResultModals: React.FC<ResultModalsProps> = ({
             <div className="w-full max-w-[720px] mx-auto flex flex-col gap-4">
               <div className="text-center py-4">
                 <span className="text-xs tracking-[0.15em] font-extrabold text-[#ff70a6]">
-                  【深层回响 · 潜意识深度解构报告】
+                  【镜界自白 · 潜意识深度解构报告】
                 </span>
                 <h1 className="text-2xl sm:text-3xl font-black text-white mt-2 mb-1">
                   {archetypeTitle}

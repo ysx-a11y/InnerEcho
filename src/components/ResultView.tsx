@@ -85,7 +85,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, onExit }) => {
   const shareUrl = typeof window !== 'undefined'
     ? `${window.location.origin}${window.location.pathname}?src=share`
     : '';
-  const shareText = `我在《深层回响》测出了我的灵魂原型：【${shareTitle}】\n“${shareMotto}”\n来看看你未曾揭露的暗面与人设反差：`;
+  const shareText = `我在《镜界自白》测出了我的灵魂原型：【${shareTitle}】\n“${shareMotto}”\n来看看你未曾揭露的暗面与人设反差：`;
 
   const handleShareTwitter = () => {
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
@@ -167,7 +167,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, onExit }) => {
     isFlipped: false,
     contentMode: 'dimensions',
     stampType: 'ink-circle',
-    stampTextTop: '深层回响 · 绝密卷宗',
+    stampTextTop: '镜界自白 · 绝密卷宗',
     stampTextBottom: 'SUB-CONSCIOUS ARCHIVE',
     stampTextCenter: defaultStampWord,
     stampColor: '#8a1515',
@@ -256,7 +256,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, onExit }) => {
 
       const cleanOcc = (cardConfig.occupation || '匿名').replace(/[\\/:*?"<>|]/g, '_');
       const cleanTitle = (cardConfig.title || '暗光解构者').replace(/[\\/:*?"<>|]/g, '_');
-      const filename = `深层回响_自白卡_${cleanOcc}_${cleanTitle}.png`;
+      const filename = `镜界自白_自白卡_${cleanOcc}_${cleanTitle}.png`;
 
       triggerDownload(dataUrl, filename);
       setPreviewModal({ url: dataUrl, title: filename });
@@ -305,7 +305,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, onExit }) => {
 
       const cleanOcc = (cardConfig.occupation || '匿名').replace(/[\\/:*?"<>|]/g, '_');
       const cleanTitle = (cardConfig.title || '暗光解构者').replace(/[\\/:*?"<>|]/g, '_');
-      const filename = `深层回响_表里双面自白卡_${cleanOcc}_${cleanTitle}.png`;
+      const filename = `镜界自白_表里双面自白卡_${cleanOcc}_${cleanTitle}.png`;
 
       triggerDownload(dataUrl, filename);
       setPreviewModal({ url: dataUrl, title: filename });
@@ -336,7 +336,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, onExit }) => {
       if (!dataUrl) throw new Error('海报渲染结果为空');
 
       const cleanOcc = (chapter1.occupation || '匿名').replace(/[\\/:*?"<>|]/g, '_');
-      const filename = `深层回响_自白卷宗_${cleanOcc}_${THEME.name}.png`;
+      const filename = `镜界自白_自白卷宗_${cleanOcc}_${THEME.name}.png`;
 
       triggerDownload(dataUrl, filename);
       setPreviewModal({ url: dataUrl, title: filename });
@@ -367,7 +367,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, onExit }) => {
       if (!dataUrl) throw new Error('壁纸渲染结果为空');
 
       const cleanOcc = (chapter1.occupation || '匿名').replace(/[\\/:*?"<>|]/g, '_');
-      const filename = `深层回响_自白壁纸_${cleanOcc}_${THEME.name}.png`;
+      const filename = `镜界自白_自白壁纸_${cleanOcc}_${THEME.name}.png`;
 
       triggerDownload(dataUrl, filename);
       setPreviewModal({ url: dataUrl, title: filename });

@@ -106,7 +106,7 @@ export const DualCardExportPoster: React.FC<DualCardExportPosterProps> = ({
                 fontFamily: 'var(--font-heading)',
               }}
             >
-              深层回响 · 表里双面绝密典藏
+              镜界自白 · 表里双面绝密典藏
             </h1>
             <div
               style={{
@@ -324,7 +324,7 @@ export const DualCardExportPoster: React.FC<DualCardExportPosterProps> = ({
                   }}
                 >
                   <span style={{ fontSize: '6px', fontWeight: 800, letterSpacing: '0.1em' }}>
-                    {config.stampTextTop?.slice(0, 8) || '深层回响'}
+                    {config.stampTextTop?.slice(0, 8) || '镜界自白'}
                   </span>
                   <span style={{ fontSize: '10px', fontWeight: 900, margin: '1px 0' }}>
                     {config.stampTextCenter || '潜意识封存'}
@@ -667,7 +667,7 @@ export const DualCardExportPoster: React.FC<DualCardExportPosterProps> = ({
           boxSizing: 'border-box',
         }}
       >
-        <span>《深层回响》官方绝密自白档案系统 · 每个人格都有其不可言说的隐秘回声</span>
+        <span>《镜界自白》官方绝密自白档案系统 · 每个人格都有其不可言说的隐秘回声</span>
         <span style={{ fontFamily: 'monospace' }}>CLASSIFIED ARCHIVE · {cleanSerial}</span>
       </div>
     </div>

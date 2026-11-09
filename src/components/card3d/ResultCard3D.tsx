@@ -206,7 +206,7 @@ export const ResultCard3D: React.FC<ResultCard3DProps> = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="card-qr-box"
-                  title="扫描或点击访问深层回响"
+                  title="扫描或点击访问镜界自白"
                 >
                   <img
                     src="/ewm-qr.svg"
@@ -219,7 +219,7 @@ export const ResultCard3D: React.FC<ResultCard3DProps> = ({
 
               {/* Bottom Footer Bar */}
               <div className="card-footer-bar">
-                <span>深层回响 · 绝密档案</span>
+                <span>镜界自白 · 绝密档案</span>
                 <span>STATUS: 256-BIT SECURE</span>
               </div>
             </div>

@@ -30,7 +30,7 @@ const mockConfig: Card3DConfig = {
   isFlipped: false,
   contentMode: 'dimensions',
   stampType: 'ink-circle',
-  stampTextTop: '深层回响 · 绝密卷宗',
+  stampTextTop: '镜界自白 · 绝密卷宗',
   stampTextBottom: 'SUB-CONSCIOUS ARCHIVE',
   stampTextCenter: '暗夜掌控',
   stampColor: '#8a1515',

@@ -197,6 +197,10 @@ export const App: React.FC = () => {
   });
 
   const [reportLoading, setReportLoading] = useState(false);
+  // 基础信息门禁：本地草稿/缓存或服务端档案任一已记录昵称，即视为完成第一章登记。
+  const hasBasicInfo = Boolean(
+    (dossierData.chapter1.nickname || '').trim() || (sessionBasicInfo?.nickname || '').trim()
+  );
   // 复测对比弹窗（仅登录用户可从题库卡片打开）
   const [retestBank, setRetestBank] = useState<{ bankId: string; bankTitle: string } | null>(null);
   const mergeDossierSummary = useCallback((summary: DossierSummaryContract) => {
@@ -847,6 +851,7 @@ export const App: React.FC = () => {
             submissionSaved={submissionSaved}
             resultNotice={resultNotice}
             llmRetry={llmRetry}
+            hasBasicInfo={hasBasicInfo}
             onRetryAnalysis={() => { void retryAnalysis(); }}
             navigateTo={navigateTo}
             onLoginSuccess={handleLoginSuccess}

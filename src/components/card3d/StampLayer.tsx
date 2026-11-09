@@ -157,7 +157,7 @@ export const StampLayer: React.FC<StampLayerProps> = ({ config, onChange, cardRe
         {/* Circular Outer Text */}
         <text fill="currentColor" fontSize="7.5" fontWeight="800" letterSpacing="0.8">
           <textPath href="#innerEchoTextArc" startOffset="50%" textAnchor="middle">
-            {config.stampTextTop || '深层回响 · 绝密卷宗'} • {config.stampTextBottom || 'SUB-CONSCIOUS ARCHIVE'}
+            {config.stampTextTop || '镜界自白 · 绝密卷宗'} • {config.stampTextBottom || 'SUB-CONSCIOUS ARCHIVE'}
           </textPath>
         </text>
 
@@ -253,7 +253,7 @@ export const StampLayer: React.FC<StampLayerProps> = ({ config, onChange, cardRe
           >
             <div className="stamp-wax-inner">
               <div style={{ fontSize: '6.5px', letterSpacing: '0.5px', marginBottom: '2px', fontWeight: 700 }}>
-                {config.stampTextTop || '深层回响'}
+                {config.stampTextTop || '镜界自白'}
               </div>
               <div style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.6px', lineHeight: 1.1 }}>
                 {config.stampTextCenter || '绝密封存'}
