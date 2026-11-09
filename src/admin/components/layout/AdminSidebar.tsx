@@ -42,6 +42,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
+import { useTheme } from '../theme-provider';
 
 export type TabType =
   | 'dashboard'
@@ -83,6 +84,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   pendingCounts = { banks: 0, echoes: 0, mailbox: 0 },
 }) => {
   const { setOpenMobile, isMobile } = useSidebar();
+  const { variant, collapsible, dir } = useTheme();
 
   const navGroups: NavGroup[] = [
     {
@@ -142,7 +144,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   };
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar">
+    <Sidebar
+      collapsible={collapsible}
+      variant={variant}
+      side={dir === 'rtl' ? 'right' : 'left'}
+    >
       {/* Workspace Header */}
       <SidebarHeader className="border-b border-border/40 p-2">
         <SidebarMenu>

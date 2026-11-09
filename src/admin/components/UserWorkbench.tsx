@@ -211,7 +211,7 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
                   setPage(1);
                 }}
               >
-                <SelectTrigger size="sm" className="h-8 w-[125px] text-xs bg-background">
+                <SelectTrigger size="sm" className="h-8 w-auto min-w-[130px] px-2.5 text-xs whitespace-nowrap bg-background">
                   <SelectValue placeholder="排序维度" />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,7 +231,7 @@ export function UserWorkbench({ refreshTrigger }: UserWorkbenchProps = {}): Reac
                   setPage(1);
                 }}
               >
-                <SelectTrigger size="sm" className="h-8 w-[95px] text-xs bg-background">
+                <SelectTrigger size="sm" className="h-8 w-auto min-w-[100px] px-2.5 text-xs whitespace-nowrap bg-background">
                   <SelectValue placeholder="顺序" />
                 </SelectTrigger>
                 <SelectContent>

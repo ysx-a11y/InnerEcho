@@ -11,6 +11,7 @@ import {
 } from './dialog';
 import { Button } from './button';
 import { Input } from './input';
+import { Textarea } from './textarea';
 
 export interface StateTransitionModalProps {
   opened: boolean;
@@ -107,12 +108,12 @@ export const StateTransitionModal: React.FC<StateTransitionModalProps> = ({
             <span className="text-[11px] text-muted-foreground">
               记录本次人工审核原因、风控结论或整改意见（仅后台内部可见）
             </span>
-            <textarea
+            <Textarea
               placeholder="例如：自白真实深刻，符合社区自白规范，予以通过。"
               rows={3}
               value={adminNotes}
               onChange={(e) => setAdminNotes(e.target.value)}
-              className="flex min-h-[75px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              className="min-h-[75px] bg-background text-xs resize-none"
             />
           </div>
 

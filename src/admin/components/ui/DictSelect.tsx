@@ -2,6 +2,13 @@ import React, { useEffect, useState, useMemo } from 'react';
 import type { SysDictItem } from '../../../../shared/apiContracts';
 import { getAdminToken } from '../../adminToken';
 import { cn } from '../../lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './select';
 
 export interface DictSelectProps {
   dictCode: string;
@@ -19,6 +26,7 @@ export interface DictSelectProps {
 }
 
 const selectDictCache = new Map<string, SysDictItem[]>();
+const CLEAR_SENTINEL = '__DICT_CLEAR__';
 
 export const DictSelect: React.FC<DictSelectProps> = ({
   dictCode,
@@ -26,6 +34,7 @@ export const DictSelect: React.FC<DictSelectProps> = ({
   onChange,
   label,
   placeholder = '请选择',
+  clearable = false,
   size = 'sm',
   disabled = false,
   includeAllOption = false,
@@ -55,12 +64,14 @@ export const DictSelect: React.FC<DictSelectProps> = ({
   }, [dictCode]);
 
   const selectData = useMemo(() => {
-    const list = items.map((i) => ({
-      value: i.value,
-      label: i.label,
-    }));
+    const list = items
+      .filter((i) => i.value !== '')
+      .map((i) => ({
+        value: i.value,
+        label: i.label,
+      }));
     if (includeAllOption) {
-      return [{ value: allOptionValue, label: allOptionLabel }, ...list];
+      return [{ value: allOptionValue || 'all', label: allOptionLabel }, ...list];
     }
     return list;
   }, [items, includeAllOption, allOptionValue, allOptionLabel]);
@@ -75,27 +86,27 @@ export const DictSelect: React.FC<DictSelectProps> = ({
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       {label && <label className="text-xs font-medium text-foreground">{label}</label>}
-      <select
-        value={value ?? ''}
+      <Select
+        value={value && value !== '' ? value : undefined}
         disabled={disabled}
-        onChange={(e) => {
-          const val = e.target.value;
-          onChange(val === '' ? null : val);
+        onValueChange={(val) => {
+          onChange(val === CLEAR_SENTINEL ? null : val);
         }}
-        className={cn(
-          'flex rounded-md border border-input bg-background text-foreground shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer',
-          sizeClasses
-        )}
       >
-        <option value="" disabled hidden>
-          {placeholder}
-        </option>
-        {selectData.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className={cn('bg-background', sizeClasses)}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {clearable && !includeAllOption && (
+            <SelectItem value={CLEAR_SENTINEL}>{placeholder}</SelectItem>
+          )}
+          {selectData.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 };

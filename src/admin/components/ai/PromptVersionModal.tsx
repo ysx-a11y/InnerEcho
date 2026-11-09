@@ -10,6 +10,7 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
 
 interface PromptVersionModalProps {
   opened: boolean;
@@ -80,12 +81,12 @@ export const PromptVersionModal: React.FC<PromptVersionModalProps> = ({
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground">本次版本变更摘要 *</label>
             <p className="text-[11px] text-muted-foreground">如：优化主审官冷峻人设追问语气，强化防注入护栏</p>
-            <textarea
+            <Textarea
               rows={2}
               placeholder="请准确总结本次主要变动..."
               value={changeSummary}
               onChange={(e) => setChangeSummary(e.target.value)}
-              className="flex w-full rounded-md border border-input bg-background p-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="min-h-[60px] bg-background text-xs"
             />
           </div>
 

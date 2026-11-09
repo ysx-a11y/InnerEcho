@@ -17,6 +17,7 @@ interface DataTableToolbarProps<TData> {
   searchPlaceholder?: string;
   searchKey?: string;
   filters?: DataTableFilterField[];
+  showViewOptions?: boolean;
 }
 
 export function DataTableToolbar<TData>({
@@ -24,6 +25,7 @@ export function DataTableToolbar<TData>({
   searchPlaceholder = '搜索...',
   searchKey,
   filters = [],
+  showViewOptions = false,
 }: DataTableToolbarProps<TData>) {
   const isFiltered =
     table.getState().columnFilters.length > 0 || Boolean(table.getState().globalFilter);
@@ -76,7 +78,7 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
-      <DataTableViewOptions table={table} />
+      {showViewOptions && <DataTableViewOptions table={table} />}
     </div>
   );
 }

@@ -1,8 +1,15 @@
 import React from 'react';
-import { Database, X } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Database } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 
 interface DictTypeModalProps {
   isOpen: boolean;
@@ -25,27 +32,19 @@ export const DictTypeModal: React.FC<DictTypeModalProps> = ({
   onClose,
   onSave,
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4"
-      onClick={onClose}
-    >
-      <Card
-        className="w-full max-w-md shadow-xl border-border bg-card"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="p-3.5 border-b border-border flex flex-row items-center justify-between">
-          <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md p-4 gap-3">
+        <DialogHeader className="pb-2 border-b border-border">
+          <DialogTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
             <Database className="size-4 text-primary" />
             <span>新增字典大类</span>
-          </CardTitle>
-          <Button variant="ghost" size="sm" className="size-7 p-0" onClick={onClose}>
-            <X className="size-4" />
-          </Button>
-        </CardHeader>
-        <CardContent className="p-3.5 space-y-3 text-xs">
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            配置字典类型编码、名称、业务描述与备注信息。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-xs">
           <div className="space-y-1">
             <label className="font-semibold text-foreground">
               字典类型编码 (code, 英文唯一键) *
@@ -84,17 +83,17 @@ export const DictTypeModal: React.FC<DictTypeModalProps> = ({
               className="h-8 text-xs"
             />
           </div>
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-            <Button variant="outline" size="sm" onClick={onClose}>
-              取消
-            </Button>
-            <Button size="sm" onClick={onSave}>
-              确认保存
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+        <DialogFooter className="pt-2 border-t border-border">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            取消
+          </Button>
+          <Button size="sm" onClick={onSave}>
+            确认保存
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

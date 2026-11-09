@@ -20,6 +20,17 @@ import {
 import type { AdminBankDetail } from '../../adminTypes';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
+import { Input } from '../ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { Textarea } from '../ui/textarea';
 
 const PRESET_COLORS = ['#ff3377', '#80f3ff', '#9333ea', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#6366f1'];
 const CATEGORY_MAP: Record<string, { label: string; desc: string; badgeColor: string }> = {
@@ -84,65 +95,39 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
 }) => (
   <div className="flex flex-col flex-1 p-5 overflow-y-auto">
     {/* 选项卡导航 */}
-    <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-xl border border-border/60 w-fit mb-5">
-      <button
-        type="button"
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
-          activeTab === 'basic'
-            ? 'bg-background text-foreground shadow-xs font-semibold'
-            : 'text-muted-foreground hover:text-foreground'
-        }`}
-        onClick={() => setActiveTab('basic')}
-      >
-        <Settings className="size-3.5" />
-        <span>基础属性</span>
-      </button>
-      <button
-        type="button"
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
-          activeTab === 'questions'
-            ? 'bg-background text-foreground shadow-xs font-semibold'
-            : 'text-muted-foreground hover:text-foreground'
-        }`}
-        onClick={() => setActiveTab('questions')}
-      >
-        <Layers className="size-3.5" />
-        <span>题目编排 ({currentBank.questions?.length || 0})</span>
-      </button>
-      <button
-        type="button"
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
-          activeTab === 'preview'
-            ? 'bg-background text-foreground shadow-xs font-semibold'
-            : 'text-muted-foreground hover:text-foreground'
-        }`}
-        onClick={() => setActiveTab('preview')}
-      >
-        <Play className="size-3.5" />
-        <span>实时仿真预览</span>
-      </button>
-      <button
-        type="button"
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
-          activeTab === 'json'
-            ? 'bg-background text-foreground shadow-xs font-semibold'
-            : 'text-muted-foreground hover:text-foreground'
-        }`}
-        onClick={() => setActiveTab('json')}
-      >
-        <FileCode2 className="size-3.5" />
-        <span>原始 JSON</span>
-      </button>
-    </div>
+    <Tabs
+      value={activeTab}
+      onValueChange={(val) => setActiveTab(val as Tab)}
+      className="mb-5"
+    >
+      <TabsList className="h-9">
+        <TabsTrigger value="basic" className="gap-1.5 text-xs px-3">
+          <Settings className="size-3.5" />
+          <span>基础属性</span>
+        </TabsTrigger>
+        <TabsTrigger value="questions" className="gap-1.5 text-xs px-3">
+          <Layers className="size-3.5" />
+          <span>题目编排 ({currentBank.questions?.length || 0})</span>
+        </TabsTrigger>
+        <TabsTrigger value="preview" className="gap-1.5 text-xs px-3">
+          <Play className="size-3.5" />
+          <span>实时仿真预览</span>
+        </TabsTrigger>
+        <TabsTrigger value="json" className="gap-1.5 text-xs px-3">
+          <FileCode2 className="size-3.5" />
+          <span>原始 JSON</span>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
 
     {/* Tab 1: 基础属性 */}
     {activeTab === 'basic' && (
       <div className="space-y-4 max-w-2xl">
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-foreground">题库主标题 *</label>
-          <input
+          <Input
             type="text"
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+            className="h-9 bg-background text-xs"
             value={currentBank.title}
             onChange={(e) => setCurrentBank({ ...currentBank, title: e.target.value })}
             disabled={currentBank.isBuiltin}
@@ -152,9 +137,9 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
 
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-foreground">副标题 (选填)</label>
-          <input
+          <Input
             type="text"
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+            className="h-9 bg-background text-xs"
             value={currentBank.subtitle || ''}
             onChange={(e) => setCurrentBank({ ...currentBank, subtitle: e.target.value })}
             disabled={currentBank.isBuiltin}
@@ -165,27 +150,31 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground">分类风格</label>
-            <select
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+            <Select
               value={currentBank.category}
-              onChange={(e) => setCurrentBank({ ...currentBank, category: e.target.value as any })}
+              onValueChange={(val) => setCurrentBank({ ...currentBank, category: val as any })}
               disabled={currentBank.isBuiltin}
             >
-              <option value="scenario">情境切片 (scenario)</option>
-              <option value="direct">真实自白 (direct)</option>
-              <option value="preference">权责谱系 (preference)</option>
-              <option value="scientific">心相镜像 (scientific)</option>
-            </select>
+              <SelectTrigger className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="scenario">情境切片 (scenario)</SelectItem>
+                <SelectItem value="direct">真实自白 (direct)</SelectItem>
+                <SelectItem value="preference">权责谱系 (preference)</SelectItem>
+                <SelectItem value="scientific">心相镜像 (scientific)</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-[11px] text-muted-foreground">{CATEGORY_MAP[currentBank.category]?.desc}</p>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground">预估作答耗时 (分钟)</label>
-            <input
+            <Input
               type="number"
               min="1"
               max="180"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+              className="h-9 bg-background text-xs"
               value={currentBank.estimatedMinutes ?? 8}
               onChange={(e) => setCurrentBank({ ...currentBank, estimatedMinutes: parseInt(e.target.value, 10) || null })}
               disabled={currentBank.isBuiltin}
@@ -223,9 +212,9 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
 
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-foreground">题库详细描述与前言</label>
-          <textarea
+          <Textarea
             rows={4}
-            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 leading-relaxed"
+            className="bg-background text-xs leading-relaxed"
             value={currentBank.description || ''}
             onChange={(e) => setCurrentBank({ ...currentBank, description: e.target.value })}
             disabled={currentBank.isBuiltin}
@@ -268,7 +257,7 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
             ) : (
               currentBank.dimensions.map((dim, idx) => (
                 <div key={idx} className="flex items-center gap-2 p-2.5 rounded-lg border border-border/70 bg-muted/20">
-                  <input
+                  <Input
                     type="text"
                     value={dim.name}
                     placeholder="维度名称"
@@ -278,9 +267,9 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
                       next[idx] = { ...next[idx], name: e.target.value };
                       setCurrentBank({ ...currentBank, dimensions: next });
                     }}
-                    className="w-32 h-8 rounded border border-input bg-background px-2 text-xs"
+                    className="w-32 h-8 bg-background px-2 text-xs"
                   />
-                  <input
+                  <Input
                     type="text"
                     value={dim.key}
                     placeholder="英文键 (如 dominance)"
@@ -290,9 +279,9 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
                       next[idx] = { ...next[idx], key: e.target.value };
                       setCurrentBank({ ...currentBank, dimensions: next });
                     }}
-                    className="w-32 h-8 rounded border border-input bg-background px-2 text-xs font-mono"
+                    className="w-32 h-8 bg-background px-2 text-xs font-mono"
                   />
-                  <input
+                  <Input
                     type="text"
                     value={dim.description || ''}
                     placeholder="说明描述"
@@ -302,7 +291,7 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
                       next[idx] = { ...next[idx], description: e.target.value };
                       setCurrentBank({ ...currentBank, dimensions: next });
                     }}
-                    className="flex-1 h-8 rounded border border-input bg-background px-2 text-xs"
+                    className="flex-1 h-8 bg-background px-2 text-xs"
                   />
                   {!currentBank.isBuiltin && (
                     <Button
@@ -449,9 +438,9 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
                     <div className="p-4 border-t border-border/60 space-y-3.5 bg-card text-xs">
                       <div className="space-y-1">
                         <label className="font-semibold text-foreground">题目标题 / 核心问题 *</label>
-                        <textarea
+                        <Textarea
                           rows={2}
-                          className="flex w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+                          className="min-h-[60px] bg-background text-xs"
                           value={q.title || ''}
                           onChange={(e) => handleUpdateQuestion(qIdx, { ...q, title: e.target.value })}
                           disabled={currentBank.isBuiltin}
@@ -461,9 +450,9 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
 
                       <div className="space-y-1">
                         <label className="font-semibold text-foreground">情境场景 / 背景描述 (选填)</label>
-                        <textarea
+                        <Textarea
                           rows={2}
-                          className="flex w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+                          className="min-h-[60px] bg-background text-xs"
                           value={q.scenario || ''}
                           onChange={(e) => handleUpdateQuestion(qIdx, { ...q, scenario: e.target.value })}
                           disabled={currentBank.isBuiltin}
@@ -474,26 +463,30 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
                       <div className="flex flex-wrap items-center gap-4">
                         <div className="w-48 space-y-1">
                           <label className="font-semibold text-foreground">题目类型</label>
-                          <select
-                            className="flex h-8 w-full rounded border border-input bg-background px-2 text-xs"
+                          <Select
                             value={q.type}
-                            onChange={(e) => handleUpdateQuestion(qIdx, { ...q, type: e.target.value })}
+                            onValueChange={(val) => handleUpdateQuestion(qIdx, { ...q, type: val as QuestionType })}
                             disabled={currentBank.isBuiltin}
                           >
-                            <option value="single_choice">单选题 (single_choice)</option>
-                            <option value="multiple_choice">多选题 (multiple_choice)</option>
-                            <option value="open_text">开放手填 (open_text)</option>
-                            <option value="media_upload">媒体上传 (media_upload)</option>
-                          </select>
+                            <SelectTrigger size="sm" className="bg-background">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="single_choice">单选题 (single_choice)</SelectItem>
+                              <SelectItem value="multiple_choice">多选题 (multiple_choice)</SelectItem>
+                              <SelectItem value="open_text">开放手填 (open_text)</SelectItem>
+                              <SelectItem value="media_upload">媒体上传 (media_upload)</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
 
                         <label className="flex items-center gap-2 mt-4 cursor-pointer">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={q.isRequired ?? true}
-                            onChange={(e) => handleUpdateQuestion(qIdx, { ...q, isRequired: e.target.checked })}
+                            onCheckedChange={(checked) =>
+                              handleUpdateQuestion(qIdx, { ...q, isRequired: checked === true })
+                            }
                             disabled={currentBank.isBuiltin}
-                            className="rounded border-input text-primary"
                           />
                           <span>必须作答 (必填项)</span>
                         </label>
@@ -526,9 +519,9 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
                                   <Badge variant="outline" className="size-6 p-0 flex items-center justify-center font-mono">
                                     {String.fromCharCode(65 + optIdx)}
                                   </Badge>
-                                  <input
+                                  <Input
                                     type="text"
-                                    className="flex-1 h-8 rounded border border-input bg-background px-2 text-xs"
+                                    className="flex-1 h-8 bg-background px-2 text-xs"
                                     value={opt.text || ''}
                                     onChange={(e) => handleUpdateOption(qIdx, optIdx, { ...opt, text: e.target.value })}
                                     disabled={currentBank.isBuiltin}
@@ -598,9 +591,9 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
                         <div className="space-y-3 pt-2 border-t border-border/50">
                           <div className="space-y-1">
                             <label className="font-semibold text-foreground">占位引导语 (Placeholder)</label>
-                            <input
+                            <Input
                               type="text"
-                              className="flex h-8 w-full rounded border border-input bg-background px-2 text-xs"
+                              className="h-8 bg-background px-2 text-xs"
                               value={q.placeholder || ''}
                               onChange={(e) => handleUpdateQuestion(qIdx, { ...q, placeholder: e.target.value })}
                               disabled={currentBank.isBuiltin}
@@ -758,9 +751,9 @@ export const BankEditorTabs: React.FC<BankEditorTabsProps> = ({
                 {/* 手填题预览 */}
                 {q.type === 'open_text' && (
                   <div className="space-y-3">
-                    <textarea
+                    <Textarea
                       rows={4}
-                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      className="bg-background text-xs"
                       placeholder={q.placeholder || '请输入你的真实自白…'}
                       value={userAns || ''}
                       onChange={(e) => setPreviewAnswers({ ...previewAnswers, [q.id]: e.target.value })}

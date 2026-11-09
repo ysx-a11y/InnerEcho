@@ -13,6 +13,8 @@ export interface WhisperMessageRow {
   replied_at: string | null;
   reply_admin_id: string | null;
   user_has_read_reply: number;
+  admin_has_read?: number;
+  admin_read_at?: string | null;
   created_at: string;
   deleted_at: string | null;
 }
@@ -28,6 +30,8 @@ export interface WhisperMessage {
   replyContent: string | null;
   repliedAt: string | null;
   userHasReadReply: boolean;
+  adminHasRead: boolean;
+  adminReadAt: string | null;
   createdAt: string;
 }
 
@@ -43,6 +47,8 @@ export function formatWhisperMessageRow(row: WhisperMessageRow): WhisperMessage 
     replyContent: row.reply_content,
     repliedAt: row.replied_at,
     userHasReadReply: Boolean(row.user_has_read_reply),
+    adminHasRead: Boolean(row.admin_has_read || row.reply_content),
+    adminReadAt: row.admin_read_at ?? row.replied_at ?? null,
     createdAt: row.created_at,
   };
 }
@@ -101,6 +107,8 @@ export class WhisperMailboxRepo {
       replyContent: null,
       repliedAt: null,
       userHasReadReply: false,
+      adminHasRead: false,
+      adminReadAt: null,
       createdAt: now,
     };
   }
@@ -175,15 +183,17 @@ export class WhisperMailboxRepo {
   listMessagesForAdmin(options: {
     page?: number;
     pageSize?: number;
-    status?: 'all' | 'pending' | 'replied';
+    status?: 'all' | 'pending' | 'read' | 'replied';
   }): { items: WhisperMessage[]; total: number; page: number; pageSize: number } {
     const page = Math.max(1, options.page || 1);
-    const pageSize = Math.min(100, Math.max(1, options.pageSize || 20));
+    const pageSize = Math.min(200, Math.max(1, options.pageSize || 50));
     const offset = (page - 1) * pageSize;
 
     let whereClause = 'WHERE deleted_at IS NULL';
     if (options.status === 'pending') {
-      whereClause += ' AND reply_content IS NULL';
+      whereClause += ' AND reply_content IS NULL AND COALESCE(admin_has_read, 0) = 0';
+    } else if (options.status === 'read') {
+      whereClause += ' AND reply_content IS NULL AND COALESCE(admin_has_read, 0) = 1';
     } else if (options.status === 'replied') {
       whereClause += ' AND reply_content IS NOT NULL';
     }
@@ -208,17 +218,62 @@ export class WhisperMailboxRepo {
   }
 
   /**
-   * 管理员回复特定密信
+   * 管理员回复特定密信（回复同时自动标记管理员已读）
    */
   replyMessage(id: string, replyContent: string, adminId?: string): boolean {
     const now = new Date().toISOString();
     const stmt = this.db.prepare(`
       UPDATE whisper_messages
-      SET reply_content = ?, replied_at = ?, reply_admin_id = ?, user_has_read_reply = 0
+      SET reply_content = ?,
+          replied_at = ?,
+          reply_admin_id = ?,
+          user_has_read_reply = 0,
+          admin_has_read = 1,
+          admin_read_at = COALESCE(admin_read_at, ?)
       WHERE id = ? AND deleted_at IS NULL
     `);
-    const res = stmt.run(replyContent, now, adminId || 'admin', id);
+    const res = stmt.run(replyContent, now, adminId || 'admin', now, id);
     return res.changes > 0;
+  }
+
+  /**
+   * 管理员标记单条密信为已读/未读（对无需回复的信件消除待处理提醒）
+   */
+  markAdminRead(id: string, isRead = true): boolean {
+    const now = isRead ? new Date().toISOString() : null;
+    const stmt = this.db.prepare(`
+      UPDATE whisper_messages
+      SET admin_has_read = ?, admin_read_at = ?
+      WHERE id = ? AND deleted_at IS NULL
+    `);
+    const res = stmt.run(isRead ? 1 : 0, now, id);
+    return res.changes > 0;
+  }
+
+  /**
+   * 管理员批量标记密信为已读（可传指定 ID 列表，或留空将全部未读标为已读）
+   */
+  markBatchAdminRead(ids?: string[]): number {
+    const now = new Date().toISOString();
+    if (Array.isArray(ids) && ids.length > 0) {
+      const safeIds = ids.slice(0, 200);
+      const placeholders = safeIds.map(() => '?').join(', ');
+      const stmt = this.db.prepare(`
+        UPDATE whisper_messages
+        SET admin_has_read = 1, admin_read_at = COALESCE(admin_read_at, ?)
+        WHERE id IN (${placeholders}) AND deleted_at IS NULL
+      `);
+      const res = stmt.run(now, ...safeIds);
+      return res.changes;
+    }
+
+    const stmt = this.db.prepare(`
+      UPDATE whisper_messages
+      SET admin_has_read = 1, admin_read_at = COALESCE(admin_read_at, ?)
+      WHERE deleted_at IS NULL AND COALESCE(admin_has_read, 0) = 0
+    `);
+    const res = stmt.run(now);
+    return res.changes;
   }
 
   /**
@@ -235,12 +290,12 @@ export class WhisperMailboxRepo {
   }
 
   /**
-   * 统计待回复的密信数量（用于管理后台角标）
+   * 统计未读且未回复的密信数量（用于管理后台角标，标为已读后不再提醒）
    */
   countPending(): number {
     const stmt = this.db.prepare(`
       SELECT COUNT(*) as count FROM whisper_messages
-      WHERE deleted_at IS NULL AND reply_content IS NULL
+      WHERE deleted_at IS NULL AND reply_content IS NULL AND COALESCE(admin_has_read, 0) = 0
     `);
     const row = stmt.get() as { count: number };
     return row?.count || 0;

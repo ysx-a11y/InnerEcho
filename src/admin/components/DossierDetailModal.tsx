@@ -14,6 +14,7 @@ import {
   DialogDescription,
 } from './ui/dialog';
 import { Badge } from './ui/badge';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 
 interface DossierDetailModalProps {
   dossier: AdminDossier | null;
@@ -80,25 +81,18 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
             </div>
 
             {/* Tabs */}
-            <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-              {tabs.map((tab) => {
-                const isSelected = activeTab === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
-                      isSelected
-                        ? 'bg-background text-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
+            <Tabs
+              value={activeTab}
+              onValueChange={(val) => setActiveTab(val as 'analysis' | 'quiz' | 'persona')}
+            >
+              <TabsList className="h-8">
+                {tabs.map((tab) => (
+                  <TabsTrigger key={tab.key} value={tab.key} className="text-xs px-3 py-1">
                     {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </div>
         </DialogHeader>
 

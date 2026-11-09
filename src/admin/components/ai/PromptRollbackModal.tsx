@@ -12,6 +12,13 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 interface PromptRollbackModalProps {
   opened: boolean;
@@ -87,19 +94,22 @@ export const PromptRollbackModal: React.FC<PromptRollbackModalProps> = ({
 
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground">选择目标历史版本 *</label>
-            <select
-              value={selectedVersionId}
-              onChange={(e) => setSelectedVersionId(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            <Select
+              value={selectedVersionId || undefined}
+              onValueChange={setSelectedVersionId}
             >
-              <option value="">-- 请选择要回滚的版本快照 --</option>
-              {versions.map((v) => (
-                <option key={v.id} value={v.id}>
-                  v{v.versionNum} · {v.changeSummary || '未记录改动'} ({formatTime(v.createdAt)})
-                  {v.id === currentVersionId ? ' [当前生效]' : ''}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="-- 请选择要回滚的版本快照 --" />
+              </SelectTrigger>
+              <SelectContent>
+                {versions.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    v{v.versionNum} · {v.changeSummary || '未记录改动'} ({formatTime(v.createdAt)})
+                    {v.id === currentVersionId ? ' [当前生效]' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {selectedVersion && (

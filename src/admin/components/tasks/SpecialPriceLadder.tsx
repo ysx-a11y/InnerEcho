@@ -7,6 +7,8 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   TrendingUp,
   DollarSign,
   Users,
@@ -19,6 +21,13 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,12 +35,11 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
+import { cn, getPageNumbers } from '../../lib/utils';
 
 interface SpecialPriceLadderProps {
   refreshTrigger?: number;
 }
-
-const PAGE_SIZE = 15;
 
 export const SpecialPriceLadder: React.FC<SpecialPriceLadderProps> = ({ refreshTrigger }) => {
   const [items, setItems] = useState<AdminSpecialEvaluation[]>([]);
@@ -45,6 +53,7 @@ export const SpecialPriceLadder: React.FC<SpecialPriceLadderProps> = ({ refreshT
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState<'all' | 'high' | 'mid' | 'low' | 'zero'>('all');
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(15);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,8 +82,8 @@ export const SpecialPriceLadder: React.FC<SpecialPriceLadderProps> = ({ refreshT
         maxPrice,
         sort: 'price',
         order: 'desc',
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
+        limit: pageSize,
+        offset: page * pageSize,
       });
 
       setItems(res.items);
@@ -85,13 +94,14 @@ export const SpecialPriceLadder: React.FC<SpecialPriceLadderProps> = ({ refreshT
     } finally {
       setLoading(false);
     }
-  }, [taskType, search, tierFilter, page]);
+  }, [taskType, search, tierFilter, page, pageSize]);
 
   useEffect(() => {
     void load();
   }, [load, refreshTrigger]);
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageNumbers = getPageNumbers(page + 1, totalPages);
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -239,7 +249,7 @@ export const SpecialPriceLadder: React.FC<SpecialPriceLadderProps> = ({ refreshT
               </TableHeader>
               <TableBody>
                 {items.map((item, idx) => {
-                  const rank = item.rank || (page * PAGE_SIZE + idx + 1);
+                  const rank = item.rank || (page * pageSize + idx + 1);
                   return (
                     <TableRow key={item.id} className="hover:bg-muted/40">
                       <TableCell>
@@ -294,31 +304,105 @@ export const SpecialPriceLadder: React.FC<SpecialPriceLadderProps> = ({ refreshT
             </Table>
           )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between p-3 border-t border-border text-xs text-muted-foreground">
-              <span>
-                共 {total} 条排位 · 第 {page + 1} / {totalPages} 页
-              </span>
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  className="h-7 px-2"
-                >
-                  <ChevronLeft className="size-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages - 1}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="h-7 px-2"
-                >
-                  <ChevronRight className="size-3.5" />
-                </Button>
+          {/* 统一现代标准数据分页器 */}
+          {total > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 border-t border-border/80 bg-background/50 text-xs text-muted-foreground">
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                <span className="font-medium text-foreground whitespace-nowrap">
+                  共 {total} 条排位
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <Select
+                    value={`${pageSize}`}
+                    onValueChange={(val) => {
+                      setPageSize(Number(val));
+                      setPage(0);
+                    }}
+                  >
+                    <SelectTrigger size="sm" className="h-8 w-auto min-w-[96px] px-2.5 text-xs whitespace-nowrap bg-background">
+                      <SelectValue placeholder={`${pageSize} 条/页`} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                      {[10, 15, 30, 50, 100].map((size) => (
+                        <SelectItem key={size} value={`${size}`} className="text-xs">
+                          {size} 条/页
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <div className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                  第 {page + 1} 页 / 共 {totalPages} 页
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 p-0"
+                    onClick={() => setPage(0)}
+                    disabled={page <= 0}
+                    title="首页"
+                  >
+                    <ChevronsLeft className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 p-0"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page <= 0}
+                    title="上一页"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+
+                  {pageNumbers.map((pageNumber, idx) => {
+                    if (pageNumber === '...') {
+                      return (
+                        <span key={`dots-${idx}`} className="px-1 text-xs text-muted-foreground">
+                          ...
+                        </span>
+                      );
+                    }
+                    const pNum = Number(pageNumber);
+                    const isActive = pNum === page + 1;
+                    return (
+                      <Button
+                        key={`page-${pNum}`}
+                        variant={isActive ? 'default' : 'outline'}
+                        size="icon"
+                        className={cn('size-8 text-xs', isActive && 'font-bold pointer-events-none')}
+                        onClick={() => setPage(pNum - 1)}
+                      >
+                        {pNum}
+                      </Button>
+                    );
+                  })}
+
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 p-0"
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={page + 1 >= totalPages}
+                    title="下一页"
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 p-0"
+                    onClick={() => setPage(totalPages - 1)}
+                    disabled={page + 1 >= totalPages}
+                    title="末页"
+                  >
+                    <ChevronsRight className="size-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           )}

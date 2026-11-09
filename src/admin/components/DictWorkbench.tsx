@@ -27,6 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '../lib/utils';
 import { DictTypeModal } from './dict/DictTypeModal';
 import { DictItemModal } from './dict/DictItemModal';
@@ -454,34 +455,21 @@ export const DictWorkbench: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {/* 子 Tab 切换 */}
-            <div className="flex items-center p-0.5 bg-muted/60 rounded-lg border border-border/60">
-              <button
-                type="button"
-                onClick={() => setActiveTab('items')}
-                className={cn(
-                  'text-xs px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5',
-                  activeTab === 'items'
-                    ? 'bg-background text-foreground font-medium shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <Layers className="size-3.5" />
-                <span>字典数据 ({items.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('transitions')}
-                className={cn(
-                  'text-xs px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5',
-                  activeTab === 'transitions'
-                    ? 'bg-background text-foreground font-medium shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <GitFork className="size-3.5" />
-                <span>流转规则 ({transitions.length})</span>
-              </button>
-            </div>
+            <Tabs
+              value={activeTab}
+              onValueChange={(val) => setActiveTab(val as 'items' | 'transitions')}
+            >
+              <TabsList className="h-7 p-0.5">
+                <TabsTrigger value="items" className="text-xs px-2.5 py-0.5 gap-1.5">
+                  <Layers className="size-3.5" />
+                  <span>字典数据 ({items.length})</span>
+                </TabsTrigger>
+                <TabsTrigger value="transitions" className="text-xs px-2.5 py-0.5 gap-1.5">
+                  <GitFork className="size-3.5" />
+                  <span>流转规则 ({transitions.length})</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
             {/* 新增按钮 */}
             {activeTab === 'items' ? (

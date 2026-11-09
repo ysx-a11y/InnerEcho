@@ -19,6 +19,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { cn } from '../lib/utils';
 
 export interface UserGroupData {
   userKey: string;
@@ -84,7 +85,15 @@ export const RespondentProfileModal: React.FC<RespondentProfileModalProps> = ({
                 <DialogTitle className="text-lg font-bold">
                   {userGroup.nickname || '神秘答卷者'} · 档案全貌
                 </DialogTitle>
-                <Badge variant={userGroup.isPureGuest ? 'secondary' : 'default'} className="text-[10px]">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded-xs font-medium',
+                    userGroup.isPureGuest
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                      : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+                  )}
+                >
                   {userGroup.isPureGuest ? '访客设备' : '注册会员'}
                 </Badge>
               </div>

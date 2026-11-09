@@ -20,6 +20,7 @@ export default defineConfig({
       JWT_SECRET: 'test-only-jwt-secret-at-least-32-characters',
       ADMIN_TOKEN: 'test-only-admin-token',
       DATABASE_FILE: ':memory:',
+      FIELD_ENC_KEY: '',
     },
     include: [
       'server/**/*.test.ts',

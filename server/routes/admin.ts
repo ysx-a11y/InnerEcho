@@ -693,12 +693,12 @@ adminRouter.delete('/echoes/:id', adminActionLimiter, requireAdmin, async (req, 
 });
 
 
-/** 管理后台：获取暗室信箱列表（支持分页、待回复/已回复筛选）。 */
+/** 管理后台：获取暗室信箱列表（支持分页、未读/已读/已回复筛选）。 */
 adminRouter.get('/mailbox', adminActionLimiter, requireAdmin, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
-    const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query.pageSize || '20'), 10) || 20));
-    const status = (req.query.status as 'all' | 'pending' | 'replied') || 'all';
+    const pageSize = Math.min(200, Math.max(1, parseInt(String(req.query.pageSize || '50'), 10) || 50));
+    const status = (req.query.status as 'all' | 'pending' | 'read' | 'replied') || 'all';
 
     const result = db.mailbox.listMessagesForAdmin({ page, pageSize, status });
     return res.json({ success: true, ...result });
@@ -720,6 +720,41 @@ adminRouter.post('/mailbox/:id/reply', adminActionLimiter, requireAdmin, async (
       return res.status(404).json({ success: false, message: '密信不存在或已被删除' });
     }
     return res.json({ success: true, message: '私密回信已发送，仅对方可见' });
+  } catch {
+    return res.status(500).json({ success: false, message: '服务器内部错误' });
+  }
+});
+
+/** 管理后台：单封暗室密信标为已读/未读。 */
+adminRouter.post('/mailbox/:id/read', adminActionLimiter, requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const isRead = req.body?.isRead !== undefined ? Boolean(req.body.isRead) : true;
+    const success = db.mailbox.markAdminRead(id, isRead);
+    if (!success) {
+      return res.status(404).json({ success: false, message: '密信不存在或已被删除' });
+    }
+    return res.json({
+      success: true,
+      message: isRead ? '已标记为已读' : '已恢复为未读待处理',
+    });
+  } catch {
+    return res.status(500).json({ success: false, message: '服务器内部错误' });
+  }
+});
+
+/** 管理后台：批量标记暗室密信为已读。 */
+adminRouter.post('/mailbox/read-batch', adminActionLimiter, requireAdmin, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.filter((item: unknown): item is string => typeof item === 'string' && item.trim() !== '')
+      : undefined;
+    const updatedCount = db.mailbox.markBatchAdminRead(ids);
+    return res.json({
+      success: true,
+      updatedCount,
+      message: `已将 ${updatedCount} 封密信标记为已读`,
+    });
   } catch {
     return res.status(500).json({ success: false, message: '服务器内部错误' });
   }
@@ -775,7 +810,7 @@ adminRouter.get('/interrogation/config', adminActionLimiter, requireAdmin, (_req
 });
 
 /** 管理后台：调整额度或提示词，改动立即对下一次对话生效。 */
-adminRouter.put('/interrogation/config', adminActionLimiter, requireAdmin, (req, res) => {
+adminRouter.put('/interrogation/config', adminActionLimiter, requireAdmin, async (req, res) => {
   try {
     const parsed = interrogationConfigSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -788,6 +823,21 @@ adminRouter.put('/interrogation/config', adminActionLimiter, requireAdmin, (req,
       return res.status(400).json({ success: false, message: '至少提供一个需要调整的参数' });
     }
     const config = db.interrogation.updateConfig(parsed.data);
+
+    // 双向同步：将审讯室配置同步至 AI 智能体中台当前生效的提示词模板
+    if (parsed.data.interrogatorPrompt !== undefined) {
+      const active = await db.prompts.getActivePromptTemplate('all', 'agent_interrogator');
+      if (active) {
+        await db.prompts.updatePromptTemplate(active.id, { content: parsed.data.interrogatorPrompt });
+      }
+    }
+    if (parsed.data.summaryPrompt !== undefined) {
+      const active = await db.prompts.getActivePromptTemplate('all', 'agent_interrogation_recorder');
+      if (active) {
+        await db.prompts.updatePromptTemplate(active.id, { content: parsed.data.summaryPrompt });
+      }
+    }
+
     return res.json({ success: true, config });
   } catch {
     return res.status(500).json({ success: false, message: '服务器内部错误' });

@@ -5,6 +5,7 @@ import { formatDuration } from '../../adminApi';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
 
 interface DossierSidebarProps {
   dossier: AdminDossier;
@@ -89,11 +90,11 @@ export const DossierSidebar: React.FC<DossierSidebarProps> = ({
             <label className="text-[11px] font-medium text-muted-foreground">
               内部管理备注 (内部追踪)
             </label>
-            <textarea
+            <Textarea
               placeholder="添加追踪备注或研判批注..."
               value={dossier.adminNotes || ''}
               onChange={(e) => onUpdateParams?.(dossier.id, { adminNotes: e.target.value })}
-              className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              className="min-h-[72px] bg-background text-xs resize-none"
             />
           </div>
 

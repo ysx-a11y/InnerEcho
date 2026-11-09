@@ -18,18 +18,20 @@ import {
 
 interface DataTablePaginationProps<TData> {
   table: Table<TData>;
+  totalCount?: number;
   className?: string;
 }
 
 export function DataTablePagination<TData>({
   table,
+  totalCount,
   className,
 }: DataTablePaginationProps<TData>) {
   const currentPage = table.getState().pagination.pageIndex + 1;
   const totalPages = Math.max(1, table.getPageCount());
   const pageNumbers = getPageNumbers(currentPage, totalPages);
   const selectedRowCount = table.getFilteredSelectedRowModel().rows.length;
-  const totalRowCount = table.getFilteredRowModel().rows.length;
+  const totalRowCount = totalCount ?? table.getFilteredRowModel().rows.length;
 
   return (
     <div
@@ -38,9 +40,12 @@ export function DataTablePagination<TData>({
         className
       )}
     >
-      <div className="flex items-center gap-4 text-xs text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
-        <div>
-          已选中 {selectedRowCount} 条 / 共 {totalRowCount} 条卷宗
+      <div className="flex items-center gap-3 text-xs text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
+        <div className="whitespace-nowrap font-medium text-foreground">
+          共 {totalRowCount} 份卷宗
+          {selectedRowCount > 0 && (
+            <span className="text-primary ml-1.5">(已选 {selectedRowCount} 条)</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Select
@@ -49,7 +54,7 @@ export function DataTablePagination<TData>({
               table.setPageSize(Number(value));
             }}
           >
-            <SelectTrigger className="h-8 w-20 text-xs">
+            <SelectTrigger className="h-8 w-auto min-w-[96px] px-2.5 text-xs whitespace-nowrap">
               <SelectValue placeholder={table.getState().pagination.pageSize} />
             </SelectTrigger>
             <SelectContent side="top">

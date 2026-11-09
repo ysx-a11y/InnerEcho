@@ -51,14 +51,18 @@ describe('SecurityEvents', () => {
   });
 
   it('provides the four required anomaly filters and resets pagination on selection', async () => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    window.HTMLElement.prototype.hasPointerCapture = vi.fn();
+    window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+
     render(<SecurityEvents refreshTrigger={0} />);
     await screen.findByText('198.51.100.7');
 
-    fireEvent.click(screen.getByRole('button', { name: /事件:.*全部事件/ }));
+    fireEvent.click(screen.getByRole('combobox', { name: '事件筛选' }));
     expect(screen.getByText('登录失败突发')).toBeTruthy();
     expect(screen.getByText('敏感读取突发')).toBeTruthy();
     expect(screen.getByText('蜜罐永久封禁')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '新管理来源' }));
+    fireEvent.click(screen.getByRole('option', { name: '新管理来源' }));
 
     await waitFor(() => expect(adminApi.listSecurityEvents).toHaveBeenLastCalledWith({
       eventType: 'admin_new_source',

@@ -224,7 +224,7 @@ export const EchoWorkbench: React.FC<EchoWorkbenchProps> = ({ refreshTrigger, on
                 setPage(0);
               }}
             >
-              <SelectTrigger size="sm" className="h-8 w-[140px] text-xs bg-background">
+              <SelectTrigger size="sm" className="h-8 w-auto min-w-[140px] px-2.5 text-xs whitespace-nowrap bg-background">
                 <SelectValue placeholder="全部阴影倾向" />
               </SelectTrigger>
               <SelectContent>

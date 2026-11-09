@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 
 const TURN_RANGE = { min: 1, max: 20 };
@@ -183,41 +184,41 @@ export const InterrogationWorkbench: React.FC = () => {
               <div className="flex flex-wrap items-center gap-4 p-2.5 rounded-lg bg-muted/20 border border-border/60 text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold text-foreground shrink-0">交互轮数:</span>
-                  <input
+                  <Input
                     type="number"
                     min={TURN_RANGE.min}
                     max={TURN_RANGE.max}
                     value={config?.maxTurns ?? 5}
                     onChange={(event) => updateField('maxTurns', event.target.value)}
-                    className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-xs font-mono font-bold"
+                    className="h-7 w-16 bg-background px-2 text-center text-xs font-mono font-bold"
                   />
                   <span className="text-muted-foreground text-[11px]">轮 (1-20)</span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold text-foreground shrink-0">单轮输入上限:</span>
-                  <input
+                  <Input
                     type="number"
                     min={INPUT_RANGE.min}
                     max={INPUT_RANGE.max}
                     step={64}
                     value={config?.maxInputTokens ?? 1200}
                     onChange={(event) => updateField('maxInputTokens', event.target.value)}
-                    className="h-7 w-20 rounded border border-input bg-background px-2 text-center text-xs font-mono font-bold"
+                    className="h-7 w-20 bg-background px-2 text-center text-xs font-mono font-bold"
                   />
                   <span className="text-muted-foreground text-[11px]">tokens</span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold text-foreground shrink-0">单轮输出上限:</span>
-                  <input
+                  <Input
                     type="number"
                     min={OUTPUT_RANGE.min}
                     max={OUTPUT_RANGE.max}
                     step={32}
                     value={config?.maxOutputTokens ?? 300}
                     onChange={(event) => updateField('maxOutputTokens', event.target.value)}
-                    className="h-7 w-20 rounded border border-input bg-background px-2 text-center text-xs font-mono font-bold"
+                    className="h-7 w-20 bg-background px-2 text-center text-xs font-mono font-bold"
                   />
                   <span className="text-muted-foreground text-[11px]">tokens</span>
                 </div>

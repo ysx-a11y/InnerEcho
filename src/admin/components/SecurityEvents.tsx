@@ -17,11 +17,17 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { adminNotify } from './ui/adminNotify';
-import { AdminSelect, type AdminSelectOption } from './ui/AdminSelect';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 
 const PAGE_SIZE = 30;
 
-const EVENT_FILTERS: AdminSelectOption[] = [
+const EVENT_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: '全部事件' },
   { value: 'admin_new_source', label: '新管理来源' },
   { value: 'admin_auth_failure_burst', label: '登录失败突发' },
@@ -29,8 +35,8 @@ const EVENT_FILTERS: AdminSelectOption[] = [
   { value: 'honeypot_permanent_ban', label: '蜜罐永久封禁' },
 ];
 
-const SEVERITY_FILTERS: AdminSelectOption[] = [
-  { value: 'all', label: '全部严重度' },
+const SEVERITY_FILTERS: { value: string; label: string }[] = [
+  { value: 'all', label: '全部' },
   { value: 'critical', label: '严重' },
   { value: 'warning', label: '警告' },
   { value: 'info', label: '信息' },
@@ -178,18 +184,33 @@ export const SecurityEvents: React.FC<SecurityEventsProps> = ({ refreshTrigger }
             <span>{chainValid ? '审计链完整' : '审计链异常'}</span>
           </Badge>
 
-          <AdminSelect
-            value={eventType}
-            options={EVENT_FILTERS}
-            onChange={changeEventType}
-            labelPrefix="事件:"
-          />
-          <AdminSelect
-            value={severity}
-            options={SEVERITY_FILTERS}
-            onChange={changeSeverity}
-            labelPrefix="严重度:"
-          />
+          <Select value={eventType} onValueChange={changeEventType}>
+            <SelectTrigger size="sm" aria-label="事件筛选" className="h-8 w-auto min-w-[140px] px-2.5 text-xs whitespace-nowrap bg-background shrink-0">
+              <span className="text-muted-foreground font-medium shrink-0">事件:</span>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {EVENT_FILTERS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={severity} onValueChange={changeSeverity}>
+            <SelectTrigger size="sm" aria-label="严重度筛选" className="h-8 w-auto min-w-[120px] px-2.5 text-xs whitespace-nowrap bg-background shrink-0">
+              <span className="text-muted-foreground font-medium shrink-0">严重度:</span>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SEVERITY_FILTERS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center gap-2 text-xs" aria-label="当前页严重度统计">

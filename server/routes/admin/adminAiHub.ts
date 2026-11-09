@@ -88,6 +88,7 @@ const updateTemplateSchema = z.object({
   name: z.string().trim().min(1).optional(),
   description: z.string().trim().optional(),
   content: z.string().trim().optional(),
+  agentId: z.string().trim().optional(),
   categories: z.array(z.string()).optional(),
   remark: z.string().optional(),
   adminNotes: z.string().optional(),
@@ -101,6 +102,16 @@ adminAiHubRouter.patch('/templates/:id', asyncHandler(async (req: Request, res: 
   }
   const updated = await db.prompts.updatePromptTemplate(id, parsed.data);
   if (!updated) return res.status(404).json({ success: false, message: '模版不存在' });
+
+  // 若修改的是当前生效中的审讯室提示词，自动同步至审讯室配置
+  if (updated.isActive) {
+    if (updated.agentId === 'agent_interrogator' && updated.content) {
+      db.interrogation.updateConfig({ interrogatorPrompt: updated.content });
+    } else if (updated.agentId === 'agent_interrogation_recorder' && updated.content) {
+      db.interrogation.updateConfig({ summaryPrompt: updated.content });
+    }
+  }
+
   return res.json({ success: true, template: updated });
 }));
 
@@ -158,6 +169,14 @@ adminAiHubRouter.post('/templates/:id/activate', asyncHandler(async (req: Reques
   const id = getParam(req, 'id');
   const activated = await db.prompts.activatePromptTemplate(id);
   if (!activated) return res.status(404).json({ success: false, message: '模版未找到' });
+
+  // 激活审讯室相关模板时，同步至审讯室配置
+  if (activated.agentId === 'agent_interrogator' && activated.content) {
+    db.interrogation.updateConfig({ interrogatorPrompt: activated.content });
+  } else if (activated.agentId === 'agent_interrogation_recorder' && activated.content) {
+    db.interrogation.updateConfig({ summaryPrompt: activated.content });
+  }
+
   return res.json({ success: true, template: activated });
 }));
 

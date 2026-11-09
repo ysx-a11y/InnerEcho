@@ -7,6 +7,8 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Image as ImageIcon,
   Music,
   AlertTriangle,
@@ -47,9 +49,7 @@ import {
   TableRow,
 } from './ui/table';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { cn } from '../lib/utils';
-
-const PAGE_SIZE = 15;
+import { cn, getPageNumbers } from '../lib/utils';
 
 interface TaskListProps {
   refreshTrigger?: number;
@@ -60,6 +60,7 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
   const [tasks, setTasks] = useState<AdminTaskSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(15);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,8 +77,8 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
     setError(null);
     try {
       const res = await adminApi.listTasks({
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
+        limit: pageSize,
+        offset: page * pageSize,
         status: filterStatus !== 'all' ? filterStatus : undefined,
         category: filterCategory !== 'all' ? filterCategory : undefined,
       });
@@ -88,7 +89,7 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
     } finally {
       setLoading(false);
     }
-  }, [page, filterStatus, filterCategory]);
+  }, [page, pageSize, filterStatus, filterCategory]);
 
   useEffect(() => {
     void load();
@@ -121,7 +122,8 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
     }
   };
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const pageNumbers = getPageNumbers(page + 1, pageCount);
 
   return (
     <div className="flex flex-col gap-2.5 w-full">
@@ -147,9 +149,10 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
         <SpecialPriceLadder refreshTrigger={refreshTrigger} />
       ) : (
         <>
-          {/* Header Panel & Filter Toolbar */}
-          <Card className="shadow-xs border-border/80">
-            <CardContent className="p-2.5 flex flex-wrap items-center justify-between gap-2.5">
+          {/* 一体化卡片：筛选工具栏 + 高密数据表格 + 现代分页器 */}
+          <Card className="shadow-xs border-border/80 overflow-hidden">
+            {/* 卡片头部筛选工具栏 */}
+            <div className="p-2.5 sm:px-3.5 border-b border-border/80 flex flex-wrap items-center justify-between gap-2.5 bg-card shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm font-bold text-foreground">任务成果流</span>
                 <Badge variant="secondary" className="text-[11px] px-1.5 py-0 font-mono">
@@ -187,7 +190,7 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
                     setPage(0);
                   }}
                 >
-                  <SelectTrigger size="sm" className="h-8 w-[130px] text-xs bg-background">
+                  <SelectTrigger size="sm" className="h-8 w-auto min-w-[130px] px-2.5 text-xs whitespace-nowrap bg-background">
                     <SelectValue placeholder="所有分类" />
                   </SelectTrigger>
                   <SelectContent>
@@ -205,7 +208,7 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
                     setPage(0);
                   }}
                 >
-                  <SelectTrigger size="sm" className="h-8 w-[130px] text-xs bg-background">
+                  <SelectTrigger size="sm" className="h-8 w-auto min-w-[130px] px-2.5 text-xs whitespace-nowrap bg-background">
                     <SelectValue placeholder="所有状态" />
                   </SelectTrigger>
                   <SelectContent>
@@ -227,11 +230,9 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
                   <span>刷新</span>
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Standard High-Density Data Table */}
-          <div className="rounded-xl border border-border/80 bg-card overflow-hidden shadow-xs">
+            {/* Standard High-Density Data Table */}
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader className="bg-muted/40">
@@ -311,11 +312,11 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
                             </div>
                           </TableCell>
 
-                          {/* 接取用户 */}
+                          {/* 接取用户：头像样式对齐高奢统一 */}
                           <TableCell>
                             <div className="flex items-center gap-1.5">
-                              <Avatar className="size-6 text-[10px]">
-                                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                              <Avatar className="size-6 text-[10px] rounded-md border border-border/60 shrink-0">
+                                <AvatarFallback className="rounded-md text-[10px] font-semibold bg-muted/80 text-foreground/85">
                                   {(task.nickname || '客').slice(0, 1).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
@@ -411,37 +412,109 @@ export const TaskList: React.FC<TaskListProps> = ({ refreshTrigger }) => {
               </Table>
             </div>
 
-            {/* Standard Pagination Footer */}
+            {/* 统一现代标准数据分页器 */}
             {total > 0 && (
-              <div className="flex items-center justify-between p-2.5 border-t border-border/80 bg-background/50 text-xs text-muted-foreground">
-                <span className="font-mono">
-                  共 {total} 条记录 · 每页 {PAGE_SIZE} 条 · 第 {page + 1} / {pageCount} 页
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page <= 0}
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                    className="h-7 text-xs px-2.5 gap-1"
-                  >
-                    <ChevronLeft className="size-3.5" />
-                    <span>上一页</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page + 1 >= pageCount}
-                    onClick={() => setPage((p) => p + 1)}
-                    className="h-7 text-xs px-2.5 gap-1"
-                  >
-                    <span>下一页</span>
-                    <ChevronRight className="size-3.5" />
-                  </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 border-t border-border/80 bg-background/50 text-xs text-muted-foreground">
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                  <span className="font-medium text-foreground whitespace-nowrap">
+                    共 {total} 条记录
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Select
+                      value={`${pageSize}`}
+                      onValueChange={(val) => {
+                        setPageSize(Number(val));
+                        setPage(0);
+                      }}
+                    >
+                      <SelectTrigger size="sm" className="h-8 w-auto min-w-[96px] px-2.5 text-xs whitespace-nowrap bg-background">
+                        <SelectValue placeholder={`${pageSize} 条/页`} />
+                      </SelectTrigger>
+                      <SelectContent side="top">
+                        {[10, 15, 30, 50, 100].map((size) => (
+                          <SelectItem key={size} value={`${size}`} className="text-xs">
+                            {size} 条/页
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                  <div className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                    第 {page + 1} 页 / 共 {pageCount} 页
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8 p-0"
+                      onClick={() => setPage(0)}
+                      disabled={page <= 0}
+                      title="首页"
+                    >
+                      <ChevronsLeft className="size-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8 p-0"
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      disabled={page <= 0}
+                      title="上一页"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </Button>
+
+                    {pageNumbers.map((pageNumber, idx) => {
+                      if (pageNumber === '...') {
+                        return (
+                          <span key={`dots-${idx}`} className="px-1 text-xs text-muted-foreground">
+                            ...
+                          </span>
+                        );
+                      }
+                      const pNum = Number(pageNumber);
+                      const isActive = pNum === page + 1;
+                      return (
+                        <Button
+                          key={`page-${pNum}`}
+                          variant={isActive ? 'default' : 'outline'}
+                          size="icon"
+                          className={cn('size-8 text-xs', isActive && 'font-bold pointer-events-none')}
+                          onClick={() => setPage(pNum - 1)}
+                        >
+                          {pNum}
+                        </Button>
+                      );
+                    })}
+
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8 p-0"
+                      onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                      disabled={page + 1 >= pageCount}
+                      title="下一页"
+                    >
+                      <ChevronRight className="size-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8 p-0"
+                      onClick={() => setPage(pageCount - 1)}
+                      disabled={page + 1 >= pageCount}
+                      title="末页"
+                    >
+                      <ChevronsRight className="size-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Task Deliverable Detail Modal */}
           <TaskDetailModal

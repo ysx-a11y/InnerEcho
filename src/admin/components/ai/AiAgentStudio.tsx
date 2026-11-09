@@ -7,6 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 interface AiAgentStudioProps {
   agents: AiAgentContract[];
@@ -90,18 +98,22 @@ export const AiAgentStudio: React.FC<AiAgentStudioProps> = ({ agents, onReload }
               <CardContent className="space-y-3 pt-1">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-foreground">默认推荐模型</label>
-                  <select
+                  <Select
                     value={state.defaultModel}
-                    onChange={(e) => {
+                    onValueChange={(val) => {
                       setEditingId(agent.id);
-                      updateState(agent.id, { defaultModel: e.target.value });
+                      updateState(agent.id, { defaultModel: val });
                     }}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (深层高智力)</option>
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (极速经济)</option>
-                    <option value="deepseek-chat">DeepSeek Chat (国产高性价比)</option>
-                  </select>
+                    <SelectTrigger size="sm" className="bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (深层高智力)</SelectItem>
+                      <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (极速经济)</SelectItem>
+                      <SelectItem value="deepseek-chat">DeepSeek Chat (国产高性价比)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1">
@@ -144,9 +156,9 @@ export const AiAgentStudio: React.FC<AiAgentStudioProps> = ({ agents, onReload }
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-foreground">管理员运维备忘 (Admin Notes)</label>
-                  <textarea
+                  <Textarea
                     rows={2}
-                    className="flex w-full rounded-md border border-input bg-background p-2 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="min-h-[60px] bg-background text-xs"
                     value={state.adminNotes || ''}
                     onChange={(e) => {
                       setEditingId(agent.id);

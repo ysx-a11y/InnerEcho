@@ -9,6 +9,14 @@ import type {
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { Input } from '../ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 
 interface PromptPlaygroundProps {
@@ -82,41 +90,46 @@ export const PromptPlayground: React.FC<PromptPlaygroundProps> = ({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground">目标智能体 (Agent)</label>
-            <select
-              value={targetAgentId}
-              onChange={(e) => setTargetAgentId(e.target.value)}
-              className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {agents.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.interactionMode})
-                </option>
-              ))}
-            </select>
+            <Select value={targetAgentId} onValueChange={setTargetAgentId}>
+              <SelectTrigger size="sm" className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {agents.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name} ({a.interactionMode})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground">模拟测试数据源</label>
-            <select
+            <Select
               value={mockSource}
-              onChange={(e) => setMockSource(e.target.value as 'preset_mock' | 'real_dossier')}
-              className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              onValueChange={(val) => setMockSource(val as 'preset_mock' | 'real_dossier')}
             >
-              <option value="preset_mock">内置标准模拟画像 (法务精英反差自白)</option>
-              <option value="real_dossier">加载线上真实卷宗 (按卷宗ID)</option>
-            </select>
+              <SelectTrigger size="sm" className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="preset_mock">内置标准模拟画像 (法务精英反差自白)</SelectItem>
+                <SelectItem value="real_dossier">加载线上真实卷宗 (按卷宗ID)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {mockSource === 'real_dossier' && (
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground">真实卷宗 ID</label>
-            <input
+            <Input
               type="text"
               placeholder="输入 dos_ 开头的卷宗 ID"
               value={dossierId}
               onChange={(e) => setDossierId(e.target.value)}
-              className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-8 text-xs bg-background"
             />
           </div>
         )}

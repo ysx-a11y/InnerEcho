@@ -115,4 +115,56 @@ describe('暗室信箱 API', () => {
       .expect(200);
     expect(readRes.body.hasUnreadReply).toBe(false);
   });
+
+  it('管理员可将无需回复的密信标为已读（单条或批量），消除待办提醒角标', async () => {
+    const deviceId = `dev_admin_read_${Date.now()}`;
+    const sent1 = await request(userApp)
+      .post('/api/mailbox/send')
+      .set('X-Device-Id', deviceId)
+      .send({ content: '发完就后悔了，就当没看到吧', category: 'suggestion' })
+      .expect(200);
+    const msgId1 = sent1.body.message.id as string;
+
+    const sent2 = await request(userApp)
+      .post('/api/mailbox/send')
+      .set('X-Device-Id', deviceId)
+      .send({ content: '第二条无需回复的建议', category: 'suggestion' })
+      .expect(200);
+    const msgId2 = sent2.body.message.id as string;
+
+    const beforeCount = await request(adminApp)
+      .get('/api/admin/mailbox/pending-count')
+      .set('x-admin-token', ADMIN_TOKEN)
+      .expect(200);
+    expect(beforeCount.body.count).toBeGreaterThanOrEqual(2);
+
+    // 单条标为已读
+    await request(adminApp)
+      .post(`/api/admin/mailbox/${msgId1}/read`)
+      .set('x-admin-token', ADMIN_TOKEN)
+      .send({ isRead: true })
+      .expect(200);
+
+    const readFilterRes = await request(adminApp)
+      .get('/api/admin/mailbox')
+      .query({ status: 'read', pageSize: 100 })
+      .set('x-admin-token', ADMIN_TOKEN)
+      .expect(200);
+    expect(readFilterRes.body.items.some((item: any) => item.id === msgId1 && item.adminHasRead === true)).toBe(true);
+
+    // 批量标为已读
+    const batchRes = await request(adminApp)
+      .post('/api/admin/mailbox/read-batch')
+      .set('x-admin-token', ADMIN_TOKEN)
+      .send({ ids: [msgId2] })
+      .expect(200);
+    expect(batchRes.body.updatedCount).toBe(1);
+
+    const pendingAfter = await request(adminApp)
+      .get('/api/admin/mailbox')
+      .query({ status: 'pending', pageSize: 100 })
+      .set('x-admin-token', ADMIN_TOKEN)
+      .expect(200);
+    expect(pendingAfter.body.items.some((item: any) => item.id === msgId1 || item.id === msgId2)).toBe(false);
+  });
 });

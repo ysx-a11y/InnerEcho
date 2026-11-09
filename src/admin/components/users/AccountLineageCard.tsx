@@ -8,6 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Checkbox } from '../ui/checkbox';
+import { Textarea } from '../ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 interface LineageGenerationItem {
   id: string;
@@ -181,26 +190,26 @@ export const AccountLineageCard: React.FC<AccountLineageCardProps> = ({
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">全域风控等级</label>
                 <p className="text-[11px] text-muted-foreground">调控该血缘跨世代的风控评估等级</p>
-                <select
-                  value={riskLevel}
-                  onChange={(e) => setRiskLevel(e.target.value)}
-                  className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  {RISK_LEVEL_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                <Select value={riskLevel} onValueChange={setRiskLevel}>
+                  <SelectTrigger size="sm" className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RISK_LEVEL_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-start gap-2 pt-1">
-                <input
+                <Checkbox
                   id="lineage-is-blocked"
-                  type="checkbox"
                   checked={isBlocked}
-                  onChange={(e) => setIsBlocked(e.target.checked)}
-                  className="mt-0.5 size-4 rounded border-border text-primary focus:ring-ring"
+                  onCheckedChange={(checked) => setIsBlocked(checked === true)}
+                  className="mt-0.5"
                 />
                 <label htmlFor="lineage-is-blocked" className="space-y-0.5 cursor-pointer">
                   <div className="text-xs font-medium text-foreground">根血缘硬封禁 (is_blocked)</div>
@@ -215,12 +224,12 @@ export const AccountLineageCard: React.FC<AccountLineageCardProps> = ({
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">血缘私密运营批注 (admin_notes)</label>
                 <p className="text-[11px] text-muted-foreground">仅管理后台内部可见的风控与运营留痕记录</p>
-                <textarea
+                <Textarea
                   rows={2}
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   placeholder="例如：多次注销重建账号，存在异常刷题特征，保持密切风控关注。"
-                  className="flex w-full rounded-md border border-input bg-background p-2 text-xs text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="min-h-[60px] bg-background text-xs"
                 />
               </div>
 

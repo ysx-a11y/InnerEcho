@@ -8,7 +8,6 @@ import {
   Plus,
   Trash2,
   Copy,
-  AlertCircle,
   Layers,
   Check,
 } from 'lucide-react';
@@ -31,8 +30,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
+import { Input } from './ui/input';
+import { cn } from '../lib/utils';
 
 export const PROMPT_CATEGORY_OPTIONS: { key: string; label: string; badgeColor: string; desc: string }[] = [
   { key: 'all', label: '通用全部', badgeColor: '#a78bfa', desc: '全部分类默认兜底' },
@@ -42,21 +42,11 @@ export const PROMPT_CATEGORY_OPTIONS: { key: string; label: string; badgeColor: 
   { key: 'scientific', label: '心相镜像', badgeColor: '#80f3ff', desc: '心理学机制与客观镜像' },
 ];
 
-const REQUIRED_OUTPUT_FIELDS = [
-  'archetypeTitle',
-  'disparityScore',
-  'personaDeconstruction',
-  'shadowDeconstruction',
-  'psychologicalSublimation',
-  'resonanceKeywords',
-];
-
 export const PromptWorkbench: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'studio' | 'playground' | 'agents'>('studio');
   const [agents, setAgents] = useState<AiAgentContract[]>([]);
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [variables, setVariables] = useState<PromptVariableContract[]>([]);
-  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // 编辑区状态
@@ -134,16 +124,6 @@ export const PromptWorkbench: React.FC = () => {
     [templates, selectedId]
   );
 
-  const filteredTemplates = useMemo(() => {
-    if (selectedAgentFilter === 'all') return templates;
-    return templates.filter((t) => (t.agentId || 'agent_dossier_analyst') === selectedAgentFilter);
-  }, [templates, selectedAgentFilter]);
-
-  const missingFields = useMemo(() => {
-    if (selected?.agentId && selected.agentId !== 'agent_dossier_analyst') return [];
-    return REQUIRED_OUTPUT_FIELDS.filter((field) => !content.includes(field));
-  }, [content, selected]);
-
   const handleInsertVariable = (placeholder: string) => {
     setContent((prev) => `${prev} ${placeholder} `);
     adminNotify.info(`已插入变量 ${placeholder}`);
@@ -157,6 +137,7 @@ export const PromptWorkbench: React.FC = () => {
         name: name.trim(),
         description: description.trim(),
         content,
+        agentId: 'agent_dossier_analyst',
         categories,
       });
       if (res.success) {
@@ -200,7 +181,7 @@ export const PromptWorkbench: React.FC = () => {
         name: `${selected.name} (副本)`,
         description: selected.description,
         content,
-        agentId: selected.agentId,
+        agentId: 'agent_dossier_analyst',
         categories: selected.categories,
         changeSummary: `复制自 ${selected.name}`,
       });
@@ -252,7 +233,7 @@ export const PromptWorkbench: React.FC = () => {
   return (
     <AdminWorkbenchShell
       title="AI 智能体与提示词中台 (AI Agent & Prompt Hub)"
-      description="统一管理卷宗解构师、审讯室主审官人设、不可变版本快照、秒级回滚与沙盒演练场"
+      description="深层卷宗解构导师提示词工程、不可变版本快照、秒级回滚与沙盒演练场"
       icon={<Bot className="size-5" />}
       loading={loading}
       onRefresh={loadData}
@@ -281,48 +262,37 @@ export const PromptWorkbench: React.FC = () => {
         {/* Tab 1: 提示词工坊 */}
         <TabsContent value="studio" className="mt-0">
           <div className="flex flex-col lg:flex-row gap-3 items-start">
-            {/* 左侧：模板列表与过滤 */}
+            {/* 左侧：卷宗解构模板列表 */}
             <Card className="w-full lg:w-80 shrink-0 border-border/80 shadow-xs flex flex-col h-[calc(100vh-125px)] min-h-[560px] overflow-hidden">
-              <CardHeader className="p-3 border-b border-border/80 space-y-2 shrink-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase">归属角色过滤</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs px-2 gap-1"
-                    onClick={async () => {
-                      const res = await aiHubApi.createTemplate({
-                        name: '新提示词模板',
-                        description: '自定义心理学解构模板',
-                        content: '你是一位极具同理心的深层解构导师...',
-                        agentId: selectedAgentFilter === 'all' ? 'agent_dossier_analyst' : selectedAgentFilter,
-                      });
-                      if (res.success) {
-                        adminNotify.success('新建模板成功');
-                        setSelectedId(res.template.id);
-                        await loadData();
-                      }
-                    }}
-                  >
-                    <Plus className="size-3" /> 新建模板
-                  </Button>
+              <CardHeader className="p-3 border-b border-border/80 flex flex-row items-center justify-between shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="size-3.5 text-primary" />
+                  <span className="text-xs font-bold text-foreground">卷宗解构模板库</span>
                 </div>
-
-                <Select value={selectedAgentFilter} onValueChange={setSelectedAgentFilter}>
-                  <SelectTrigger size="sm" className="h-8 text-xs bg-background">
-                    <SelectValue placeholder="全部角色模板" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">全部角色模板</SelectItem>
-                    {agents.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs px-2 gap-1 shrink-0"
+                  onClick={async () => {
+                    const res = await aiHubApi.createTemplate({
+                      name: '新提示词模板',
+                      description: '自定义心理学解构模板',
+                      content: '你是一位极具同理心的深层解构导师...',
+                      agentId: 'agent_dossier_analyst',
+                    });
+                    if (res.success) {
+                      adminNotify.success('新建模板成功');
+                      setSelectedId(res.template.id);
+                      await loadData();
+                    }
+                  }}
+                >
+                  <Plus className="size-3" /> 新建模板
+                </Button>
               </CardHeader>
 
               <div className="flex-1 p-2.5 overflow-y-auto space-y-2">
-                {filteredTemplates.map((t) => {
+                {templates.map((t) => {
                   const isCurrent = t.id === selectedId;
                   return (
                     <div
@@ -340,7 +310,7 @@ export const PromptWorkbench: React.FC = () => {
                         </strong>
                         <div className="flex items-center gap-1 shrink-0">
                           {t.isActive && (
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] h-4.5 px-1">
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] h-4.5 px-1 font-medium">
                               生效中
                             </Badge>
                           )}
@@ -349,7 +319,7 @@ export const PromptWorkbench: React.FC = () => {
                           </Badge>
                         </div>
                       </div>
-                      <p className="text-[11px] text-muted-foreground truncate">{t.description || '无描述'}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{t.description || '卷宗深度心理解构与报告生成'}</p>
                     </div>
                   );
                 })}
@@ -404,34 +374,40 @@ export const PromptWorkbench: React.FC = () => {
               )}
             </Card>
 
-            {/* 右侧：代码编辑器、变量芯片，完全去除回滚与副本体现，顶部直出保存与升版，输入框获得 100% 垂直空间 */}
+            {/* 右侧：代码编辑器、变量芯片，单行紧凑头部，绝不折行 */}
             {selected ? (
               <Card className="flex-1 w-full border-border/80 shadow-xs flex flex-col h-[calc(100vh-125px)] min-h-[560px] overflow-hidden">
-                <CardHeader className="p-2.5 sm:px-3.5 border-b border-border/80 flex flex-wrap items-center justify-between gap-2 bg-card shrink-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h3 className="text-sm font-bold text-foreground truncate">{selected.name}</h3>
+                <CardHeader className="h-12 px-3.5 border-b border-border/80 flex flex-row items-center justify-between gap-3 bg-card shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="模板名称"
+                      className="h-7.5 w-44 text-xs font-bold shrink-0"
+                    />
+
                     {selected.isActive ? (
-                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 h-5">
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[11px] h-6 px-2 shrink-0 font-medium">
                         生效中 v{selected.activeVersionNum ?? 1}
                       </Badge>
                     ) : (
-                      <Button variant="outline" size="sm" className="h-5 text-[10px] px-1.5 text-primary" onClick={handleActivate}>
+                      <Button variant="outline" size="sm" className="h-6 text-[11px] px-2 text-primary shrink-0" onClick={handleActivate}>
                         设为生效
                       </Button>
                     )}
-                    <span className="text-[11px] text-muted-foreground font-mono hidden md:inline truncate">
-                      {formatTime(selected.updatedAt)} · {selected.activeVersionId}
+                    <span className="text-[11px] text-muted-foreground shrink-0 hidden md:inline">
+                      更新于 {formatTime(selected.updatedAt).slice(5, 16)}
                     </span>
                   </div>
 
-                  {/* 顶部右侧核心保存与升版按钮：置于顶部，省去卡片底部 Footer 的额外留白 */}
+                  {/* 顶部右侧核心保存与升版按钮：单行稳固排列在右上角，绝不折行 */}
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleDraftSave}
                       disabled={saving}
-                      className="h-7 px-2.5 gap-1.5 text-xs"
+                      className="h-7.5 px-3 gap-1.5 text-xs shrink-0"
                     >
                       <Save className="size-3.5" />
                       <span>保存草稿</span>
@@ -439,7 +415,7 @@ export const PromptWorkbench: React.FC = () => {
                     <Button
                       size="sm"
                       onClick={() => setVersionModalOpen(true)}
-                      className="h-7 px-2.5 gap-1.5 text-xs"
+                      className="h-7.5 px-3 gap-1.5 text-xs shrink-0"
                     >
                       <Sparkles className="size-3.5" />
                       <span>固化为新版本 (v{(selected.activeVersionNum ?? 1) + 1})</span>
@@ -472,16 +448,6 @@ export const PromptWorkbench: React.FC = () => {
                       placeholder="在此输入大模型系统级 Prompt 设定..."
                     />
                   </div>
-
-                  {/* 契约缺失告警（仅在缺失时展示） */}
-                  {missingFields.length > 0 && (
-                    <div className="flex items-center gap-2 p-2 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11px] shrink-0">
-                      <AlertCircle className="size-3.5 shrink-0" />
-                      <span className="truncate">
-                        契约缺失警示：当前输出疑似遗漏 <strong>{missingFields.join(', ')}</strong> 字段，请保留 JSON 输出声明。
-                      </span>
-                    </div>
-                  )}
                 </div>
               </Card>
             ) : (

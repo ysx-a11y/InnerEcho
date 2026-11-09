@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { SidebarTrigger } from '../ui/sidebar';
 import { ThemeSwitch } from '../ThemeSwitch';
+import { ConfigDrawer } from '../ConfigDrawer';
 import type { TabType } from './AdminSidebar';
 import { cn } from '../../lib/utils';
 
@@ -83,6 +84,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         <Separator orientation="vertical" className="h-3.5" />
 
         <ThemeSwitch />
+        <ConfigDrawer />
       </div>
     </header>
   );

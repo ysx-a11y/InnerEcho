@@ -390,6 +390,7 @@ export class PromptRepo {
       name?: string;
       description?: string;
       content?: string;
+      agentId?: string;
       categories?: string[];
       remark?: string;
       adminNotes?: string;
@@ -408,6 +409,10 @@ export class PromptRepo {
     if (patch.content !== undefined) {
       sets.push('content = ?');
       params.push(patch.content);
+    }
+    if (patch.agentId !== undefined) {
+      sets.push('agent_id = ?');
+      params.push(patch.agentId.trim());
     }
     if (patch.categories !== undefined) {
       sets.push('categories = ?');

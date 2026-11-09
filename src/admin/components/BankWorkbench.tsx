@@ -24,13 +24,22 @@ import type {
   AdminBankSummary,
 } from '../adminTypes';
 import { AdminConfirmDialog } from './ui/AdminConfirmDialog';
-import { AdminToast, type ToastMessage } from './ui/AdminToast';
+import { adminNotify } from './ui/adminNotify';
 import { BankEditorHeader } from './banks/BankEditorHeader';
 import { BankEditorTabs } from './banks/BankEditorTabs';
 import { DictBadge } from './ui/DictBadge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import {
   Select,
   SelectContent,
@@ -102,14 +111,11 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
     onConfirm: () => {},
   });
 
-  // 统一 Toast 状态
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  // 统一 Toast 提示代理至全局 adminNotify
   const addToast = (type: 'success' | 'error' | 'info', content: string) => {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    setToasts((prev) => [...prev, { id, type, content }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3200);
+    if (type === 'success') adminNotify.success(content);
+    else if (type === 'error') adminNotify.error(content);
+    else adminNotify.info(content);
   };
 
   // JSON 导入弹窗
@@ -603,10 +609,10 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
           {/* 搜索框 */}
           <div className="relative w-44 sm:w-56">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               placeholder="搜索标题、ID、标签..."
-              className="flex h-8 w-full rounded-md border border-input bg-background pl-8 pr-7 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-8 bg-background pl-8 pr-7 text-xs"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void loadBankList()}
@@ -627,7 +633,7 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
             value={categoryFilter}
             onValueChange={(val) => setCategoryFilter(val as any)}
           >
-            <SelectTrigger size="sm" className="h-8 w-[120px] text-xs bg-background">
+            <SelectTrigger size="sm" className="h-8 w-auto min-w-[120px] px-2.5 text-xs whitespace-nowrap bg-background">
               <SelectValue placeholder="全部分类" />
             </SelectTrigger>
             <SelectContent>
@@ -644,7 +650,7 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
             value={sourceFilter}
             onValueChange={(val) => setSourceFilter(val as any)}
           >
-            <SelectTrigger size="sm" className="h-8 w-[110px] text-xs bg-background">
+            <SelectTrigger size="sm" className="h-8 w-auto min-w-[110px] px-2.5 text-xs whitespace-nowrap bg-background">
               <SelectValue placeholder="全部来源" />
             </SelectTrigger>
             <SelectContent>
@@ -819,58 +825,52 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
       </div>
 
       {/* 5. 导入 JSON 模态弹窗 */}
-      {importModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4" onClick={() => setImportModalOpen(false)}>
-          <Card className="w-full max-w-xl shadow-xl border-border bg-card" onClick={(e) => e.stopPropagation()}>
-            <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Upload className="size-4" />
-                <span>批量导入题库 (JSON)</span>
-              </CardTitle>
-              <Button variant="ghost" size="sm" className="size-7 p-0" onClick={() => setImportModalOpen(false)}>
-                <X className="size-4" />
-              </Button>
-            </CardHeader>
+      <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+        <DialogContent className="sm:max-w-xl p-4 gap-3">
+          <DialogHeader className="pb-2 border-b border-border">
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <Upload className="size-4 text-primary" />
+              <span>批量导入题库 (JSON)</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              请将包含 <code>title</code> 与 <code>questions</code> 数组的合法题库 JSON 粘贴到下方：
+            </DialogDescription>
+          </DialogHeader>
 
-            <CardContent className="p-4 space-y-3">
-              <p className="text-xs text-muted-foreground">
-                请将包含 <code>title</code> 与 <code>questions</code> 数组的合法题库 JSON 粘贴到下方：
-              </p>
-
-              {importError && (
-                <div className="flex items-center gap-2 p-2.5 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-xs">
-                  <AlertTriangle className="size-3.5 shrink-0" />
-                  <span>{importError}</span>
-                </div>
-              )}
-
-              <Textarea
-                className="w-full bg-background p-3 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                rows={10}
-                value={importJsonText}
-                onChange={(e) => setImportJsonText(e.target.value)}
-                placeholder={`{\n  "title": "新测试题库",\n  "subtitle": "副标题",\n  "category": "direct",\n  "questions": [\n    {\n      "id": "q1",\n      "title": "问题文本",\n      "type": "single_choice",\n      "options": [\n        { "id": "opt1", "text": "选项A", "scores": { "dominance": 10 } }\n      ]\n    }\n  ]\n}`}
-              />
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button variant="outline" size="sm" onClick={() => setImportModalOpen(false)}>
-                  取消
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleExecuteImport}
-                  disabled={saving || !importJsonText.trim()}
-                  className="gap-1.5"
-                >
-                  {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-                  <span>确认导入</span>
-                </Button>
+          <div className="space-y-3">
+            {importError && (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-xs">
+                <AlertTriangle className="size-3.5 shrink-0" />
+                <span>{importError}</span>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            )}
+
+            <Textarea
+              className="w-full bg-background p-3 font-mono text-xs"
+              rows={10}
+              value={importJsonText}
+              onChange={(e) => setImportJsonText(e.target.value)}
+              placeholder={`{\n  "title": "新测试题库",\n  "subtitle": "副标题",\n  "category": "direct",\n  "questions": [\n    {\n      "id": "q1",\n      "title": "问题文本",\n      "type": "single_choice",\n      "options": [\n        { "id": "opt1", "text": "选项A", "scores": { "dominance": 10 } }\n      ]\n    }\n  ]\n}`}
+            />
+          </div>
+
+          <DialogFooter className="pt-2 border-t border-border">
+            <Button variant="outline" size="sm" onClick={() => setImportModalOpen(false)}>
+              取消
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleExecuteImport}
+              disabled={saving || !importJsonText.trim()}
+              className="gap-1.5"
+            >
+              {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+              <span>确认导入</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 6. 统一确认对话框 */}
       <AdminConfirmDialog
@@ -883,9 +883,6 @@ export const BankWorkbench: React.FC<BankWorkbenchProps> = ({ onStatusChanged, r
         onConfirm={confirmConfig.onConfirm}
         onCancel={() => setConfirmConfig((prev) => ({ ...prev, isOpen: false }))}
       />
-
-      {/* 7. 统一 Toast 提示 */}
-      <AdminToast toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
     </div>
   );
 };

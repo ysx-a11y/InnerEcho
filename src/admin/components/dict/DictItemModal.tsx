@@ -1,8 +1,24 @@
 import React from 'react';
-import { Layers, X } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Layers } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Checkbox } from '../ui/checkbox';
+import { Textarea } from '../ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 export const BADGE_COLOR_OPTIONS = [
   { value: 'teal', label: '青翠绿 (teal)' },
@@ -46,27 +62,19 @@ export const DictItemModal: React.FC<DictItemModalProps> = ({
   onClose,
   onSave,
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4"
-      onClick={onClose}
-    >
-      <Card
-        className="w-full max-w-md shadow-xl border-border bg-card"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="p-3.5 border-b border-border flex flex-row items-center justify-between">
-          <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md p-4 gap-3">
+        <DialogHeader className="pb-2 border-b border-border">
+          <DialogTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
             <Layers className="size-4 text-primary" />
             <span>{itemEditing.isEdit ? '编辑字典项' : '新增字典项'}</span>
-          </CardTitle>
-          <Button variant="ghost" size="sm" className="size-7 p-0" onClick={onClose}>
-            <X className="size-4" />
-          </Button>
-        </CardHeader>
-        <CardContent className="p-3.5 space-y-3 text-xs">
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            配置字典枚举键值、展示标签、徽章样式与启用状态。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-xs">
           <div className="space-y-1">
             <label className="font-semibold text-foreground">枚举键值 (value, 唯一键) *</label>
             <Input
@@ -89,27 +97,39 @@ export const DictItemModal: React.FC<DictItemModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="font-semibold text-foreground">徽章配色</label>
-              <select
+              <Select
                 value={itemEditing.badgeColor}
-                onChange={(e) => onChange({ badgeColor: e.target.value })}
-                className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                onValueChange={(val) => onChange({ badgeColor: val })}
               >
-                {BADGE_COLOR_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                <SelectTrigger size="sm" className="bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BADGE_COLOR_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <label className="font-semibold text-foreground">风格变体</label>
-              <select
+              <Select
                 value={itemEditing.badgeVariant}
-                onChange={(e) => onChange({ badgeVariant: e.target.value })}
-                className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                onValueChange={(val) => onChange({ badgeVariant: val })}
               >
-                {BADGE_VARIANT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                <SelectTrigger size="sm" className="bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BADGE_VARIANT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -124,18 +144,16 @@ export const DictItemModal: React.FC<DictItemModalProps> = ({
             </div>
             <div className="flex items-center gap-4 mt-6">
               <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={itemEditing.isActive === 1}
-                  onChange={(e) => onChange({ isActive: e.target.checked ? 1 : 0 })}
+                  onCheckedChange={(checked) => onChange({ isActive: checked ? 1 : 0 })}
                 />
                 <span>启用中</span>
               </label>
               <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={itemEditing.isDefault === 1}
-                  onChange={(e) => onChange({ isDefault: e.target.checked ? 1 : 0 })}
+                  onCheckedChange={(checked) => onChange({ isDefault: checked ? 1 : 0 })}
                 />
                 <span>默认项</span>
               </label>
@@ -143,25 +161,25 @@ export const DictItemModal: React.FC<DictItemModalProps> = ({
           </div>
           <div className="space-y-1">
             <label className="font-semibold text-foreground">业务说明与备注 (remark)</label>
-            <textarea
+            <Textarea
               rows={2}
               value={itemEditing.remark}
               onChange={(e) => onChange({ remark: e.target.value })}
               placeholder="说明该枚举值在哪些业务模块适用…"
-              className="flex w-full rounded-md border border-input bg-background p-2 text-xs"
+              className="min-h-[60px] text-xs"
             />
           </div>
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-            <Button variant="outline" size="sm" onClick={onClose}>
-              取消
-            </Button>
-            <Button size="sm" onClick={onSave}>
-              保存字典项
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+        <DialogFooter className="pt-2 border-t border-border">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            取消
+          </Button>
+          <Button size="sm" onClick={onSave}>
+            保存字典项
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

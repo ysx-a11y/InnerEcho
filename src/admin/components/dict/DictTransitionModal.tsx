@@ -1,9 +1,23 @@
 import React from 'react';
-import { GitFork, X } from 'lucide-react';
+import { GitFork } from 'lucide-react';
 import type { SysDictItem } from '../../adminTypes';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 interface DictTransitionModalProps {
   isOpen: boolean;
@@ -28,55 +42,57 @@ export const DictTransitionModal: React.FC<DictTransitionModalProps> = ({
   onClose,
   onSave,
 }) => {
-  if (!isOpen) return null;
+  const validItems = items.filter((it) => it.value !== '');
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4"
-      onClick={onClose}
-    >
-      <Card
-        className="w-full max-w-md shadow-xl border-border bg-card"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <CardHeader className="p-3.5 border-b border-border flex flex-row items-center justify-between">
-          <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md p-4 gap-3">
+        <DialogHeader className="pb-2 border-b border-border">
+          <DialogTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
             <GitFork className="size-4 text-primary" />
             <span>新增状态机流转规则</span>
-          </CardTitle>
-          <Button variant="ghost" size="sm" className="size-7 p-0" onClick={onClose}>
-            <X className="size-4" />
-          </Button>
-        </CardHeader>
-        <CardContent className="p-3.5 space-y-3 text-xs">
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            配置起始状态、目标状态、触发动作与所需执行角色。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="font-semibold text-foreground">起始状态 (From) *</label>
-              <select
-                value={transitionEditing.fromValue}
-                onChange={(e) => onChange({ fromValue: e.target.value })}
-                className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-mono"
+              <Select
+                value={transitionEditing.fromValue || undefined}
+                onValueChange={(val) => onChange({ fromValue: val })}
               >
-                {items.map((it) => (
-                  <option key={it.value} value={it.value}>
-                    {it.label} ({it.value})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger size="sm" className="bg-background font-mono">
+                  <SelectValue placeholder="选择起始状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  {validItems.map((it) => (
+                    <SelectItem key={it.value} value={it.value}>
+                      {it.label} ({it.value})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <label className="font-semibold text-foreground">目标状态 (To) *</label>
-              <select
-                value={transitionEditing.toValue}
-                onChange={(e) => onChange({ toValue: e.target.value })}
-                className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-mono"
+              <Select
+                value={transitionEditing.toValue || undefined}
+                onValueChange={(val) => onChange({ toValue: val })}
               >
-                {items.map((it) => (
-                  <option key={it.value} value={it.value}>
-                    {it.label} ({it.value})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger size="sm" className="bg-background font-mono">
+                  <SelectValue placeholder="选择目标状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  {validItems.map((it) => (
+                    <SelectItem key={it.value} value={it.value}>
+                      {it.label} ({it.value})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-1">
@@ -90,15 +106,21 @@ export const DictTransitionModal: React.FC<DictTransitionModalProps> = ({
           </div>
           <div className="space-y-1">
             <label className="font-semibold text-foreground">所需执行角色 (requiredRole)</label>
-            <select
+            <Select
               value={transitionEditing.requiredRole}
-              onChange={(e) => onChange({ requiredRole: e.target.value as any })}
-              className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-mono"
+              onValueChange={(val) =>
+                onChange({ requiredRole: val as 'user' | 'admin' | 'system' })
+              }
             >
-              <option value="admin">管理员 (admin)</option>
-              <option value="user">普通用户 (user)</option>
-              <option value="system">系统内部 (system)</option>
-            </select>
+              <SelectTrigger size="sm" className="bg-background font-mono">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">管理员 (admin)</SelectItem>
+                <SelectItem value="user">普通用户 (user)</SelectItem>
+                <SelectItem value="system">系统内部 (system)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <label className="font-semibold text-foreground">流转备注说明 (remark)</label>
@@ -109,17 +131,17 @@ export const DictTransitionModal: React.FC<DictTransitionModalProps> = ({
               className="h-8 text-xs"
             />
           </div>
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-            <Button variant="outline" size="sm" onClick={onClose}>
-              取消
-            </Button>
-            <Button size="sm" onClick={onSave}>
-              保存流转规则
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+        <DialogFooter className="pt-2 border-t border-border">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            取消
+          </Button>
+          <Button size="sm" onClick={onSave}>
+            保存流转规则
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

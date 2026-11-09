@@ -367,11 +367,15 @@ export interface AdminMailboxMessage {
   replyContent: string | null;
   repliedAt: string | null;
   userHasReadReply: boolean;
+  adminHasRead?: boolean;
+  adminReadAt?: string | null;
   createdAt: string;
 }
 
 export const mailboxApi = {
-  listMessages: (params: { page?: number; pageSize?: number; status?: 'all' | 'pending' | 'replied' } = {}) => {
+  listMessages: (
+    params: { page?: number; pageSize?: number; status?: 'all' | 'pending' | 'read' | 'replied' } = {}
+  ) => {
     const sp = new URLSearchParams();
     if (params.page) sp.set('page', String(params.page));
     if (params.pageSize) sp.set('pageSize', String(params.pageSize));
@@ -389,6 +393,16 @@ export const mailboxApi = {
     adminFetch<{ success: boolean; message: string }>('/api/admin/mailbox/' + encodeURIComponent(id) + '/reply', {
       method: 'POST',
       body: JSON.stringify({ replyContent }),
+    }),
+  markRead: (id: string, isRead = true) =>
+    adminFetch<{ success: boolean; message: string }>('/api/admin/mailbox/' + encodeURIComponent(id) + '/read', {
+      method: 'POST',
+      body: JSON.stringify({ isRead }),
+    }),
+  markBatchRead: (ids?: string[]) =>
+    adminFetch<{ success: boolean; updatedCount: number; message: string }>('/api/admin/mailbox/read-batch', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
     }),
   deleteMessage: (id: string) =>
     adminFetch<{ success: boolean; message: string }>('/api/admin/mailbox/' + encodeURIComponent(id), {
@@ -457,7 +471,7 @@ export const aiHubApi = {
     }),
   updateTemplate: (
     id: string,
-    patch: { name?: string; description?: string; content?: string; categories?: string[]; remark?: string; adminNotes?: string }
+    patch: { name?: string; description?: string; content?: string; agentId?: string; categories?: string[]; remark?: string; adminNotes?: string }
   ) =>
     adminFetch<{ success: boolean; template: PromptTemplate }>(`/api/admin/ai/templates/${encodeURIComponent(id)}`, {
       method: 'PATCH',

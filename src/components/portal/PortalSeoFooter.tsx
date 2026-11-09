@@ -88,21 +88,27 @@ const GUIDE_ARTICLES = [
 ] as const;
 
 /**
- * 首页底部 SEO 内链矩阵：
- * 保证 React 挂载替换 `#root` 后，搜索引擎爬虫（Googlebot WRS）依然能在 DOM 中抓取到
- * 指向 `/banks/*.html` 与 `/articles/*.html` 的全部真实 `<a href>` 链接，避免文章与题库沦为孤立页。
+ * 首页底部 SEO 内链矩阵（无障碍视觉隐藏 sr-only 模式）：
+ * 保证 React 挂载替换 `#root` 后，搜索引擎爬虫（Googlebot WRS 等）依然能在真实 DOM 中抓取到
+ * 指向 `/banks/*.html` 与 `/articles/*.html` 的全部语义化 `<nav>` 与 `<a href>` 链接，
+ * 同时对前台人类访客保持零视觉占位，不破坏首页高奢极简布局。
  */
 export const PortalSeoFooter: React.FC = () => {
   return (
     <footer
       aria-label="测评卷宗档案与心理探索专栏索引"
       style={{
-        marginTop: '0.35rem',
-        padding: '0.85rem 0.95rem',
-        borderRadius: 16,
-        background: 'rgba(14, 5, 20, 0.58)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxSizing: 'border-box',
+        position: 'absolute',
+        width: 1,
+        height: 1,
+        padding: 0,
+        margin: -1,
+        overflow: 'hidden',
+        clip: 'rect(0, 0, 0, 0)',
+        clipPath: 'inset(50%)',
+        whiteSpace: 'nowrap',
+        border: 0,
+        pointerEvents: 'none',
       }}
     >
       <div

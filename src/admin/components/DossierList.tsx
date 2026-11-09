@@ -14,6 +14,7 @@ import {
 } from '@tanstack/react-table';
 import {
   Download,
+  Eye,
   FileSpreadsheet,
   Layers,
   MoreHorizontal,
@@ -113,12 +114,10 @@ export const DossierList: React.FC<DossierListProps> = ({
           : 'submitTime';
       const order = sortItem?.desc === false ? 'asc' : 'desc';
 
-      const depthFilter = columnFilters.find((f) => f.id === 'depthRating')?.value as string[] | undefined;
       const credFilter = columnFilters.find((f) => f.id === 'credibilityLevel')?.value as string[] | undefined;
 
       const res = await adminApi.listDossiers({
         search: globalFilter.trim() || undefined,
-        depth: depthFilter && depthFilter.length > 0 ? depthFilter[0] : undefined,
         credibility: credFilter && credFilter.length > 0 ? credFilter[0] : undefined,
         sort: sortField,
         order,
@@ -219,7 +218,6 @@ export const DossierList: React.FC<DossierListProps> = ({
         '测评问卷',
         '提交时间',
         '用时秒数',
-        '心理深度',
         '可信度评分',
         '设备ID',
       ];
@@ -231,7 +229,6 @@ export const DossierList: React.FC<DossierListProps> = ({
         getQuestionnaireName(d, bankNames),
         formatTime(d.submitTime),
         d.durationSeconds,
-        d.depthRating,
         d.credibilityScore ?? '-',
         d.deviceId || '-',
       ]);
@@ -266,30 +263,6 @@ export const DossierList: React.FC<DossierListProps> = ({
   const columns = useMemo<ColumnDef<AdminDossier>[]>(() => {
     return [
       {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && 'indeterminate')
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
-            aria-label="全选"
-            className="translate-y-0.5"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
-            aria-label="选择该行"
-            className="translate-y-0.5"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      {
         accessorKey: 'id',
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title="卷宗号" />
@@ -319,15 +292,8 @@ export const DossierList: React.FC<DossierListProps> = ({
 
           return (
             <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6 rounded-md border border-border/50">
-                <AvatarFallback
-                  className={cn(
-                    'rounded-md text-[10px] font-semibold',
-                    isRegistered
-                      ? 'bg-primary/10 text-primary'
-                      : 'bg-muted text-muted-foreground'
-                  )}
-                >
+              <Avatar className="h-6 w-6 rounded-md border border-border/60 shrink-0">
+                <AvatarFallback className="rounded-md text-[10px] font-semibold bg-muted/80 text-foreground/85">
                   {initial}
                 </AvatarFallback>
               </Avatar>
@@ -342,10 +308,10 @@ export const DossierList: React.FC<DossierListProps> = ({
                   <Badge
                     variant="outline"
                     className={cn(
-                      'text-[9px] px-1 py-0 h-3.5 rounded-xs',
+                      'text-[9px] px-1.5 py-0 h-4 rounded-xs font-medium shrink-0',
                       isRegistered
-                        ? 'border-primary/40 text-primary'
-                        : 'text-muted-foreground'
+                        ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
                     )}
                   >
                     {isRegistered ? '注册用户' : '访客'}
@@ -401,33 +367,6 @@ export const DossierList: React.FC<DossierListProps> = ({
         },
       },
       {
-        accessorKey: 'depthRating',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="心理深度" />
-        ),
-        cell: ({ row }) => {
-          const rawDepth = (row.original.depthRating || 'medium').toLowerCase();
-          const depthMap: Record<string, { label: string; className: string }> = {
-            light: { label: '轻度', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' },
-            mild: { label: '轻度', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' },
-            medium: { label: '中度', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' },
-            moderate: { label: '中度', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' },
-            deep: { label: '重度', className: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30' },
-          };
-          const meta = depthMap[rawDepth] || { label: rawDepth, className: 'bg-muted/40 text-muted-foreground border-border' };
-          return (
-            <Badge variant="outline" className={cn('text-xs font-normal', meta.className)}>
-              {meta.label}
-            </Badge>
-          );
-        },
-        filterFn: (row: Row<AdminDossier>, id: string, value: string[]) => {
-          const rowVal = String(row.getValue(id)).toLowerCase();
-          const norm = (v: string) => (v === 'mild' ? 'light' : v === 'moderate' ? 'medium' : v);
-          return value.map(norm).includes(norm(rowVal));
-        },
-      },
-      {
         id: 'credibilityLevel',
         accessorFn: (row: AdminDossier) => {
           const score = row.credibilityScore ?? 95;
@@ -480,50 +419,65 @@ export const DossierList: React.FC<DossierListProps> = ({
         cell: ({ row }) => {
           const d = row.original;
           return (
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="flex h-8 w-8 p-0 data-[state=open]:bg-muted cursor-pointer"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">打开菜单</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 text-xs">
-                <DropdownMenuItem
-                  onClick={() => void openDossierDetail(d.id)}
-                  className="cursor-pointer"
-                >
-                  <FileSpreadsheet className="mr-2 size-3.5 text-muted-foreground" />
-                  <span>查阅卷宗</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => openUserProfile(d)}
-                  className="cursor-pointer"
-                >
-                  <Layers className="mr-2 size-3.5 text-muted-foreground" />
-                  <span>用户画像</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => void handleReanalyze(d.id)}
-                  disabled={reanalyzingId === d.id}
-                  className="cursor-pointer"
-                >
-                  <RotateCcw className={cn('mr-2 size-3.5 text-muted-foreground', reanalyzingId === d.id && 'animate-spin')} />
-                  <span>重新评估</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setSingleDeleteId(d.id)}
-                  className="cursor-pointer"
-                >
-                  <Trash2 className="mr-2 size-3.5" />
-                  <span>删除卷宗</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-1 justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void openDossierDetail(d.id);
+                }}
+                className="h-7 px-2 text-xs gap-1 hover:text-primary cursor-pointer text-muted-foreground hover:bg-primary/10"
+                title="直接查阅卷宗"
+              >
+                <Eye className="size-3.5" />
+                <span>查阅</span>
+              </Button>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    className="flex h-7 w-7 p-0 data-[state=open]:bg-muted cursor-pointer"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">打开菜单</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40 text-xs">
+                  <DropdownMenuItem
+                    onClick={() => void openDossierDetail(d.id)}
+                    className="cursor-pointer"
+                  >
+                    <FileSpreadsheet className="mr-2 size-3.5 text-muted-foreground" />
+                    <span>查阅卷宗</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => openUserProfile(d)}
+                    className="cursor-pointer"
+                  >
+                    <Layers className="mr-2 size-3.5 text-muted-foreground" />
+                    <span>用户画像</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => void handleReanalyze(d.id)}
+                    disabled={reanalyzingId === d.id}
+                    className="cursor-pointer"
+                  >
+                    <RotateCcw className={cn('mr-2 size-3.5 text-muted-foreground', reanalyzingId === d.id && 'animate-spin')} />
+                    <span>重新评估</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => setSingleDeleteId(d.id)}
+                    className="cursor-pointer"
+                  >
+                    <Trash2 className="mr-2 size-3.5" />
+                    <span>删除卷宗</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           );
         },
       },
@@ -625,20 +579,11 @@ export const DossierList: React.FC<DossierListProps> = ({
         </div>
       </div>
 
-      {/* 2. DataTable Toolbar (Search, Faceted Filters, View Toggle) */}
+      {/* 2. DataTable Toolbar (Search & Faceted Filters) */}
       <DataTableToolbar
         table={table}
         searchPlaceholder="搜索称呼、职业、人设、设备ID..."
         filters={[
-          {
-            columnId: 'depthRating',
-            title: '心理深度',
-            options: [
-              { label: '轻度', value: 'light' },
-              { label: '中度', value: 'medium' },
-              { label: '重度', value: 'deep' },
-            ],
-          },
           {
             columnId: 'credibilityLevel',
             title: '可信度',
@@ -678,7 +623,8 @@ export const DossierList: React.FC<DossierListProps> = ({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="h-9 border-b border-border/40 hover:bg-muted/30 transition-colors"
+                  onClick={() => void openDossierDetail(row.original.id)}
+                  className="h-9 border-b border-border/40 hover:bg-muted/30 transition-colors cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="py-1 px-2.5">
@@ -705,7 +651,7 @@ export const DossierList: React.FC<DossierListProps> = ({
       </div>
 
       {/* 4. DataTable Pagination */}
-      <DataTablePagination table={table} />
+      <DataTablePagination table={table} totalCount={total} />
 
       {/* 5. Detail Modal */}
       {selectedDossier && (
