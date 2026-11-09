@@ -196,7 +196,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </span>
           <span className="text-muted-foreground/40 hidden sm:inline">|</span>
           <span className="text-[11px] text-muted-foreground hidden sm:inline font-mono">
-            全站 342 份心理卷宗实时解构监控与跨域画像大盘
+            全站 {(overview?.totals.dossiers ?? 0).toLocaleString()} 份心理卷宗实时解构监控与跨域画像大盘
           </span>
         </div>
 
@@ -239,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* 3. 用户特征多维分布 */}
-      <DashboardDistribution overview={overview} />
+      <DashboardDistribution overview={overview} rangeLabel={rangeLabels[currentRange]} />
 
       {/* 4. 最近提交卷宗轻量流式卡片 */}
       <Card className="shadow-xs border-border/80">
@@ -247,10 +247,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <FileText className="size-4 text-primary" />
-              <CardTitle className="text-base font-semibold">最近成功生成的测评卷宗</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                {rangeLabels[currentRange]}最新成功生成的测评卷宗
+              </CardTitle>
             </div>
             <CardDescription className="mt-1">
-              实时同步最新测评完成记录
+              实时同步所选时段（{rangeLabels[currentRange]}）最新测评完成记录
             </CardDescription>
           </div>
           <Button

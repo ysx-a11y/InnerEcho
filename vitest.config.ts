@@ -1,3 +1,4 @@
+import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
 import { QuietReporter } from './scripts/vitest-quiet-reporter.mjs';
 
@@ -6,6 +7,11 @@ import { QuietReporter } from './scripts/vitest-quiet-reporter.mjs';
  * Tests are colocated alongside source files as `*.test.ts` / `*.test.tsx`.
  */
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@admin': resolve(import.meta.dirname, 'src/admin'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',

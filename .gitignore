@@ -67,3 +67,7 @@ scripts/deploy-server.sh
 scripts/innerecho-deploy.sh
 scripts/innerecho-smoke.sh
 scripts/sync-innerecho-backup.ps1
+
+# 本地 AI Agent Skills（不入 Git）
+.agents/skills/
+skills-lock.json

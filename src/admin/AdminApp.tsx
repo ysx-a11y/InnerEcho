@@ -109,7 +109,9 @@ export const AdminApp: React.FC = () => {
     return (
       <AdminLogin
         onLoginSuccess={(token: string) => {
-          setAdminToken(token);
+          if (!getAdminToken()) {
+            setAdminToken(token);
+          }
           setIsLoggedIn(true);
         }}
       />

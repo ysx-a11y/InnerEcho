@@ -60,6 +60,7 @@ describe('AdminApp render test', () => {
 
   it('renders login view when not logged in', () => {
     sessionStorage.removeItem('innerecho_admin_token');
+    localStorage.removeItem('innerecho_admin_token_v2');
     const { container } = render(
       <ThemeProvider>
         <AdminApp />

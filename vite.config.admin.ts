@@ -11,6 +11,11 @@ import { resolve } from 'path';
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@admin': resolve(import.meta.dirname, 'src/admin'),
+    },
+  },
   // publicDir 是 Vite 顶层选项，放在 build 里会被忽略并回退到默认 public/
   publicDir: resolve(import.meta.dirname, 'public-admin'),
   build: {

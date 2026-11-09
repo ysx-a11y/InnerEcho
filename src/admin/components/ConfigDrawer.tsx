@@ -13,7 +13,9 @@ import {
 import { useSidebar } from './ui/sidebar';
 import {
   useTheme,
+  type ColorScheme,
   type Direction,
+  type FontFamily,
   type SidebarCollapsible,
   type SidebarVariant,
   type Theme,
@@ -323,12 +325,16 @@ export const ConfigDrawer: React.FC = () => {
   const {
     theme,
     setTheme,
+    colorScheme,
+    setColorScheme,
     variant,
     setVariant,
     collapsible,
     setCollapsible,
     dir,
     setDir,
+    font,
+    setFont,
     resetConfig,
   } = useTheme();
 
@@ -343,6 +349,18 @@ export const ConfigDrawer: React.FC = () => {
     { value: 'system', label: '跟随系统', icon: SvgThemeSystem },
     { value: 'light', label: '明亮浅色', icon: SvgThemeLight },
     { value: 'dark', label: '暗夜深色', icon: SvgThemeDark },
+  ];
+
+  const colorSchemeOptions: {
+    value: ColorScheme;
+    label: string;
+    swatch: string;
+  }[] = [
+    { value: 'slate', label: '默认原版', swatch: '#0f172a' },
+    { value: 'amethyst', label: '镜界魅紫', swatch: '#8b5cf6' },
+    { value: 'rose', label: '暗夜玫瑰', swatch: '#e11d48' },
+    { value: 'claude', label: '克劳德金', swatch: '#c96442' },
+    { value: 'emerald', label: '极光翡翠', swatch: '#10b981' },
   ];
 
   const sidebarOptions: {
@@ -368,6 +386,41 @@ export const ConfigDrawer: React.FC = () => {
   const dirOptions: { value: Direction; label: string; icon: React.ComponentType }[] = [
     { value: 'ltr', label: '从左到右', icon: SvgDirLtr },
     { value: 'rtl', label: '从右到左', icon: SvgDirRtl },
+  ];
+
+  const fontOptions: {
+    value: FontFamily;
+    label: string;
+    sublabel: string;
+    sampleStyle: React.CSSProperties;
+  }[] = [
+    {
+      value: 'noto-sans',
+      label: '思源黑体',
+      sublabel: 'Inter + Noto Sans SC',
+      sampleStyle: { fontFamily: "'Inter', 'Noto Sans SC', sans-serif" },
+    },
+    {
+      value: 'lxgw-wenkai',
+      label: '霞鹜文楷',
+      sublabel: 'Inter + LXGW WenKai',
+      sampleStyle: { fontFamily: "'Inter', 'LXGW WenKai Screen', sans-serif" },
+    },
+    {
+      value: 'noto-serif',
+      label: '思源宋体',
+      sublabel: 'Inter + Noto Serif SC',
+      sampleStyle: { fontFamily: "'Inter', 'Noto Serif SC', serif" },
+    },
+    {
+      value: 'system',
+      label: '系统原生',
+      sublabel: '苹方 / 鸿蒙 / 雅黑 UI',
+      sampleStyle: {
+        fontFamily:
+          "'Inter', -apple-system, 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei UI', sans-serif",
+      },
+    },
   ];
 
   return (
@@ -414,6 +467,91 @@ export const ConfigDrawer: React.FC = () => {
                   icon={item.icon}
                 />
               ))}
+            </div>
+          </div>
+
+          {/* 1.2 Color Scheme Preset */}
+          <div role="radiogroup" aria-label="精选配色盲盒">
+            <SectionTitle
+              title="精选配色皮肤 (Tweakcn)"
+              showReset={colorScheme !== 'slate'}
+              onReset={() => setColorScheme('slate')}
+            />
+            <div className="grid grid-cols-5 gap-2">
+              {colorSchemeOptions.map((item) => {
+                const isSelected = colorScheme === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => setColorScheme(item.value)}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 rounded-md border py-2 px-1 transition-all cursor-pointer outline-none',
+                      isSelected
+                        ? 'border-foreground ring-1 ring-foreground bg-accent/40'
+                        : 'border-border/80 bg-card hover:border-foreground/40'
+                    )}
+                  >
+                    <span
+                      className="flex size-5 items-center justify-center rounded-full shadow-xs border border-white/20"
+                      style={{ backgroundColor: item.swatch }}
+                    >
+                      {isSelected && <Check className="size-3 text-white stroke-[3]" />}
+                    </span>
+                    <span className="text-[10px] font-medium text-foreground whitespace-nowrap">
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 1.5 Font Family */}
+          <div role="radiogroup" aria-label="中文字体排版">
+            <SectionTitle
+              title="中文字体排版"
+              showReset={font !== 'noto-sans'}
+              onReset={() => setFont('noto-sans')}
+            />
+            <div className="grid grid-cols-2 gap-2.5">
+              {fontOptions.map((item) => {
+                const isSelected = font === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => setFont(item.value)}
+                    className={cn(
+                      'relative flex flex-col items-start gap-1 rounded-md border px-3 py-2 text-left transition-all cursor-pointer outline-none',
+                      isSelected
+                        ? 'border-foreground ring-1 ring-foreground bg-accent/40'
+                        : 'border-border/80 bg-card hover:border-foreground/40'
+                    )}
+                  >
+                    <div className="flex w-full items-center justify-between gap-1">
+                      <span
+                        style={item.sampleStyle}
+                        className="text-xs font-semibold text-foreground whitespace-nowrap"
+                      >
+                        {item.label} · 镜界
+                      </span>
+                      {isSelected && (
+                        <span className="flex size-3.5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                          <Check className="size-2.5 stroke-[3]" />
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      {item.sublabel}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

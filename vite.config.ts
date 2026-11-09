@@ -10,6 +10,11 @@ import { resolve } from 'path';
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@admin': resolve(import.meta.dirname, 'src/admin'),
+    },
+  },
   build: {
     outDir: 'dist-user',
     emptyOutDir: true,

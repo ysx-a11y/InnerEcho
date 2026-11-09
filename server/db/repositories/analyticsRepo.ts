@@ -268,9 +268,11 @@ export class AnalyticsRepo {
     const recentRows = this.db
       .prepare(
         `SELECT id, nickname, depth_rating, bank_ids, diagnostic_result_json, quiz_payload_json, created_at
-         FROM dossiers ORDER BY created_at DESC LIMIT 5`
+         FROM dossiers
+         WHERE date(created_at, '+8 hours') BETWEEN ? AND ?
+         ORDER BY created_at DESC LIMIT 5`
       )
-      .all() as AdminRecentRow[];
+      .all(start, end) as AdminRecentRow[];
 
     const selectedPeriod = await this.getMetricsForPeriod(start, end);
     const todayUniquePeople = (this.db.prepare("SELECT COUNT(DISTINCT coalesce(user_id, device_id)) c FROM dossiers WHERE date(created_at, '+8 hours') = ?").get(today) as { c: number } | undefined)?.c ?? 0;
@@ -434,34 +436,8 @@ export class AnalyticsRepo {
       )
       .all(start, end) as { referrer: string; c: number }[];
 
-    let effectiveReferrerLinkRows = referrerLinkRows;
-    if (effectiveReferrerLinkRows.length === 0) {
-      effectiveReferrerLinkRows = this.db
-        .prepare(
-          `SELECT referrer, COUNT(*) c FROM page_visits
-           WHERE referrer IS NOT NULL AND referrer != ''
-           GROUP BY referrer ORDER BY c DESC LIMIT 10`
-        )
-        .all() as { referrer: string; c: number }[];
-    }
-    const referrerLinks = effectiveReferrerLinkRows.map((r) => ({
-      referrer: r.referrer,
-      count: r.c,
-    }));
-
-    let effectiveSourceRows = sourceRows;
-    if (effectiveSourceRows.length === 0) {
-      effectiveSourceRows = this.db
-        .prepare(
-          `SELECT referrer, COUNT(*) c FROM page_visits
-           WHERE referrer IS NOT NULL AND referrer != ''
-           GROUP BY referrer ORDER BY c DESC`
-        )
-        .all() as typeof sourceRows;
-    }
-
     const sourceMap = new Map<string, number>();
-    for (const row of effectiveSourceRows) {
+    for (const row of sourceRows) {
       const source = classifyReferrer(row.referrer);
       sourceMap.set(source, (sourceMap.get(source) ?? 0) + row.c);
     }
@@ -475,19 +451,17 @@ export class AnalyticsRepo {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
-    let effectiveRegionRows = regionRows;
-    let effectiveRegionTotal = selectedPeriod?.visits ?? 0;
-    if (effectiveRegionRows.length === 0) {
-      effectiveRegionRows = this.db
-        .prepare(
-          `SELECT region_code, COUNT(*) c FROM page_visits
-           WHERE region_code IS NOT NULL AND region_code != ''
-           GROUP BY region_code ORDER BY c DESC`
-        )
-        .all() as typeof regionRows;
-      effectiveRegionTotal = effectiveRegionRows.reduce((sum, r) => sum + r.c, 0);
-    }
-    const regionDistribution = buildRegionDistribution(effectiveRegionRows, effectiveRegionTotal);
+    const referrerLinks = [
+      ...referrerLinkRows.map((r) => ({
+        referrer: r.referrer,
+        count: r.c,
+      })),
+      ...(directCount > 0 ? [{ referrer: 'direct', count: directCount }] : []),
+    ]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    const regionDistribution = buildRegionDistribution(regionRows, selectedPeriod?.visits ?? 0);
 
     const totalEventMap = new Map(totalEventRows.map((r) => [r.event_type, r]));
     const eventStats = eventRows.map((r) => ({

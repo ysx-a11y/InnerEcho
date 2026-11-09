@@ -13,8 +13,8 @@
   --text-primary: #fff0f5;
   --text-secondary: #dfb8cf;
   --text-muted: #946b85;
-  --font-heading: 'Outfit', 'Cinzel', sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Outfit', 'Cinzel', 'Noto Sans SC', 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Microsoft YaHei UI', sans-serif;
+  --font-body: 'Inter', 'Noto Sans SC', 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Source Han Sans SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
 }
 
 * {
