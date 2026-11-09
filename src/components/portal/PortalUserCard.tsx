@@ -73,33 +73,28 @@ export const PortalUserCard: React.FC<PortalUserCardProps> = ({
           <div className="text-xs text-[var(--text-secondary)] leading-snug mt-1 truncate">
             {isRegistered
               ? (hasMissingDetails
-                  ? '已建档 · 建议补全职业与渴望设定'
+                  ? `已建档 · 建议补全职业与渴望设定${sealedPersonaCount > 0 ? ` · 已封印人格卡 ${sealedPersonaCount} 张` : ''}`
                   : (occupation
-                      ? `真实职业：${occupation}${personaTrait ? ` · 人前：${personaTrait}` : ''}`
-                      : '真实设定已密存存证'))
-              : '录入真实职业与人前假面设定'}
+                      ? `真实职业：${occupation}${personaTrait ? ` · 人前：${personaTrait}` : ''}${sealedPersonaCount > 0 ? ` · 已封印人格卡 ${sealedPersonaCount} 张` : ''}`
+                      : `真实设定已密存存证${sealedPersonaCount > 0 ? ` · 已封印人格卡 ${sealedPersonaCount} 张` : ''}`))
+              : `录入真实职业与人前假面设定${sealedPersonaCount > 0 ? ` · 已封印人格卡 ${sealedPersonaCount} 张` : ''}`}
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col items-end justify-center gap-1 shrink-0 relative">
-        <span className="text-[10.5px] text-[#ff70a6] font-semibold tracking-tight whitespace-nowrap opacity-90">
-          已封印人格卡 {sealedPersonaCount} 张
+      <div
+        className="flex items-center gap-1 px-2.5 py-1 rounded-full shrink-0 relative"
+        style={{
+          color: accentColor,
+          background: `${accentColor}18`,
+          border: `1px solid ${accentColor}45`,
+          boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+        }}
+      >
+        <span className="text-xs font-bold whitespace-nowrap">
+          {isRegistered ? (hasMissingDetails ? '补全资料' : '修改资料') : '去登记'}
         </span>
-        <div
-          className="flex items-center gap-1 px-2.5 py-1 rounded-full shrink-0"
-          style={{
-            color: accentColor,
-            background: `${accentColor}18`,
-            border: `1px solid ${accentColor}45`,
-            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.18)',
-          }}
-        >
-          <span className="text-xs font-bold whitespace-nowrap">
-            {isRegistered ? (hasMissingDetails ? '补全资料' : '修改资料') : '去登记'}
-          </span>
-          <ChevronRight size={13} />
-        </div>
+        <ChevronRight size={13} />
       </div>
     </button>
   );

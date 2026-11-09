@@ -1,24 +1,36 @@
 import React, { useEffect, useRef } from 'react';
 
-/**
- * 极致性能优化的星空暗夜流光背景组件
- * 
- * 关键健壮性保障：
- * 所有定位属性必须通过行内 style 强制声明为 position: fixed / absolute，
- * 绝不依赖任何外部 CSS 类，确保在任何网络/加载时序下 100% 脱离正常文档流，
- * 绝不挤占垂直空间或将 Header / 主体内容下推。
- */
-interface Star {
+interface StarParticle {
   x: number;
   y: number;
-  size: number;
+  radius: number;
   baseAlpha: number;
-  alpha: number;
-  twinkleSpeed: number;
-  vx: number;
-  vy: number;
+  alphaAmplitude: number;
+  speedX: number;
+  speedY: number;
+  breathPeriodMs: number;
+  phaseOffset: number;
+  color: string;
+  tier: 'far' | 'mid' | 'near';
 }
 
+interface NebulaOrb {
+  anchorX: number;
+  anchorY: number;
+  radiusRatio: number;
+  maxRadiusPx: number;
+  rgb: string;
+  baseAlpha: number;
+  alphaVariation: number;
+  periodMs: number;
+  phaseOffset: number;
+  driftPx: number;
+}
+
+/**
+ * 高奢暗夜星空与呼吸星云画布
+ * 强制 position: fixed 绝对脱离正常文档流，0 占位，绝不下推页面任何元素。
+ */
 export const BackgroundStars: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -32,173 +44,211 @@ export const BackgroundStars: React.FC = () => {
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    let animId: number;
-    let stars: Star[] = [];
-    let w = 0;
-    let h = 0;
-    let isDestroyed = false;
-    let lastDrawTime = 0;
-    const FRAME_INTERVAL = 1000 / 30; // 30fps 节流
+    let animationFrameId: number;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
 
-    const resize = () => {
+    const handleResize = () => {
       if (!canvas) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      w = window.innerWidth;
-      h = window.innerHeight;
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      ctx.scale(dpr, dpr);
-      initStars();
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
     };
 
-    const initStars = () => {
-      const count = Math.min(40, Math.max(20, Math.floor((w * h) / 35000)));
-      stars = [];
-      for (let i = 0; i < count; i++) {
-        const baseAlpha = 0.15 + Math.random() * 0.45;
-        stars.push({
-          x: Math.random() * w,
-          y: Math.random() * h,
-          size: Math.random() < 0.2 ? 1.6 : 1.0,
-          baseAlpha,
-          alpha: baseAlpha,
-          twinkleSpeed: 0.008 + Math.random() * 0.015,
-          vx: (Math.random() - 0.5) * 0.08,
-          vy: -0.04 - Math.random() * 0.08,
-        });
+    window.addEventListener('resize', handleResize, { passive: true });
+
+    // 浪漫深邃的三色星云呼吸光场（魅惑玫红 + 电光紫罗兰 + 暖粉香槟）
+    const nebulae: NebulaOrb[] = [
+      {
+        anchorX: 0.24,
+        anchorY: 0.16,
+        radiusRatio: 0.52,
+        maxRadiusPx: 540,
+        rgb: '255, 51, 119', // 顶部偏左：绯红玫瑰主光场
+        baseAlpha: 0.16,
+        alphaVariation: 0.035,
+        periodMs: 10500,
+        phaseOffset: 0.3,
+        driftPx: 24,
+      },
+      {
+        anchorX: 0.78,
+        anchorY: 0.52,
+        radiusRatio: 0.56,
+        maxRadiusPx: 580,
+        rgb: '210, 30, 255', // 中右：魅惑紫罗兰星云
+        baseAlpha: 0.125,
+        alphaVariation: 0.03,
+        periodMs: 13200,
+        phaseOffset: 2.4,
+        driftPx: 26,
+      },
+      {
+        anchorX: 0.35,
+        anchorY: 0.88,
+        radiusRatio: 0.48,
+        maxRadiusPx: 480,
+        rgb: '255, 145, 175', // 底部：暖粉香槟柔光
+        baseAlpha: 0.1,
+        alphaVariation: 0.025,
+        periodMs: 11800,
+        phaseOffset: 4.2,
+        driftPx: 20,
+      },
+    ];
+
+    // 远/中/近三层晶莹星尘与柔焦散景光斑
+    const totalCount = Math.min(82, Math.max(46, Math.floor((width * height) / 11500)));
+    const nearCount = Math.min(6, Math.max(4, Math.floor(totalCount * 0.08)));
+    const midCount = Math.floor(totalCount * 0.34);
+    const farCount = Math.max(18, totalCount - nearCount - midCount);
+
+    const farColors = ['#ff9ec4', '#dfb8cf', '#d8b4fe', '#ffffff'];
+    const midColors = ['#ff3377', '#ff70a6', '#e100ff', '#ffd180', '#ffffff'];
+    const nearColors = ['255, 80, 145', '225, 40, 255', '255, 160, 200', '192, 132, 252'];
+
+    const particles: StarParticle[] = [];
+
+    for (let i = 0; i < farCount; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 0.75 + 0.45,
+        baseAlpha: Math.random() * 0.3 + 0.16,
+        alphaAmplitude: Math.random() * 0.12 + 0.04,
+        speedX: (Math.random() - 0.5) * 0.06,
+        speedY: (Math.random() - 0.5) * 0.06 - 0.015,
+        breathPeriodMs: 8500 + Math.random() * 5500,
+        phaseOffset: Math.random() * Math.PI * 2,
+        color: farColors[Math.floor(Math.random() * farColors.length)],
+        tier: 'far',
+      });
+    }
+
+    for (let i = 0; i < midCount; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 1.15 + 1.0,
+        baseAlpha: Math.random() * 0.42 + 0.35,
+        alphaAmplitude: Math.random() * 0.22 + 0.08,
+        speedX: (Math.random() - 0.5) * 0.16,
+        speedY: (Math.random() - 0.5) * 0.16 - 0.025,
+        breathPeriodMs: 7000 + Math.random() * 6000,
+        phaseOffset: Math.random() * Math.PI * 2,
+        color: midColors[Math.floor(Math.random() * midColors.length)],
+        tier: 'mid',
+      });
+    }
+
+    for (let i = 0; i < nearCount; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 15 + 12,
+        baseAlpha: Math.random() * 0.055 + 0.04,
+        alphaAmplitude: Math.random() * 0.025 + 0.012,
+        speedX: (Math.random() - 0.5) * 0.22,
+        speedY: (Math.random() - 0.5) * 0.22 - 0.035,
+        breathPeriodMs: 9500 + Math.random() * 5000,
+        phaseOffset: Math.random() * Math.PI * 2,
+        color: nearColors[i % nearColors.length],
+        tier: 'near',
+      });
+    }
+
+    const startTime = performance.now();
+
+    const render = (now: number) => {
+      const elapsed = now - startTime;
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. 绘制呼吸星云光场
+      for (let i = 0; i < nebulae.length; i++) {
+        const orb = nebulae[i];
+        const phase = (elapsed / orb.periodMs) * Math.PI * 2 + orb.phaseOffset;
+        const currentAlpha = Math.max(
+          0.03,
+          orb.baseAlpha + Math.sin(phase) * orb.alphaVariation
+        );
+        const cx = orb.anchorX * width + Math.cos(phase * 0.7) * orb.driftPx;
+        const cy = orb.anchorY * height + Math.sin(phase * 0.5) * orb.driftPx;
+        const r = Math.min(orb.maxRadiusPx, Math.max(width, height) * orb.radiusRatio);
+
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        grad.addColorStop(0, `rgba(${orb.rgb}, ${currentAlpha.toFixed(3)})`);
+        grad.addColorStop(0.5, `rgba(${orb.rgb}, ${(currentAlpha * 0.42).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(18, 7, 22, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
       }
-    };
 
-    let startTimer: ReturnType<typeof setTimeout>;
+      // 2. 绘制三层景深星尘
+      const isMobile = width <= 640;
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.x += p.speedX;
+        p.y += p.speedY;
 
-    const render = (time: number) => {
-      if (isDestroyed) return;
+        const margin = p.tier === 'near' ? p.radius : 2;
+        if (p.x < -margin) p.x = width + margin;
+        if (p.x > width + margin) p.x = -margin;
+        if (p.y < -margin) p.y = height + margin;
+        if (p.y > height + margin) p.y = -margin;
 
-      const delta = time - lastDrawTime;
-      if (delta >= FRAME_INTERVAL) {
-        lastDrawTime = time - (delta % FRAME_INTERVAL);
+        const wave = Math.sin((elapsed / p.breathPeriodMs) * Math.PI * 2 + p.phaseOffset);
+        const alpha = Math.max(0.04, Math.min(0.92, p.baseAlpha + wave * p.alphaAmplitude));
 
-        ctx.clearRect(0, 0, w, h);
-
-        for (let i = 0; i < stars.length; i++) {
-          const s = stars[i];
-          s.alpha = s.baseAlpha + Math.sin(time * s.twinkleSpeed) * 0.25;
-          s.x += s.vx;
-          s.y += s.vy;
-
-          if (s.y < 0) s.y = h;
-          if (s.x < 0) s.x = w;
-          if (s.x > w) s.x = 0;
-
-          const currentAlpha = Math.max(0.05, Math.min(0.7, s.alpha));
-          ctx.fillStyle = `rgba(244, 114, 182, ${currentAlpha.toFixed(2)})`;
+        if (p.tier === 'near') {
+          const bokehGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+          bokehGrad.addColorStop(0, `rgba(${p.color}, ${(alpha * 1.15).toFixed(3)})`);
+          bokehGrad.addColorStop(0.45, `rgba(${p.color}, ${(alpha * 0.5).toFixed(3)})`);
+          bokehGrad.addColorStop(1, `rgba(${p.color}, 0)`);
+          ctx.fillStyle = bokehGrad;
           ctx.beginPath();
-          ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
           ctx.fill();
+        } else {
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = p.color;
+          if (!isMobile && p.tier === 'mid') {
+            ctx.shadowBlur = p.radius * 3.5;
+            ctx.shadowColor = p.color;
+          }
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
         }
       }
 
-      animId = requestAnimationFrame(render);
+      animationFrameId = requestAnimationFrame(render);
     };
 
-    window.addEventListener('resize', resize, { passive: true });
-    resize();
-
-    startTimer = setTimeout(() => {
-      animId = requestAnimationFrame(render);
-    }, 100);
+    animationFrameId = requestAnimationFrame(render);
 
     return () => {
-      isDestroyed = true;
-      clearTimeout(startTimer);
-      window.removeEventListener('resize', resize);
-      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
   return (
-    <div
+    <canvas
+      ref={canvasRef}
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
-        right: 0,
-        bottom: 0,
         width: '100vw',
         height: '100vh',
         pointerEvents: 'none',
-        overflow: 'hidden',
-        userSelect: 'none',
         zIndex: 0,
       }}
       aria-hidden="true"
-    >
-      {/* 
-        GPU 硬件合成层 CSS 径向渐变：
-        1. 0 CPU 消耗，移动端 60fps 丝滑
-        2. 绝对定位强制脱离正常文档流，绝不撑开任何垂直页面高度
-      */}
-      <div 
-        style={{
-          position: 'absolute',
-          width: 600,
-          height: 600,
-          top: -160,
-          left: -160,
-          borderRadius: '50%',
-          filter: 'blur(100px)',
-          WebkitFilter: 'blur(100px)',
-          opacity: 0.25,
-          background: 'radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(168, 85, 247, 0) 70%)',
-          pointerEvents: 'none',
-          willChange: 'transform',
-        }}
-      />
-      <div 
-        style={{
-          position: 'absolute',
-          width: 500,
-          height: 500,
-          top: '35%',
-          right: -130,
-          borderRadius: '50%',
-          filter: 'blur(110px)',
-          WebkitFilter: 'blur(110px)',
-          opacity: 0.2,
-          background: 'radial-gradient(circle, rgba(236, 72, 153, 0.35) 0%, rgba(236, 72, 153, 0) 70%)',
-          pointerEvents: 'none',
-          willChange: 'transform',
-        }}
-      />
-      <div 
-        style={{
-          position: 'absolute',
-          width: 700,
-          height: 700,
-          bottom: -190,
-          left: '25%',
-          borderRadius: '50%',
-          filter: 'blur(120px)',
-          WebkitFilter: 'blur(120px)',
-          opacity: 0.15,
-          background: 'radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, rgba(99, 102, 241, 0) 70%)',
-          pointerEvents: 'none',
-          willChange: 'transform',
-        }}
-      />
-
-      {/* 轻量星尘画布 */}
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-        }}
-      />
-    </div>
+    />
   );
 };
